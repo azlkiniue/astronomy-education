@@ -73,7 +73,7 @@ window.I18N = (function () {
 /* ---- Shared UI strings (header, footer, home, common control labels) ---- */
 I18N.add({
   en: {
-    "site.title": "Cosmos Lab",
+    "site.title": "Astronomy Education",
     "site.tagline": "Interactive Astronomy",
     "nav.topics": "Topics",
     "nav.originals": "All 126",
@@ -111,7 +111,7 @@ I18N.add({
     "common.off": "Off"
   },
   id: {
-    "site.title": "Cosmos Lab",
+    "site.title": "Astronomy Education",
     "site.tagline": "Astronomi Interaktif",
     "nav.topics": "Topik",
     "nav.originals": "Semua 126",

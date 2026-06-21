@@ -1,4 +1,4 @@
-# Cosmos Lab — Interactive Astronomy Simulations
+# Astronomy Education — Interactive Astronomy Simulations
 
 A modern, **bilingual (English / Bahasa Indonesia)** recreation of the classic
 [UNL Astronomy](https://astro.unl.edu/animationsLinks.html) Flash applets

@@ -65,7 +65,7 @@ window.UI = (function () {
     f.innerHTML =
       '<div class="container">' +
       '<span data-i18n="footer.note"></span>' +
-      '<span>Cosmos Lab · <a href="https://github.com/" target="_blank" rel="noopener" data-i18n="footer.source"></a></span>' +
+      '<span>Astronomy Education · <a href="https://github.com/" target="_blank" rel="noopener" data-i18n="footer.source"></a></span>' +
       "</div>";
     return f;
   }

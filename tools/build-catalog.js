@@ -176,7 +176,7 @@ const READY = {
   hrexplorer: "hr-diagram",
   ebs: "eclipsing-binary", eclipsingbinarysim: "eclipsing-binary",
   transitsimulator: "exoplanet-transit",
-  parallaxexplorer: "parallax", parallaxdiag: "parallax"
+  parallaxexplorer: "parallax"
 };
 
 /* ---- 4. assemble entries ---- */

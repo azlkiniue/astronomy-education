@@ -1072,15 +1072,15 @@ window.ANIM = {
   {
    "slug": "parallaxdiag",
    "topic": "stars",
-   "ready": "parallax",
+   "ready": null,
    "title": {
-    "en": "Parallax Explorer",
-    "id": "Penjelajah Paralaks"
+    "en": "Parallax Calculator",
+    "id": "Kalkulator Paralaks"
    },
-   "desc": "Demonstrates the concept of parallax and how it can be used to determine distance using an analogy of a boat on a lake.",
-   "preview": "originals/naap/distance/animations/parallaxExplorer.jpg",
-   "swf": "originals/naap/distance/animations/parallaxExplorer.swf",
-   "href": "naap/distance/animations/parallaxExplorer.html"
+   "desc": "Diagrams the geometry and shows the math involved in determining a star's distance via parallax.",
+   "preview": "originals/classaction/animations/stellarprops/parallaxdiag.jpg",
+   "swf": "originals/classaction/animations/stellarprops/parallaxdiag.swf",
+   "href": "classaction/animations/stellarprops/parallaxdiag.html"
   },
   {
    "slug": "spectroparallax",
@@ -1484,6 +1484,19 @@ window.ANIM = {
    "preview": "originals/naap/vsp/animations/variableStarPhotometryAnalyzer.jpg",
    "swf": "originals/naap/vsp/animations/variableStarPhotometryAnalyzer.swf",
    "href": "naap/vsp/animations/variableStarPhotometryAnalyzer.html"
+  },
+  {
+   "slug": "parallaxExplorer",
+   "topic": "cosmology",
+   "ready": "parallax",
+   "title": {
+    "en": "Parallax Explorer",
+    "id": "Penjelajah Paralaks"
+   },
+   "desc": "Demonstrates the concept of parallax and how it can be used to determine distance using an analogy of a boat on a lake.",
+   "preview": "originals/naap/distance/animations/parallaxExplorer.jpg",
+   "swf": "originals/naap/distance/animations/parallaxExplorer.swf",
+   "href": "naap/distance/animations/parallaxExplorer.html"
   },
   {
    "slug": "clusterFittingExplorer",
@@ -2607,7 +2620,7 @@ window.ANIM = {
         "id": "Kalkulator Paralaks"
        },
        "desc": "Diagrams the geometry and shows the math involved in determining a star's distance via parallax.",
-       "ready": "parallax",
+       "ready": null,
        "topic": "stars"
       },
       {
