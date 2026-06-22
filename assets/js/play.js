@@ -25,17 +25,18 @@ I18N.add({
 (function () {
   function param(n) { return new URLSearchParams(location.search).get(n); }
 
-  function findItem(slug) {
-    if (!slug || !window.ANIM) return null;
-    var found = null;
+  function findItem(slug, swf) {
+    if ((!slug && !swf) || !window.ANIM) return null;
+    var bySwf = null, bySlug = null;
     ANIM.sections.forEach(function (sec) {
       sec.modules.forEach(function (mod) {
         mod.items.forEach(function (it) {
-          if (!found && it.slug.toLowerCase() === slug.toLowerCase()) found = it;
+          if (swf && !bySwf && it.swf === swf) bySwf = it;                         // exact SWF wins (slugs can collide)
+          if (slug && !bySlug && it.slug.toLowerCase() === slug.toLowerCase()) bySlug = it;
         });
       });
     });
-    return found;
+    return bySwf || bySlug;
   }
 
   function mount() {
@@ -50,7 +51,7 @@ I18N.add({
     crumb.innerHTML = '<a href="originals.html" data-i18n="nav.originals"></a>';
     main.appendChild(crumb);
 
-    var item = findItem(param("a"));
+    var item = findItem(param("a"), param("s"));
     var head = document.createElement("div");
     head.className = "sim-head";
     main.appendChild(head);

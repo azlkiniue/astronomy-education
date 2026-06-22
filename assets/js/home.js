@@ -152,7 +152,7 @@
     // a planned card is a <div>, so we can add a "play original" link inside it
     var actions = (!sim.ready && sim.swf) ?
       '<div class="card-actions"><a class="mini-btn flash" href="play.html?a=' + encodeURIComponent(sim.slug) +
-      '" data-i18n="card.playOriginal"></a></div>' : "";
+      '&s=' + encodeURIComponent(sim.swf) + '" data-i18n="card.playOriginal"></a></div>' : "";
     el.innerHTML =
       thumb +
       '<span class="badge ' + (sim.ready ? "ready" : "planned") + '" data-i18n="' +

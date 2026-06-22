@@ -191,6 +191,7 @@ Sim.create({
     upd();
 
     function fillSweep(ctx, sun, E0, E1, col, pt) {
+      while (E1 < E0 - 1e-9) E1 += 2 * Math.PI;   // sweep forward across the perihelion wrap (E: 2π → 0)
       var b = bAxis(); ctx.beginPath(); ctx.moveTo(sun.x, sun.y);
       var n = 24; for (var i = 0; i <= n; i++) { var E = E0 + (E1 - E0) * i / n; var p = pt(a * Math.cos(E), b * Math.sin(E)); ctx.lineTo(p.x, p.y); }
       ctx.closePath(); ctx.fillStyle = col; ctx.fill();

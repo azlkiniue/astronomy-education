@@ -266,7 +266,7 @@ window.ANIM = {
   {
    "slug": "altazimuth",
    "topic": "coords",
-   "ready": null,
+   "ready": "altazimuth",
    "title": {
     "en": "Azimuth/Altitude Demonstrator",
     "id": "Demonstrator Azimut/Altitud"
@@ -710,13 +710,13 @@ window.ANIM = {
    "topic": "orbits",
    "ready": null,
    "title": {
-    "en": "Ptolemaic System Simulator",
-    "id": "Simulator Sistem Ptolemaik"
+    "en": "Ptolemaic Phases of Venus",
+    "id": "Fase Venus Ptolemaik"
    },
-   "desc": "Demonstrates how Ptolemy's geocentric model accounts for the movements of the planets.",
-   "preview": "originals/naap/ssm/animations/ptolemaic.jpg",
-   "swf": "originals/naap/ssm/animations/ptolemaic.swf",
-   "href": "naap/ssm/animations/ptolemaic.html"
+   "desc": "Shows what Venus would look like through a telescope if Ptolemy's model was correct. Compare with the other Phases of Venus simulation.",
+   "preview": "originals/classaction/animations/renaissance/ptolemaic.jpg",
+   "swf": "originals/classaction/animations/renaissance/ptolemaic.swf",
+   "href": "classaction/animations/renaissance/ptolemaic.html"
   },
   {
    "slug": "marsorbit",
@@ -747,7 +747,7 @@ window.ANIM = {
   {
    "slug": "retrograde",
    "topic": "orbits",
-   "ready": null,
+   "ready": "retrograde",
    "title": {
     "en": "Retrograde Motion",
     "id": "Gerak Retrograd"
@@ -812,7 +812,7 @@ window.ANIM = {
   {
    "slug": "ellipsedemo",
    "topic": "orbits",
-   "ready": null,
+   "ready": "ellipsedemo",
    "title": {
     "en": "Eccentricity Demonstrator",
     "id": "Demonstrator Eksentrisitas"
@@ -968,7 +968,7 @@ window.ANIM = {
   {
    "slug": "dopplershift",
    "topic": "light",
-   "ready": null,
+   "ready": "dopplershift",
    "title": {
     "en": "Doppler Shift Demonstrator",
     "id": "Demonstrator Pergeseran Doppler"
@@ -1356,6 +1356,19 @@ window.ANIM = {
    "href": "classaction/animations/solarsystemdebris/drivingthroughsnow.html"
   },
   {
+   "slug": "ptolemaic",
+   "topic": "orbits",
+   "ready": "ptolemaic",
+   "title": {
+    "en": "Ptolemaic System Simulator",
+    "id": "Simulator Sistem Ptolemaik"
+   },
+   "desc": "Demonstrates how Ptolemy's geocentric model accounts for the movements of the planets.",
+   "preview": "originals/naap/ssm/animations/ptolemaic.jpg",
+   "swf": "originals/naap/ssm/animations/ptolemaic.swf",
+   "href": "naap/ssm/animations/ptolemaic.html"
+  },
+  {
    "slug": "seasons_ecliptic",
    "topic": "sun",
    "ready": null,
@@ -1704,7 +1717,7 @@ window.ANIM = {
         "id": "Demonstrator Azimut/Altitud"
        },
        "desc": "Demonstrates the horizon coordinate system, where altitude and azimuth define an object's position in the sky.",
-       "ready": null,
+       "ready": "altazimuth",
        "topic": "coords"
       },
       {
@@ -2238,7 +2251,7 @@ window.ANIM = {
         "id": "Gerak Retrograd"
        },
        "desc": "Demonstrates the retrograde motion of Mars with an annotated animation.",
-       "ready": null,
+       "ready": "retrograde",
        "topic": "orbits"
       },
       {
@@ -2308,7 +2321,7 @@ window.ANIM = {
         "id": "Demonstrator Eksentrisitas"
        },
        "desc": "Demonstrates the parameters that define the eccentricity of an ellipse.",
-       "ready": null,
+       "ready": "ellipsedemo",
        "topic": "orbits"
       },
       {
@@ -2484,7 +2497,7 @@ window.ANIM = {
         "id": "Demonstrator Pergeseran Doppler"
        },
        "desc": "Shows circular waves expanding from a source. Movement of the source or observer affects the frequency of the waves seen by the observer, demonstrating doppler shift.",
-       "ready": null,
+       "ready": "dopplershift",
        "topic": "light"
       }
      ]
@@ -2940,7 +2953,7 @@ window.ANIM = {
         "id": "Demonstrator Pergeseran Doppler"
        },
        "desc": "Shows circular waves expanding from a source. Movement of the source or observer affects the frequency of the waves seen by the observer, demonstrating doppler shift.",
-       "ready": null,
+       "ready": "dopplershift",
        "topic": "exoplanets"
       },
       {
@@ -3085,7 +3098,7 @@ window.ANIM = {
         "id": "Simulator Sistem Ptolemaik"
        },
        "desc": "Demonstrates how Ptolemy's geocentric model accounts for the movements of the planets.",
-       "ready": null,
+       "ready": "ptolemaic",
        "topic": "orbits"
       }
      ]

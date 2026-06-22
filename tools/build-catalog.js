@@ -176,7 +176,18 @@ const READY = {
   hrexplorer: "hr-diagram",
   ebs: "eclipsing-binary", eclipsingbinarysim: "eclipsing-binary",
   transitsimulator: "exoplanet-transit",
-  parallaxexplorer: "parallax"
+  parallaxexplorer: "parallax",
+  ellipsedemo: "ellipsedemo",
+  retrograde: "retrograde",
+  altazimuth: "altazimuth",
+  dopplershift: "dopplershift"
+};
+
+// href-specific overrides — for slugs that collide between DIFFERENT animations sharing a
+// SWF basename (e.g. ptolemaic.swf is both NAAP's "Ptolemaic System Simulator" and ClassAction's
+// "Ptolemaic Phases of Venus"). Keyed by the exact item href; checked before the slug map.
+const READY_HREF = {
+  "naap/ssm/animations/ptolemaic.html": "ptolemaic"   // our rebuild = the NAAP System Simulator only
 };
 
 /* ---- 4. assemble entries ---- */
@@ -206,7 +217,7 @@ const outSections = sections.map(function (sec) {
             srcId: it.id, slug: slug, href: it.href, preview: a.preview, swf: a.swf,
             title: { en: data.title, id: TITLE_ID[data.title] || data.title },
             desc: data.desc,
-            ready: READY[slug.toLowerCase()] || null,
+            ready: READY_HREF[it.href] || READY[slug.toLowerCase()] || null,
             topic: topicFor(mod.title, slug, data.title)
           };
         })

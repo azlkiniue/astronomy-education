@@ -97,7 +97,7 @@
     if (ready) actions += '<a class="mini-btn primary" href="sims/' + it.ready +
       '.html" data-i18n="orig.interactive"></a>';
     if (it.swf) actions += '<a class="mini-btn flash" href="play.html?a=' + encodeURIComponent(it.slug) +
-      '" data-i18n="card.playOriginal"></a>';
+      '&s=' + encodeURIComponent(it.swf) + '" data-i18n="card.playOriginal"></a>';
     actions += "</div>";
     el.innerHTML =
       '<span class="badge ' + (ready ? "ready" : "planned") + '" data-i18n="' +
