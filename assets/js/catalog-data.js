@@ -773,7 +773,7 @@ window.ANIM = {
   {
    "slug": "synodiccalculator",
    "topic": "orbits",
-   "ready": null,
+   "ready": "synodic-period",
    "title": {
     "en": "Synodic Period Calculator",
     "id": "Kalkulator Periode Sinodis"
@@ -890,7 +890,7 @@ window.ANIM = {
   {
    "slug": "emspectrum",
    "topic": "light",
-   "ready": null,
+   "ready": "em-spectrum",
    "title": {
     "en": "EM Spectrum Module",
     "id": "Modul Spektrum EM"
@@ -1163,7 +1163,7 @@ window.ANIM = {
   {
    "slug": "centerofmass",
    "topic": "binary",
-   "ready": null,
+   "ready": "center-of-mass",
    "title": {
     "en": "Center of Mass Simulator",
     "id": "Simulator Pusat Massa"
@@ -1306,7 +1306,7 @@ window.ANIM = {
   {
    "slug": "radialvelocitysimulator",
    "topic": "exoplanets",
-   "ready": null,
+   "ready": "radial-velocity",
    "title": {
     "en": "Exoplanet Radial Velocity Simulator",
     "id": "Simulator Kecepatan Radial Eksoplanet"
@@ -1540,7 +1540,7 @@ window.ANIM = {
   {
    "slug": "stellarHabitableZone",
    "topic": "atmosphere",
-   "ready": null,
+   "ready": "habitable-zone",
    "title": {
     "en": "Circumstellar Habitable Zone Simulator",
     "id": "Simulator Zona Layak Huni Sekitar Bintang"
@@ -2279,7 +2279,7 @@ window.ANIM = {
         "id": "Kalkulator Periode Sinodis"
        },
        "desc": "Lets one calculate the sidereal period of the planet (P) from the synodic period (S), and vice versa.",
-       "ready": null,
+       "ready": "synodic-period",
        "topic": "orbits"
       },
       {
@@ -2413,7 +2413,7 @@ window.ANIM = {
         "id": "Modul Spektrum EM"
        },
        "desc": "Surveys the electromagnetic spectrum, showing a typical astronomical image for different wavelengths of light and the kind of instrument that would take such an image.",
-       "ready": null,
+       "ready": "em-spectrum",
        "topic": "light"
       },
       {
@@ -2739,7 +2739,7 @@ window.ANIM = {
         "id": "Simulator Pusat Massa"
        },
        "desc": "Shows how the center of mass of two objects changes as their masses change.",
-       "ready": null,
+       "ready": "center-of-mass",
        "topic": "binary"
       },
       {
@@ -2939,7 +2939,7 @@ window.ANIM = {
         "id": "Simulator Kecepatan Radial (NAAP)"
        },
        "desc": "Models the motion of an extrasolar planet and its star around their common center of mass, and the effect this motion has on the star's observed radial velocity.",
-       "ready": null,
+       "ready": "radial-velocity",
        "topic": "exoplanets"
       },
       {
@@ -3410,7 +3410,7 @@ window.ANIM = {
         "id": "Simulator Kecepatan Radial Eksoplanet"
        },
        "desc": "Models the motion of an extrasolar planet and its star around their common center of mass, and the effect this motion has on the star's observed radial velocity.",
-       "ready": null,
+       "ready": "radial-velocity",
        "topic": "exoplanets"
       },
       {
@@ -3574,7 +3574,7 @@ window.ANIM = {
         "id": "Simulator Zona Layak Huni Sekitar Bintang"
        },
        "desc": "Demonstrates location and evolution of the stellar habitable zone, which is the region around a star where surface water may exist on a earth like planet.",
-       "ready": null,
+       "ready": "habitable-zone",
        "topic": "atmosphere"
       },
       {

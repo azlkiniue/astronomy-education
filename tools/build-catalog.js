@@ -180,7 +180,12 @@ const READY = {
   ellipsedemo: "ellipsedemo",
   retrograde: "retrograde",
   altazimuth: "altazimuth",
-  dopplershift: "dopplershift"
+  dopplershift: "dopplershift",
+  radialvelocitysimulator: "radial-velocity",
+  stellarhabitablezone: "habitable-zone",
+  emspectrum: "em-spectrum",
+  centerofmass: "center-of-mass",
+  synodiccalculator: "synodic-period"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a

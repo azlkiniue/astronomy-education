@@ -5,6 +5,7 @@
    =========================================================================== */
 (function () {
   var lang = function () { return I18N.getLang(); };
+  var FILTER = { q: "", sections: [], noResults: null };
 
   function mount() {
     document.body.prepend(UI.header());
@@ -33,23 +34,32 @@
 
   function modId(secId, i) { return "m-" + secId + "-" + i; }
 
+  function renderSearch(main) {
+    var bar = document.createElement("div");
+    bar.className = "toolbar";
+    var search = document.createElement("div");
+    search.className = "search";
+    search.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9fabce" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+    var input = document.createElement("input");
+    input.type = "search";
+    input.setAttribute("data-i18n-attr", "placeholder:home.searchPlaceholder");
+    input.addEventListener("input", function () { FILTER.q = input.value.toLowerCase().trim(); applyFilter(); });
+    search.appendChild(input);
+    bar.appendChild(search);
+    main.appendChild(bar);
+  }
+
   function render(main) {
-    // table of contents (module chips)
+    renderSearch(main);
+
+    // table of contents (module chips) — kept in sync with each module's visibility
     var toc = document.createElement("div");
     toc.className = "chips";
     toc.style.margin = "0 0 10px";
-    ANIM.sections.forEach(function (sec) {
-      sec.modules.forEach(function (mod, i) {
-        var a = document.createElement("a");
-        a.className = "chip";
-        a.href = "#" + modId(sec.id, i);
-        a.dataset.en = mod.title.en; a.dataset.idt = mod.title.id;
-        a.textContent = mod.title[lang()];
-        toc.appendChild(a);
-      });
-    });
     main.appendChild(toc);
 
+    FILTER.sections = [];
     ANIM.sections.forEach(function (sec) {
       var secEl = document.createElement("section");
       secEl.style.margin = "30px 0 10px";
@@ -60,17 +70,25 @@
       h2.textContent = sec.title[lang()];
       secEl.appendChild(h2);
       main.appendChild(secEl);
+      var secRec = { secEl: secEl, mods: [] };
 
       sec.modules.forEach(function (mod, i) {
+        var id = modId(sec.id, i);
+        var chip = document.createElement("a");
+        chip.className = "chip";
+        chip.href = "#" + id;
+        chip.dataset.en = mod.title.en; chip.dataset.idt = mod.title.id;
+        chip.textContent = mod.title[lang()];
+        toc.appendChild(chip);
+
         var block = document.createElement("section");
         block.className = "category-block";
-        block.id = modId(sec.id, i);
+        block.id = id;
         block.style.scrollMarginTop = "72px";
         var h3 = document.createElement("h3");
         h3.className = "category-title";
         h3.style.fontSize = "1.12rem";
         h3.dataset.en = mod.title.en; h3.dataset.idt = mod.title.id;
-        h3.innerHTML = "";
         var nameSpan = document.createElement("span");
         nameSpan.textContent = mod.title[lang()];
         h3.appendChild(nameSpan);
@@ -82,11 +100,47 @@
 
         var grid = document.createElement("div");
         grid.className = "card-grid";
-        mod.items.forEach(function (it) { grid.appendChild(itemCard(it)); });
+        var cards = [];
+        mod.items.forEach(function (it) {
+          var card = itemCard(it);
+          grid.appendChild(card);
+          cards.push({ el: card, hay: (it.title.en + " " + it.title.id + " " + (it.desc || "")).toLowerCase() });
+        });
         block.appendChild(grid);
         main.appendChild(block);
+
+        secRec.mods.push({ block: block, countEl: cnt, chip: chip, cards: cards });
       });
+      FILTER.sections.push(secRec);
     });
+
+    var nr = document.createElement("p");
+    nr.className = "empty-msg";
+    nr.style.cssText = "display:none;text-align:center;color:#9fabce;margin:40px 0";
+    nr.setAttribute("data-i18n", "home.empty");
+    main.appendChild(nr);
+    FILTER.noResults = nr;
+  }
+
+  function applyFilter() {
+    var q = FILTER.q, any = false;
+    FILTER.sections.forEach(function (sec) {
+      var secVisible = false;
+      sec.mods.forEach(function (m) {
+        var vis = 0;
+        m.cards.forEach(function (c) {
+          var show = !q || c.hay.indexOf(q) !== -1;
+          c.el.style.display = show ? "" : "none";
+          if (show) vis++;
+        });
+        m.block.style.display = vis ? "" : "none";
+        m.chip.style.display = vis ? "" : "none";
+        m.countEl.textContent = vis;
+        if (vis) { secVisible = true; any = true; }
+      });
+      sec.secEl.style.display = secVisible ? "" : "none";
+    });
+    FILTER.noResults.style.display = any ? "none" : "";
   }
 
   function itemCard(it) {
