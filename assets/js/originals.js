@@ -5,7 +5,7 @@
    =========================================================================== */
 (function () {
   var lang = function () { return I18N.getLang(); };
-  var FILTER = { q: "", sections: [], noResults: null };
+  var FILTER = { q: "", status: "all", sections: [], noResults: null };
 
   function mount() {
     document.body.prepend(UI.header());
@@ -47,6 +47,24 @@
     input.addEventListener("input", function () { FILTER.q = input.value.toLowerCase().trim(); applyFilter(); });
     search.appendChild(input);
     bar.appendChild(search);
+
+    // status filter (all / ready / planned) — mirrors the home page
+    var status = document.createElement("div");
+    status.className = "chips";
+    [["all", "home.all"], ["ready", "home.ready"], ["planned", "home.planned"]].forEach(function (p) {
+      var c = document.createElement("button");
+      c.className = "chip" + (FILTER.status === p[0] ? " active" : "");
+      c.setAttribute("data-i18n", p[1]);
+      c.addEventListener("click", function () {
+        FILTER.status = p[0];
+        status.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("active"); });
+        c.classList.add("active");
+        applyFilter();
+      });
+      status.appendChild(c);
+    });
+    bar.appendChild(status);
+
     main.appendChild(bar);
   }
 
@@ -104,7 +122,7 @@
         mod.items.forEach(function (it) {
           var card = itemCard(it);
           grid.appendChild(card);
-          cards.push({ el: card, hay: (it.title.en + " " + it.title.id + " " + (it.desc || "")).toLowerCase() });
+          cards.push({ el: card, ready: !!it.ready, hay: (it.title.en + " " + it.title.id + " " + (it.desc || "")).toLowerCase() });
         });
         block.appendChild(grid);
         main.appendChild(block);
@@ -123,13 +141,14 @@
   }
 
   function applyFilter() {
-    var q = FILTER.q, any = false;
+    var q = FILTER.q, st = FILTER.status, any = false;
     FILTER.sections.forEach(function (sec) {
       var secVisible = false;
       sec.mods.forEach(function (m) {
         var vis = 0;
         m.cards.forEach(function (c) {
-          var show = !q || c.hay.indexOf(q) !== -1;
+          var show = (!q || c.hay.indexOf(q) !== -1) &&
+            (st === "all" || (st === "ready" ? c.ready : !c.ready));
           c.el.style.display = show ? "" : "none";
           if (show) vis++;
         });

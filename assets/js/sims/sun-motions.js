@@ -12,10 +12,11 @@ Sim.create({
   strings: {
     en: {
       "sm.timeLoc": "Time & Location", "sm.day": "day of year", "sm.time": "time of day", "sm.lat": "observer's latitude",
-      "sm.anim": "Animation", "sm.start": "start animation", "sm.pause": "pause animation", "sm.speed": "animation speed", "sm.mode": "animate",
-      "sm.modeTime": "time of day", "sm.modeDay": "day of year",
-      "sm.settings": "Settings", "sm.eq": "show celestial equator", "sm.ecl": "show the ecliptic",
-      "sm.diur": "show the Sun's path", "sm.shadow": "show stickfigure shadow", "sm.analemma": "show analemma",
+      "sm.anim": "Animation", "sm.start": "start animation", "sm.pause": "pause animation", "sm.speed": "animation speed",
+      "sm.mode": "animation mode", "sm.modeCont": "continuous", "sm.modeStep": "step by day", "sm.loopday": "loop day",
+      "sm.settings": "Settings", "sm.decl": "show the Sun's declination circle", "sm.ecl": "show the ecliptic",
+      "sm.month": "show month labels", "sm.under": "show underside of celestial sphere",
+      "sm.shadow": "show stickfigure and its shadow", "sm.analemma": "show analemma", "sm.legEq": "celestial equator",
       "sm.alt": "Sun's altitude", "sm.az": "Sun's azimuth", "sm.dec": "Sun's declination", "sm.ra": "Sun's right ascension",
       "sm.ha": "hour angle", "sm.lst": "sidereal time", "sm.eot": "equation of time",
       "sm.captAt": "Horizon diagram for an observer at", "sm.on": "on", "sm.at": "at",
@@ -23,10 +24,11 @@ Sim.create({
     },
     id: {
       "sm.timeLoc": "Waktu & Lokasi", "sm.day": "hari ke-", "sm.time": "waktu hari", "sm.lat": "lintang pengamat",
-      "sm.anim": "Animasi", "sm.start": "mulai animasi", "sm.pause": "jeda animasi", "sm.speed": "kecepatan animasi", "sm.mode": "animasikan",
-      "sm.modeTime": "waktu hari", "sm.modeDay": "hari dalam tahun",
-      "sm.settings": "Pengaturan", "sm.eq": "tampilkan ekuator langit", "sm.ecl": "tampilkan ekliptika",
-      "sm.diur": "tampilkan lintasan Matahari", "sm.shadow": "tampilkan bayangan", "sm.analemma": "tampilkan analema",
+      "sm.anim": "Animasi", "sm.start": "mulai animasi", "sm.pause": "jeda animasi", "sm.speed": "kecepatan animasi",
+      "sm.mode": "mode animasi", "sm.modeCont": "kontinu", "sm.modeStep": "langkah per hari", "sm.loopday": "ulang satu hari",
+      "sm.settings": "Pengaturan", "sm.decl": "tampilkan lingkaran deklinasi Matahari", "sm.ecl": "tampilkan ekliptika",
+      "sm.month": "tampilkan label bulan", "sm.under": "tampilkan bagian bawah bola langit",
+      "sm.shadow": "tampilkan tokoh & bayangannya", "sm.analemma": "tampilkan analema", "sm.legEq": "ekuator langit",
       "sm.alt": "altitudo Matahari", "sm.az": "azimut Matahari", "sm.dec": "deklinasi Matahari", "sm.ra": "asensiorekta Matahari",
       "sm.ha": "sudut jam", "sm.lst": "waktu sideris", "sm.eot": "perata waktu",
       "sm.captAt": "Diagram horizon untuk pengamat di", "sm.on": "pada", "sm.at": "pukul",
@@ -44,7 +46,7 @@ Sim.create({
   build: function (S) {
     var C = {
       panel: "#0e1530", border: "#2c3a66", text: "#e8ecf8", dim: "#9fabce",
-      accent: "#6ea8fe", warm: "#ffd166", eq: "#7fd1ff", ecl: "#ffd166", diur: "#ffffff", ana: "#b692ff"
+      accent: "#6ea8fe", warm: "#ffd166", eq: "#5b9bff", ecl: "#ffd166", diur: "#ffffff", ana: "#b692ff"
     };
     var D2R = Math.PI / 180, R2D = 180 / Math.PI, EPS = 23.44 * D2R;
     var MONTHS = { en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -54,7 +56,7 @@ Sim.create({
 
     /* ---- state (defaults match the original's opening screen) ---- */
     var day = 147, time = 12, lat = 40.8;     // 27 May, noon, 40.8°N
-    var mode = "time", speed = 3;
+    var mode = "continuous", speed = 3;
 
     function wrap(v, m) { return ((v % m) + m) % m; }
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -76,9 +78,14 @@ Sim.create({
     }
     function eq2hor(HA, dec, latR) {
       var sinL = Math.sin(latR), cosL = Math.cos(latR);
-      var sinAlt = clamp(sinL * Math.sin(dec) + cosL * Math.cos(dec) * Math.cos(HA), -1, 1);
-      var alt = Math.asin(sinAlt), cA = Math.cos(alt) || 1e-6;
-      var az = Math.atan2(-Math.cos(dec) * Math.sin(HA) / cA, (Math.sin(dec) - sinL * sinAlt) / (cosL * cA));
+      var sinDec = Math.sin(dec), cosDec = Math.cos(dec), cosHA = Math.cos(HA), sinHA = Math.sin(HA);
+      var sinAlt = clamp(sinL * sinDec + cosL * cosDec * cosHA, -1, 1);
+      var alt = Math.asin(sinAlt);
+      // horizontal Cartesian (xS toward South, yW toward West) — stays finite at the poles,
+      // where the old cos(lat) divisor went to zero and produced NaN azimuths.
+      var xS = cosDec * cosHA * sinL - sinDec * cosL;
+      var yW = cosDec * sinHA;
+      var az = Math.atan2(-yW, -xS);   // azimuth from North toward East (0=N, 90=E)
       return { alt: alt, az: az };
     }
 
@@ -97,22 +104,31 @@ Sim.create({
     S.group("sm.anim");
     var dayAcc = 0;
     var loop = S.loop(function (dt) {
-      if (mode === "time") { timeCtl.set(wrap(time + speed * dt, 24)); }
-      else { dayAcc += speed * dt; while (dayAcc >= 1) { dayAcc -= 1; dayCtl.set(day % 365 + 1); } }
+      if (mode === "stepday") {                              // advance whole days, clock fixed
+        dayAcc += speed * dt;
+        while (dayAcc >= 1) { dayAcc -= 1; dayCtl.set(day % 365 + 1); }
+      } else {                                               // continuous: run the clock
+        var raw = time + speed * dt;
+        if (raw >= 24 && !optLoopDay.value()) dayCtl.set(day % 365 + 1);   // roll into the next day unless looping
+        timeCtl.set(wrap(raw, 24));
+      }
     });
     var playBtn = S.button({ labelKey: "sm.start", primary: true, on: function () { loop.toggle(); syncPlay(); } });
     function syncPlay() { var k = loop.playing ? "sm.pause" : "sm.start"; playBtn.setAttribute("data-i18n", k); playBtn.textContent = I18N.t(k); }
     S.refreshers.push(syncPlay);
-    S.slider({ labelKey: "sm.speed", min: 1, max: 20, step: 0.5, value: speed,
-      format: function (v) { return v.toFixed(1) + (mode === "time" ? " hr/s" : " d/s"); }, on: function (v) { speed = v; } });
-    S.select({ labelKey: "sm.mode", value: mode, on: function (v) { mode = v; },
-      options: [{ v: "time", labelKey: "sm.modeTime" }, { v: "day", labelKey: "sm.modeDay" }] });
+    var modeCtl = S.select({ labelKey: "sm.mode", value: mode,
+      options: [{ v: "continuous", labelKey: "sm.modeCont" }, { v: "stepday", labelKey: "sm.modeStep" }],
+      on: function (v) { mode = v; speedCtl.set(speedCtl.value()); } });   // refresh the speed unit
+    var optLoopDay = S.toggle({ labelKey: "sm.loopday", value: false });
+    var speedCtl = S.slider({ labelKey: "sm.speed", min: 1, max: 100, step: 0.5, value: speed,
+      format: function (v) { return v.toFixed(1) + (mode === "stepday" ? " days/sec" : " hrs/sec"); }, on: function (v) { speed = v; } });
 
     /* ---- controls : Settings ---- */
     S.group("sm.settings");
-    var optEq = S.toggle({ labelKey: "sm.eq", value: true });
+    var optDecl = S.toggle({ labelKey: "sm.decl", value: true });
     var optEcl = S.toggle({ labelKey: "sm.ecl", value: true });
-    var optDiur = S.toggle({ labelKey: "sm.diur", value: true });
+    var optMonth = S.toggle({ labelKey: "sm.month", value: false });
+    var optUnder = S.toggle({ labelKey: "sm.under", value: true });
     var optShadow = S.toggle({ labelKey: "sm.shadow", value: true });
     var optAna = S.toggle({ labelKey: "sm.analemma", value: false });
 
@@ -144,10 +160,22 @@ Sim.create({
     S.refreshers.push(upd);
 
     /* ===================== celestial-sphere drawing ===================== */
-    var SCx = 340, SCy = 330, R = 232, TILT = 22 * D2R;
-    var sinB = Math.sin(TILT), cosB = Math.cos(TILT), rx = R, ry = R * sinB;
-    function projVec(E, N, U) { return { x: SCx - R * E, y: SCy - R * (U * cosB - N * sinB) }; }
-    function project(alt, az) { var c = Math.cos(alt); return projVec(c * Math.sin(az), c * Math.cos(az), Math.sin(alt)); }
+    // Orthographic camera looking from the SW and above — matches the SWF orientation:
+    // N upper-left, E right, S lower-right, W lower-left, rotation axis poking out near the top.
+    var SCx = 340, SCy = 322, R = 226;
+    var AC = 225 * D2R, EC = 32 * D2R;                       // camera azimuth & elevation
+    var camv = { e: Math.sin(AC) * Math.cos(EC), n: Math.cos(AC) * Math.cos(EC), u: Math.sin(EC) };
+    var rmag = Math.hypot(camv.n, camv.e) || 1;
+    var rightv = { e: -camv.n / rmag, n: camv.e / rmag, u: 0 };       // screen-right basis
+    var upv = { e: -rightv.n * camv.u, n: rightv.e * camv.u, u: rightv.n * camv.e - rightv.e * camv.n }; // screen-up
+    var rx = R, ry = R * Math.sin(EC);                      // horizon ellipse stays axis-aligned
+    function projDir(E, N, U) {
+      return { x: SCx + R * (E * rightv.e + N * rightv.n + U * rightv.u),
+               y: SCy - R * (E * upv.e + N * upv.n + U * upv.u),
+               z: E * camv.e + N * camv.n + U * camv.u };    // z > 0 ⇒ toward the camera (in front)
+    }
+    function projVec(E, N, U) { return projDir(E, N, U); }
+    function project(alt, az) { var c = Math.cos(alt); return projDir(c * Math.sin(az), c * Math.cos(az), Math.sin(alt)); }
 
     function curve(pts, col, w) {     // pts: [{alt,az}] — solid above horizon, faint below
       var ctx = S.ctx;
@@ -186,14 +214,18 @@ Sim.create({
       sg.addColorStop(0, skyTop); sg.addColorStop(1, skyHor); ctx.fillStyle = sg; ctx.fill();
 
       // underside (lower hemisphere) dark
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, Math.PI, false);
-      ctx.ellipse(SCx, SCy, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
-      ctx.fillStyle = "#060a16"; ctx.fill();
+      if (optUnder.value()) {
+        ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, Math.PI, false);
+        ctx.ellipse(SCx, SCy, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
+        ctx.fillStyle = "#060a16"; ctx.fill();
+      }
 
       // great circles
       var i;
-      if (optEq.value()) { var eqp = []; for (i = 0; i <= 360; i += 3) eqp.push(eq2hor(i * D2R, 0, latR)); curve(eqp, C.eq, 1.4); }
-      if (optDiur.value()) { var dp = []; for (i = 0; i <= 360; i += 3) dp.push(eq2hor(i * D2R, k.dec, latR)); curve(dp, C.diur, 1.4); }
+      // celestial equator — always shown (the original has no toggle for it)
+      var eqp = []; for (i = 0; i <= 360; i += 3) eqp.push(eq2hor(i * D2R, 0, latR)); curve(eqp, C.eq, 1.5);
+      // the Sun's declination circle (its diurnal path for this day)
+      if (optDecl.value()) { var dp = []; for (i = 0; i <= 360; i += 3) dp.push(eq2hor(i * D2R, k.dec, latR)); curve(dp, C.diur, 1.5); }
       if (optEcl.value()) {
         var ep = [];
         for (i = 0; i <= 360; i += 3) {
@@ -201,7 +233,19 @@ Sim.create({
           var ra = wrap(Math.atan2(Math.cos(EPS) * Math.sin(lam), Math.cos(lam)) * R2D / 15, 24);
           ep.push(eq2hor((k.lst - ra) * 15 * D2R, dec, latR));
         }
-        curve(ep, C.ecl, 1.6);
+        curve(ep, C.ecl, 1.8);
+      }
+      if (optMonth.value()) {
+        ctx.font = "11px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for (var mi = 0; mi < 12; mi++) {
+          var dd = CUM[mi] + 15;
+          var lm = (dd - 80) / 365.2422 * 360 * D2R, dc = Math.asin(Math.sin(EPS) * Math.sin(lm));
+          var rh = wrap(Math.atan2(Math.cos(EPS) * Math.sin(lm), Math.cos(lm)) * R2D / 15, 24);
+          var mh = eq2hor((k.lst - rh) * 15 * D2R, dc, latR), mp = project(mh.alt, mh.az);
+          ctx.fillStyle = mh.alt >= 0 ? "rgba(255,226,150,0.95)" : "rgba(255,226,150,0.32)";
+          ctx.fillText(MONTHS[lang][mi], mp.x, mp.y);
+        }
+        ctx.textBaseline = "alphabetic";
       }
       if (optAna.value()) {
         var ap = [];
@@ -223,10 +267,16 @@ Sim.create({
       // sphere outline
       ctx.strokeStyle = C.border; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, 2 * Math.PI); ctx.stroke();
 
-      // NCP marker
-      var ncp = project(latR, 0);
-      ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(ncp.x - 4, ncp.y); ctx.lineTo(ncp.x + 4, ncp.y); ctx.moveTo(ncp.x, ncp.y - 4); ctx.lineTo(ncp.x, ncp.y + 4); ctx.stroke();
+      // celestial rotation axis (NCP — SCP), poking out beyond the sphere like the original
+      var f = 1.18, nd = { e: 0, n: Math.cos(latR), u: Math.sin(latR) };   // direction to the NCP
+      var a1 = projDir(nd.e * f, nd.n * f, nd.u * f), a2 = projDir(-nd.e * f, -nd.n * f, -nd.u * f);
+      ctx.strokeStyle = "#2f6fd6"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(a2.x, a2.y); ctx.stroke(); ctx.lineCap = "butt";
+      // pole dots (the nearer pole brighter)
+      [[a1, nd.u >= 0], [a2, nd.u < 0]].forEach(function (pp) {
+        ctx.fillStyle = pp[1] ? "#bcd4ff" : "#5a78b0";
+        ctx.beginPath(); ctx.arc(pp[0].x, pp[0].y, 3, 0, 2 * Math.PI); ctx.fill();
+      });
 
       // stickfigure shadow
       if (optShadow.value() && sun.alt > 0.02) {
@@ -243,22 +293,23 @@ Sim.create({
       g.addColorStop(0, "#fff6cf"); g.addColorStop(1, C.warm);
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sp2.x, sp2.y, 10, 0, 2 * Math.PI); ctx.fill(); ctx.restore();
 
-      // observer
-      stick(ctx, SCx, SCy);
+      // observer (stickfigure — toggled together with its shadow)
+      if (optShadow.value()) stick(ctx, SCx, SCy);
 
-      // cardinals
-      ctx.fillStyle = "#eaf2ff"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(I18N.t("dir.S"), SCx, SCy - ry - 10);
-      ctx.fillText(I18N.t("dir.N"), SCx, SCy + ry + 11);
-      ctx.fillText(I18N.t("dir.E"), SCx - R - 11, SCy);
-      ctx.fillText(I18N.t("dir.W"), SCx + R + 11, SCy);
+      // cardinals — placed just outside the horizon ellipse at each projected direction
+      ctx.fillStyle = "#eaf2ff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      [["dir.N", 0], ["dir.E", 90], ["dir.S", 180], ["dir.W", 270]].forEach(function (c) {
+        var p = project(0, c[1] * D2R), dx = p.x - SCx, dy = p.y - SCy, m = Math.hypot(dx, dy) || 1;
+        ctx.fillText(I18N.t(c[0]), p.x + dx / m * 14, p.y + dy / m * 14);
+      });
       ctx.textBaseline = "alphabetic";
 
       // legend
-      var lx = 16, ly = S.H - 70;
-      if (optEcl.value()) { legend(ctx, lx, ly, C.ecl, stripShow("sm.ecl")); }
-      if (optEq.value()) { legend(ctx, lx, ly + 18, C.eq, stripShow("sm.eq")); }
-      if (optDiur.value()) { legend(ctx, lx, ly + 36, C.diur, stripShow("sm.diur")); }
+      var lx = 16, ly = S.H - 88, ln = 0;
+      if (optEcl.value()) { legend(ctx, lx, ly + (ln++) * 18, C.ecl, stripShow("sm.ecl")); }
+      legend(ctx, lx, ly + (ln++) * 18, C.eq, I18N.t("sm.legEq"));
+      if (optDecl.value()) { legend(ctx, lx, ly + (ln++) * 18, C.diur, stripShow("sm.decl")); }
+      legend(ctx, lx, ly + (ln++) * 18, "#2f6fd6", I18N.getLang() === "id" ? "sumbu rotasi" : "rotation axis");
     });
 
     upd();

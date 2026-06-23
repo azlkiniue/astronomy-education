@@ -448,7 +448,7 @@ window.ANIM = {
   {
    "slug": "daylighthoursexplorer",
    "topic": "sun",
-   "ready": null,
+   "ready": "daylighthoursexplorer",
    "title": {
     "en": "Daylight Hours Explorer",
     "id": "Penjelajah Jam Siang"
@@ -838,7 +838,7 @@ window.ANIM = {
   {
    "slug": "gravcalc",
    "topic": "orbits",
-   "ready": null,
+   "ready": "gravcalc",
    "title": {
     "en": "Newton's Law of Gravity Calculator",
     "id": "Kalkulator Hukum Gravitasi Newton"
@@ -1007,7 +1007,7 @@ window.ANIM = {
   {
    "slug": "snellslaw",
    "topic": "telescopes",
-   "ready": null,
+   "ready": "snellslaw",
    "title": {
     "en": "Snell's Law Demonstrator",
     "id": "Demonstrator Hukum Snell"
@@ -1046,7 +1046,7 @@ window.ANIM = {
   {
    "slug": "stellarmag",
    "topic": "stars",
-   "ready": null,
+   "ready": "stellarmag",
    "title": {
     "en": "Distance Modulus Explorer",
     "id": "Penjelajah Modulus Jarak"
@@ -1215,7 +1215,7 @@ window.ANIM = {
   {
    "slug": "balloon",
    "topic": "cosmology",
-   "ready": null,
+   "ready": "balloon",
    "title": {
     "en": "Balloon Universe",
     "id": "Alam Semesta Balon"
@@ -1913,7 +1913,7 @@ window.ANIM = {
         "id": "Penjelajah Jam Siang"
        },
        "desc": "Shows the hours of daylight received during the year for an observer at a given latitude. This is an important factor contributing to the seasons.",
-       "ready": null,
+       "ready": "daylighthoursexplorer",
        "topic": "sun"
       },
       {
@@ -2349,7 +2349,7 @@ window.ANIM = {
         "id": "Kalkulator Hukum Gravitasi Newton"
        },
        "desc": "Allows one to calculate the force of gravity acting on a variety of masses over a range of distances.",
-       "ready": null,
+       "ready": "gravcalc",
        "topic": "orbits"
       },
       {
@@ -2547,7 +2547,7 @@ window.ANIM = {
         "id": "Demonstrator Hukum Snell"
        },
        "desc": "Demonstrates Snell's Law, a formula that describes how light is refracted when it moves between different media.",
-       "ready": null,
+       "ready": "snellslaw",
        "topic": "telescopes"
       }
      ]
@@ -2605,7 +2605,7 @@ window.ANIM = {
         "id": "Penjelajah Modulus Jarak"
        },
        "desc": "Shows how the distance modulus formula combines apparent and absolute magnitudes to give the distance to a star.",
-       "ready": null,
+       "ready": "stellarmag",
        "topic": "stars"
       },
       {
@@ -2811,7 +2811,7 @@ window.ANIM = {
         "id": "Alam Semesta Balon"
        },
        "desc": "An animation of coins attached to a balloon, providing an analogy to the expansion of the universe. The coins represent galaxies, which maintain their scale while the space between them grows.",
-       "ready": null,
+       "ready": "balloon",
        "topic": "cosmology"
       },
       {

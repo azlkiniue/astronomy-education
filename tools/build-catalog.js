@@ -185,7 +185,12 @@ const READY = {
   stellarhabitablezone: "habitable-zone",
   emspectrum: "em-spectrum",
   centerofmass: "center-of-mass",
-  synodiccalculator: "synodic-period"
+  synodiccalculator: "synodic-period",
+  gravcalc: "gravcalc",
+  snellslaw: "snellslaw",
+  stellarmag: "stellarmag",
+  balloon: "balloon",
+  daylighthoursexplorer: "daylighthoursexplorer"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a
