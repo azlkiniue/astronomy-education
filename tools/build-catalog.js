@@ -190,7 +190,11 @@ const READY = {
   snellslaw: "snellslaw",
   stellarmag: "stellarmag",
   balloon: "balloon",
-  daylighthoursexplorer: "daylighthoursexplorer"
+  daylighthoursexplorer: "daylighthoursexplorer",
+  keplers_third: "keplers_third",
+  stellarlum: "stellarlum",
+  stellarvel: "stellarvel",
+  sunsrays: "sunsrays"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a

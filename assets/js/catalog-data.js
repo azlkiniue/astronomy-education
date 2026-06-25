@@ -383,7 +383,7 @@ window.ANIM = {
   {
    "slug": "sunsrays",
    "topic": "sun",
-   "ready": null,
+   "ready": "sunsrays",
    "title": {
     "en": "Sun's Rays Simulator",
     "id": "Simulator Sinar Matahari"
@@ -760,7 +760,7 @@ window.ANIM = {
   {
    "slug": "keplers_third",
    "topic": "orbits",
-   "ready": null,
+   "ready": "keplers_third",
    "title": {
     "en": "Kepler's Third Law",
     "id": "Hukum Ketiga Kepler"
@@ -1059,7 +1059,7 @@ window.ANIM = {
   {
    "slug": "stellarvel",
    "topic": "stars",
-   "ready": null,
+   "ready": "stellarvel",
    "title": {
     "en": "Stellar Velocity Calculator",
     "id": "Kalkulator Kecepatan Bintang"
@@ -1098,7 +1098,7 @@ window.ANIM = {
   {
    "slug": "stellarlum",
    "topic": "stars",
-   "ready": null,
+   "ready": "stellarlum",
    "title": {
     "en": "Stellar Luminosity Calculator",
     "id": "Kalkulator Luminositas Bintang"
@@ -1843,7 +1843,7 @@ window.ANIM = {
         "id": "Simulator Sinar Matahari"
        },
        "desc": "Shows how the sun's most direct rays hit different parts of the earth as the seasons change.",
-       "ready": null,
+       "ready": "sunsrays",
        "topic": "sun"
       },
       {
@@ -2265,7 +2265,7 @@ window.ANIM = {
         "id": "Hukum Ketiga Kepler"
        },
        "desc": "Lets one calculate the period of a planet from its semimajor axis, and vice versa.",
-       "ready": null,
+       "ready": "keplers_third",
        "topic": "orbits"
       },
       {
@@ -2619,7 +2619,7 @@ window.ANIM = {
         "id": "Kalkulator Kecepatan Bintang"
        },
        "desc": "Shows how the distance to a star, its doppler shift, and its proper motion allow one to calculate the star's true space velocity.",
-       "ready": null,
+       "ready": "stellarvel",
        "topic": "stars"
       },
       {
@@ -2661,7 +2661,7 @@ window.ANIM = {
         "id": "Kalkulator Luminositas Bintang"
        },
        "desc": "Demonstrates how a star's luminosity depends on its temperature and radius. ",
-       "ready": null,
+       "ready": "stellarlum",
        "topic": "stars"
       },
       {
