@@ -162,7 +162,7 @@ window.ANIM = {
   {
    "slug": "lookbacktimesim",
    "topic": "cosmology",
-   "ready": null,
+   "ready": "lookbacktimesim",
    "title": {
     "en": "Lookback Time Simulator",
     "id": "Simulator Waktu Tilik-Balik"
@@ -292,7 +292,7 @@ window.ANIM = {
   {
    "slug": "obliquity",
    "topic": "sun",
-   "ready": null,
+   "ready": "obliquity",
    "title": {
     "en": "Obliquity Simulator",
     "id": "Simulator Oblikuitas"
@@ -604,7 +604,7 @@ window.ANIM = {
   {
    "slug": "tidesim",
    "topic": "moon",
-   "ready": null,
+   "ready": "tidesim",
    "title": {
     "en": "Tidal Bulge Simulation",
     "id": "Simulasi Tonjolan Pasang"
@@ -695,7 +695,7 @@ window.ANIM = {
   {
    "slug": "venusphases",
    "topic": "orbits",
-   "ready": null,
+   "ready": "venusphases",
    "title": {
     "en": "Phases of Venus",
     "id": "Fase Venus"
@@ -1176,7 +1176,7 @@ window.ANIM = {
   {
    "slug": "lightcurve",
    "topic": "binary",
-   "ready": null,
+   "ready": "lightcurve",
    "title": {
     "en": "Lightcurve Simulator",
     "id": "Simulator Kurva Cahaya"
@@ -1589,7 +1589,7 @@ window.ANIM = {
         "id": "Simulator Waktu Tilik-Balik"
        },
        "desc": "Shows how the finite speed of light and the great distances to most astronomical objects cause us to observe things as they were in the past.",
-       "ready": null,
+       "ready": "lookbacktimesim",
        "topic": "cosmology"
       }
      ]
@@ -1745,7 +1745,7 @@ window.ANIM = {
         "id": "Simulator Oblikuitas"
        },
        "desc": "Shows how obliquity (tilt) is defined.",
-       "ready": null,
+       "ready": "obliquity",
        "topic": "sun"
       },
       {
@@ -2089,7 +2089,7 @@ window.ANIM = {
         "id": "Simulasi Tonjolan Pasang"
        },
        "desc": "Shows how the sun, moon, and earth's rotation combine to create tides.",
-       "ready": null,
+       "ready": "tidesim",
        "topic": "moon"
       },
       {
@@ -2195,7 +2195,7 @@ window.ANIM = {
         "id": "Fase Venus"
        },
        "desc": "Shows what Venus looks like through a telescope as the planets go around in their orbits. Compare with the Ptolemaic Phases of Venus simulation.",
-       "ready": null,
+       "ready": "venusphases",
        "topic": "orbits"
       },
       {
@@ -2753,7 +2753,7 @@ window.ANIM = {
         "id": "Simulator Kurva Cahaya"
        },
        "desc": "Shows how a lightcurve is constructed from observations of an eclipsing binary system.",
-       "ready": null,
+       "ready": "lightcurve",
        "topic": "binary"
       }
      ]
