@@ -194,7 +194,8 @@ const READY = {
   keplers_third: "keplers_third",
   stellarlum: "stellarlum",
   stellarvel: "stellarvel",
-  sunsrays: "sunsrays"
+  sunsrays: "sunsrays",
+  galacticredshift: "galacticredshift"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a

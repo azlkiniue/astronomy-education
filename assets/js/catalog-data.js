@@ -1228,7 +1228,7 @@ window.ANIM = {
   {
    "slug": "galacticredshift",
    "topic": "cosmology",
-   "ready": null,
+   "ready": "galacticredshift",
    "title": {
     "en": "Galactic Redshift Simulator",
     "id": "Simulator Pergeseran Merah Galaksi"
@@ -2825,7 +2825,7 @@ window.ANIM = {
         "id": "Simulator Pergeseran Merah Galaksi"
        },
        "desc": "Demonstrates the redshift of a galaxy due to the expansion of the universe, and the effect this shift has on the galaxy's brightness as observed through various filters.",
-       "ready": null,
+       "ready": "galacticredshift",
        "topic": "cosmology"
       }
      ]
