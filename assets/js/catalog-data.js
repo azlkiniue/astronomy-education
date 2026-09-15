@@ -331,7 +331,7 @@ window.ANIM = {
   {
    "slug": "radecdemo",
    "topic": "coords",
-   "ready": null,
+   "ready": "radecdemo",
    "title": {
     "en": "Celestial-Equatorial (RA/Dec) Demonstrator",
     "id": "Demonstrator Ekuatorial-Langit (AR/Dek)"
@@ -344,7 +344,7 @@ window.ANIM = {
   {
    "slug": "sunpaths",
    "topic": "sun",
-   "ready": null,
+   "ready": "sunpaths",
    "title": {
     "en": "Paths of the Sun",
     "id": "Lintasan Matahari"
@@ -786,7 +786,7 @@ window.ANIM = {
   {
    "slug": "configurationssimulator",
    "topic": "orbits",
-   "ready": null,
+   "ready": "configurationssimulator",
    "title": {
     "en": "Planetary Configurations Simulator",
     "id": "Simulator Konfigurasi Planet"
@@ -916,7 +916,7 @@ window.ANIM = {
   {
    "slug": "filters",
    "topic": "light",
-   "ready": null,
+   "ready": "filters",
    "title": {
     "en": "Light and Filters Simulator",
     "id": "Simulator Cahaya dan Filter"
@@ -981,7 +981,7 @@ window.ANIM = {
   {
    "slug": "telescope10",
    "topic": "telescopes",
-   "ready": null,
+   "ready": "telescope10",
    "title": {
     "en": "Telescope Simulator",
     "id": "Simulator Teleskop"
@@ -1072,7 +1072,7 @@ window.ANIM = {
   {
    "slug": "parallaxdiag",
    "topic": "stars",
-   "ready": null,
+   "ready": "parallaxdiag",
    "title": {
     "en": "Parallax Calculator",
     "id": "Kalkulator Paralaks"
@@ -1787,7 +1787,7 @@ window.ANIM = {
         "id": "Demonstrator Ekuatorial-Langit (AR/Dek)"
        },
        "desc": "Demonstrates the celestial-equatorial (RA/dec) coordinate system, where declination and right ascension define an object's position on the celestial sphere.",
-       "ready": null,
+       "ready": "radecdemo",
        "topic": "coords"
       },
       {
@@ -1801,7 +1801,7 @@ window.ANIM = {
         "id": "Lintasan Matahari"
        },
        "desc": "Shows how the declination of the sun varies over the course of a year using a horizon diagram.",
-       "ready": null,
+       "ready": "sunpaths",
        "topic": "sun"
       },
       {
@@ -2293,7 +2293,7 @@ window.ANIM = {
         "id": "Simulator Konfigurasi Planet (NAAP)"
        },
        "desc": "Models the movements of the planets around the sun in a simplified Copernican model of the solar system.",
-       "ready": null,
+       "ready": "configurationssimulator",
        "topic": "orbits"
       },
       {
@@ -2441,7 +2441,7 @@ window.ANIM = {
         "id": "Simulator Filter (NAAP)"
        },
        "desc": "Demonstrates how different light sources and filters combine to determine an observed spectrum. This simulator also shows the perceived colors associated with the spectra shown.",
-       "ready": null,
+       "ready": "filters",
        "topic": "light"
       },
       {
@@ -2519,7 +2519,7 @@ window.ANIM = {
         "id": "Simulator Teleskop"
        },
        "desc": "Demonstrates the properties of a telescope, and how these vary with aperture and eyepiece selection.",
-       "ready": null,
+       "ready": "telescope10",
        "topic": "telescopes"
       },
       {
@@ -2633,7 +2633,7 @@ window.ANIM = {
         "id": "Kalkulator Paralaks"
        },
        "desc": "Diagrams the geometry and shows the math involved in determining a star's distance via parallax.",
-       "ready": null,
+       "ready": "parallaxdiag",
        "topic": "stars"
       },
       {
@@ -3017,7 +3017,7 @@ window.ANIM = {
         "id": "Simulator Konfigurasi Planet (NAAP)"
        },
        "desc": "Models the movements of the planets around the sun in a simplified Copernican model of the solar system.",
-       "ready": null,
+       "ready": "configurationssimulator",
        "topic": "solar"
       },
       {
@@ -3084,7 +3084,7 @@ window.ANIM = {
         "id": "Simulator Konfigurasi Planet"
        },
        "desc": "Models the movements of the planets around the sun in a simplified Copernican model of the solar system.",
-       "ready": null,
+       "ready": "configurationssimulator",
        "topic": "orbits"
       },
       {
@@ -3286,7 +3286,7 @@ window.ANIM = {
         "id": "Simulator Cahaya dan Filter"
        },
        "desc": "Demonstrates how different light sources and filters combine to determine an observed spectrum. This simulator also shows the perceived colors associated with the spectra shown.",
-       "ready": null,
+       "ready": "filters",
        "topic": "light"
       }
      ]

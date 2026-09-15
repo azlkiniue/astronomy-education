@@ -195,7 +195,18 @@ const READY = {
   stellarlum: "stellarlum",
   stellarvel: "stellarvel",
   sunsrays: "sunsrays",
-  galacticredshift: "galacticredshift"
+  galacticredshift: "galacticredshift",
+  obliquity: "obliquity",
+  tidesim: "tidesim",
+  lookbacktimesim: "lookbacktimesim",
+  lightcurve: "lightcurve",
+  venusphases: "venusphases",
+  radecdemo: "radecdemo",
+  sunpaths: "sunpaths",
+  parallaxdiag: "parallaxdiag",
+  telescope10: "telescope10",
+  configurationssimulator: "configurationssimulator",
+  filters: "filters"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a
