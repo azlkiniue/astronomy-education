@@ -214,7 +214,7 @@ window.ANIM = {
   {
    "slug": "meridaltdiagram",
    "topic": "coords",
-   "ready": null,
+   "ready": "meridaltdiagram",
    "title": {
     "en": "Meridional Altitude Simulator",
     "id": "Simulator Altitud Meridian"
@@ -227,7 +227,7 @@ window.ANIM = {
   {
    "slug": "latsim",
    "topic": "coords",
-   "ready": null,
+   "ready": "latsim",
    "title": {
     "en": "Declination Ranges Simulator",
     "id": "Simulator Rentang Deklinasi"
@@ -513,7 +513,7 @@ window.ANIM = {
   {
    "slug": "lunar_phaser",
    "topic": "moon",
-   "ready": null,
+   "ready": "lunar_phaser",
    "title": {
     "en": "Lunar Phase Vocabulary",
     "id": "Kosakata Fase Bulan"
@@ -565,7 +565,7 @@ window.ANIM = {
   {
    "slug": "mooninc",
    "topic": "moon",
-   "ready": null,
+   "ready": "mooninc",
    "title": {
     "en": "Moon Inclination",
     "id": "Inklinasi Bulan"
@@ -578,7 +578,7 @@ window.ANIM = {
   {
    "slug": "eclipsetable",
    "topic": "moon",
-   "ready": null,
+   "ready": "eclipsetable",
    "title": {
     "en": "Eclipse Table",
     "id": "Tabel Gerhana"
@@ -591,7 +591,7 @@ window.ANIM = {
   {
    "slug": "shadowsim",
    "topic": "moon",
-   "ready": null,
+   "ready": "shadowsim",
    "title": {
     "en": "Eclipse Shadow Simulator",
     "id": "Simulator Bayangan Gerhana"
@@ -643,7 +643,7 @@ window.ANIM = {
   {
    "slug": "synodiclag",
    "topic": "moon",
-   "ready": null,
+   "ready": "synodiclag",
    "title": {
     "en": "Synodic Lag",
     "id": "Jeda Sinodis"
@@ -708,7 +708,7 @@ window.ANIM = {
   {
    "slug": "ptolemaic",
    "topic": "orbits",
-   "ready": null,
+   "ready": "ptolemaicvenus",
    "title": {
     "en": "Ptolemaic Phases of Venus",
     "id": "Fase Venus Ptolemaik"
@@ -721,7 +721,7 @@ window.ANIM = {
   {
    "slug": "marsorbit",
    "topic": "orbits",
-   "ready": null,
+   "ready": "marsorbit",
    "title": {
     "en": "Ptolemaic Orbit of Mars",
     "id": "Orbit Mars Ptolemaik"
@@ -851,7 +851,7 @@ window.ANIM = {
   {
    "slug": "gravalgebra",
    "topic": "orbits",
-   "ready": null,
+   "ready": "gravalgebra",
    "title": {
     "en": "Gravity Algebra",
     "id": "Aljabar Gravitasi"
@@ -942,7 +942,7 @@ window.ANIM = {
   {
    "slug": "threeviewsspectra",
    "topic": "light",
-   "ready": null,
+   "ready": "threeviewsspectra",
    "title": {
     "en": "Three Views Spectrum Demonstrator",
     "id": "Demonstrator Spektrum Tiga Pandangan"
@@ -994,7 +994,7 @@ window.ANIM = {
   {
    "slug": "buckets",
    "topic": "telescopes",
-   "ready": null,
+   "ready": "buckets",
    "title": {
     "en": "CCD Simulator",
     "id": "Simulator CCD"
@@ -1150,7 +1150,7 @@ window.ANIM = {
   {
    "slug": "wagonwheel",
    "topic": "binary",
-   "ready": null,
+   "ready": "wagonwheel",
    "title": {
     "en": "Aliasing in Wagon Wheels",
     "id": "Aliasing pada Roda Gerobak"
@@ -1280,7 +1280,7 @@ window.ANIM = {
   {
    "slug": "ca_extrasolarplanets_graph",
    "topic": "exoplanets",
-   "ready": null,
+   "ready": "ca_extrasolarplanets_graph",
    "title": {
     "en": "Radial Velocity Graph",
     "id": "Grafik Kecepatan Radial"
@@ -1661,7 +1661,7 @@ window.ANIM = {
         "id": "Simulator Altitud Meridian"
        },
        "desc": "Shows the geometry for calculating the meridional altitude of objects.",
-       "ready": null,
+       "ready": "meridaltdiagram",
        "topic": "coords"
       },
       {
@@ -1675,7 +1675,7 @@ window.ANIM = {
         "id": "Simulator Rentang Deklinasi"
        },
        "desc": "Shows how an observer's latitude determines the circumpolar, rise and set, and never rise regions in the sky.",
-       "ready": null,
+       "ready": "latsim",
        "topic": "coords"
       },
       {
@@ -1991,7 +1991,7 @@ window.ANIM = {
         "id": "Kosakata Fase Bulan"
        },
        "desc": "Shows the appearance of the moon at each of the named moon phases.",
-       "ready": null,
+       "ready": "lunar_phaser",
        "topic": "moon"
       },
       {
@@ -2047,7 +2047,7 @@ window.ANIM = {
         "id": "Inklinasi Bulan"
        },
        "desc": "Demonstrates how the inclination of the moon's orbit precludes eclipses most of the time, leading to distinct eclipse seasons.",
-       "ready": null,
+       "ready": "mooninc",
        "topic": "moon"
       },
       {
@@ -2061,7 +2061,7 @@ window.ANIM = {
         "id": "Tabel Gerhana"
        },
        "desc": "Consists of a table of solar and lunar eclipses, showing the banding that represents the eclipse seasons that occur about twice a year.",
-       "ready": null,
+       "ready": "eclipsetable",
        "topic": "moon"
       },
       {
@@ -2075,7 +2075,7 @@ window.ANIM = {
         "id": "Simulator Bayangan Gerhana"
        },
        "desc": "Provides draggable earth and moon discs with shadows, which can be used to demonstrate how the umbral (complete) and penumbral (partial) shadows give rise to different types of eclipses.",
-       "ready": null,
+       "ready": "shadowsim",
        "topic": "moon"
       },
       {
@@ -2131,7 +2131,7 @@ window.ANIM = {
         "id": "Jeda Sinodis"
        },
        "desc": "Demonstrates the difference between a sidereal and synodic (solar) day, which arises from the earth's revolution around the sun.",
-       "ready": null,
+       "ready": "synodiclag",
        "topic": "moon"
       },
       {
@@ -2209,7 +2209,7 @@ window.ANIM = {
         "id": "Fase Venus Ptolemaik"
        },
        "desc": "Shows what Venus would look like through a telescope if Ptolemy's model was correct. Compare with the other Phases of Venus simulation.",
-       "ready": null,
+       "ready": "ptolemaicvenus",
        "topic": "orbits"
       },
       {
@@ -2223,7 +2223,7 @@ window.ANIM = {
         "id": "Orbit Mars Ptolemaik"
        },
        "desc": "Shows Ptolemy's model for the orbit of Mars.",
-       "ready": null,
+       "ready": "marsorbit",
        "topic": "orbits"
       },
       {
@@ -2363,7 +2363,7 @@ window.ANIM = {
         "id": "Aljabar Gravitasi"
        },
        "desc": "Shows how the force of gravity would be different if the values used in Newton's law of universal gravitation formula are changed.",
-       "ready": null,
+       "ready": "gravalgebra",
        "topic": "orbits"
       }
      ]
@@ -2469,7 +2469,7 @@ window.ANIM = {
         "id": "Demonstrator Spektrum Tiga Pandangan"
        },
        "desc": "Demonstrates how different spectra can arise from a light bulb (a thermal source) and a cold, thin gas cloud. The spectrometer shows emission, absorption, or continuous spectra based on where the draggable telescope is pointed.",
-       "ready": null,
+       "ready": "threeviewsspectra",
        "topic": "light"
       },
       {
@@ -2533,7 +2533,7 @@ window.ANIM = {
         "id": "Simulator CCD"
        },
        "desc": "Shows a rainfall and bucket analogy to CCD imaging.",
-       "ready": null,
+       "ready": "buckets",
        "topic": "telescopes"
       },
       {
@@ -2725,7 +2725,7 @@ window.ANIM = {
         "id": "Aliasing pada Roda Gerobak"
        },
        "desc": "Demonstrates aliasing through the analogy of a wagon wheel being filmed. For some combinations of frame rates and true rotation speeds the wheel can appear to rotate backwards.",
-       "ready": null,
+       "ready": "wagonwheel",
        "topic": "binary"
       },
       {
@@ -2897,7 +2897,7 @@ window.ANIM = {
         "id": "Grafik Kecepatan Radial"
        },
        "desc": "Shows a star and planet in orbit around each other while tracing out the star's radial velocity curve.",
-       "ready": null,
+       "ready": "ca_extrasolarplanets_graph",
        "topic": "exoplanets"
       },
       {

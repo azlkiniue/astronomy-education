@@ -206,14 +206,28 @@ const READY = {
   parallaxdiag: "parallaxdiag",
   telescope10: "telescope10",
   configurationssimulator: "configurationssimulator",
-  filters: "filters"
+  filters: "filters",
+  meridaltdiagram: "meridaltdiagram",
+  latsim: "latsim",
+  mooninc: "mooninc",
+  synodiclag: "synodiclag",
+  wagonwheel: "wagonwheel",
+  gravalgebra: "gravalgebra",
+  shadowsim: "shadowsim",
+  buckets: "buckets",
+  marsorbit: "marsorbit",
+  threeviewsspectra: "threeviewsspectra",
+  ca_extrasolarplanets_graph: "ca_extrasolarplanets_graph",
+  eclipsetable: "eclipsetable",
+  lunar_phaser: "lunar_phaser"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a
 // SWF basename (e.g. ptolemaic.swf is both NAAP's "Ptolemaic System Simulator" and ClassAction's
 // "Ptolemaic Phases of Venus"). Keyed by the exact item href; checked before the slug map.
 const READY_HREF = {
-  "naap/ssm/animations/ptolemaic.html": "ptolemaic"   // our rebuild = the NAAP System Simulator only
+  "naap/ssm/animations/ptolemaic.html": "ptolemaic",          // the NAAP Ptolemaic System Simulator
+  "classaction/animations/renaissance/ptolemaic.html": "ptolemaicvenus"   // ClassAction Ptolemaic Phases of Venus
 };
 
 /* ---- 4. assemble entries ---- */

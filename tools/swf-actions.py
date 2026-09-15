@@ -115,6 +115,56 @@ def decompile(code, pool, indent=0, out=None):
         else: out.append(pad+'/* op 0x%02X */'%op)
     return out
 chunks=[]
+SWF_VERSION=data[3]
+EVENTS=['load','enterFrame','unload','mouseMove','mouseDown','mouseUp','keyDown','keyUp',
+        'data','initialize','press','release','releaseOutside','rollOver','rollOut','dragOver',
+        'dragOut','keyPress','construct']
+def bits_skip_matrix(b, p):
+    # MATRIX is bit-packed: skip it and return the next byte offset
+    bitpos=p*8
+    def ub(n):
+        nonlocal bitpos
+        v=0
+        for _ in range(n): v=(v<<1)|((b[bitpos>>3]>>(7-(bitpos&7)))&1); bitpos+=1
+        return v
+    if ub(1): n=ub(5); ub(n); ub(n)
+    if ub(1): n=ub(5); ub(n); ub(n)
+    n=ub(5); ub(n); ub(n)
+    return (bitpos+7)//8
+def bits_skip_cxform(b, p):
+    bitpos=p*8
+    def ub(n):
+        nonlocal bitpos
+        v=0
+        for _ in range(n): v=(v<<1)|((b[bitpos>>3]>>(7-(bitpos&7)))&1); bitpos+=1
+        return v
+    add=ub(1); mul=ub(1); n=ub(4)
+    if mul: [ub(n) for _ in range(4)]
+    if add: [ub(n) for _ in range(4)]
+    return (bitpos+7)//8
+def clip_actions(body, code, where):
+    """PlaceObject2/3 with ClipActions → one chunk per onClipEvent handler."""
+    flags=body[0]; p=1
+    if code==70: flags2=body[1]; p=2
+    depth=struct.unpack('<H',body[p:p+2])[0]; p+=2
+    if code==70 and flags2 & 0x08: p=body.index(0,p)+1           # class name
+    if flags & 0x02: p+=2                                          # character id
+    if flags & 0x04: p=bits_skip_matrix(body,p)
+    if flags & 0x08: p=bits_skip_cxform(body,p)
+    if flags & 0x10: p+=2                                          # ratio
+    name=''
+    if flags & 0x20: j=body.index(0,p); name=body[p:j].decode('latin1'); p=j+1
+    if flags & 0x40: p+=2                                          # clip depth
+    fw=4 if SWF_VERSION>=6 else 2
+    p+=2+fw                                                        # reserved + all-event flags
+    while p+fw<=len(body):
+        ev=int.from_bytes(body[p:p+fw],'little'); p+=fw
+        if ev==0: break
+        size=struct.unpack('<I',body[p:p+4])[0]; p+=4
+        if ev & (1<<17): p+=1; size-=1                             # keyPress keycode
+        names=[EVENTS[i] for i in range(len(EVENTS)) if ev & (1<<i)]
+        chunks.append((where+'/%s[depth %d]/onClipEvent(%s)'%(name or 'clip',depth,','.join(names)), body[p:p+size]))
+        p+=size
 def walk(b, p, end, depth, where):
     while p<end:
         h=struct.unpack('<H',b[p:p+2])[0]; p+=2; code=h>>6; L=h&0x3f
@@ -123,10 +173,9 @@ def walk(b, p, end, depth, where):
         if code==12: chunks.append((where, body))
         elif code==59: chunks.append((where+'/init%d'%struct.unpack('<H',body[:2])[0], body[2:]))
         elif code==39: walk(body, 4, len(body), depth+1, where+'/sprite%d'%struct.unpack('<H',body[:2])[0])
-        elif code in (26,70) and L>3:
-            flags=body[0]
-            if flags & 0x80:   # PlaceObject2 with clip actions: decode loosely by scanning for event records
-                chunks.append((where+'/placeobj-clipactions', body))
+        elif code in (26,70) and L>3 and body[0] & 0x80:
+            try: clip_actions(body, code, where)
+            except Exception as e: chunks.append((where+'/placeobj-clipactions (unparsed: %s)'%e, b''))
         p+=L
 walk(data,pos,len(data),0,'root')
 pool=[]
