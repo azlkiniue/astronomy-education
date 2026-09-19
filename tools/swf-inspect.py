@@ -13,6 +13,8 @@
 #                                for shape ids: bounds
 #    fills   <file.swf> <ids>    DefineShape fill/line styles, including gradient
 #                                matrices and every stop (ratio 0–255, colour, alpha)
+#    edges   <file.swf> <ids>    DefineShape outlines as M/L/Q path commands, each run
+#                                headed by the fill/line style it is drawn with
 #
 #  Matrices are in Flash's form: x' = sx·x + r1·y + tx,  y' = r0·x + sy·y + ty.
 #  A linear/radial gradient spans ±819.2 px in its own space before its matrix,
@@ -184,13 +186,60 @@ def cmd_fills(path, ids):
                 walk(p0 + 4, p0 + ln)
     walk(off, len(b))
 
+def cmd_edges(path, ids):
+    _, b, off = load(path)
+    want = set(ids)
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            if code in (2, 22, 32, 83) and struct.unpack('<H', body[:2])[0] in want:
+                ver = {2: 1, 22: 2, 32: 3, 83: 4}[code]
+                bits = Bits(body, 2); rect(bits)
+                if ver == 4: rect(bits); bits.u8()
+                fills, lines = styles(bits, ver)
+                bits.align(); nf, nl = bits.ub(4), bits.ub(4)
+                x = y = 0.0; f0 = f1 = ln_ = 0
+                print('shape', struct.unpack('<H', body[:2])[0])
+                def style():
+                    pick = lambda arr, k: arr[k - 1] if k else None
+                    return '  [fill0=%s fill1=%s line=%s]' % (pick(fills, f0), pick(fills, f1), pick(lines, ln_))
+                while True:
+                    if bits.ub(1) == 0:                     # style change / end
+                        fl = bits.ub(5)
+                        if fl == 0: break
+                        if fl & 1:
+                            n = bits.ub(5); x = bits.sb(n) / 20; y = bits.sb(n) / 20
+                            print('M %.2f %.2f' % (x, y))
+                        if fl & 2: f0 = bits.ub(nf)
+                        if fl & 4: f1 = bits.ub(nf)
+                        if fl & 8: ln_ = bits.ub(nl)
+                        if fl & 16:                          # the indices now refer to a fresh set
+                            fills, lines = styles(bits, ver)
+                            bits.align(); nf, nl = bits.ub(4), bits.ub(4)
+                        print(style())
+                    elif bits.ub(1):                         # straight edge
+                        n = bits.ub(4) + 2
+                        if bits.ub(1): x += bits.sb(n) / 20; y += bits.sb(n) / 20
+                        elif bits.ub(1): y += bits.sb(n) / 20
+                        else: x += bits.sb(n) / 20
+                        print('L %.2f %.2f' % (x, y))
+                    else:                                    # quadratic curve
+                        n = bits.ub(4) + 2
+                        cx = x + bits.sb(n) / 20; cy = y + bits.sb(n) / 20
+                        x = cx + bits.sb(n) / 20; y = cy + bits.sb(n) / 20
+                        print('Q %.2f %.2f %.2f %.2f' % (cx, cy, x, y))
+            elif code == 39:
+                walk(p0 + 4, p0 + ln)
+    walk(off, len(b))
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills <file.swf> [...]'); sys.exit(1)
+        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges <file.swf> [...]'); sys.exit(1)
     cmd, path = sys.argv[1], sys.argv[2]
     ids = [int(x) for x in sys.argv[3].split(',')] if len(sys.argv) > 3 and sys.argv[3] != 'all' else []
     if cmd == 'text': cmd_text(path)
     elif cmd == 'place': cmd_place(path, len(sys.argv) > 3 and sys.argv[3] == 'all')
     elif cmd == 'shapes': cmd_shapes(path, ids)
     elif cmd == 'fills': cmd_fills(path, ids)
+    elif cmd == 'edges': cmd_edges(path, ids)
     else: print('unknown command', cmd); sys.exit(1)

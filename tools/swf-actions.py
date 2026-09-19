@@ -22,6 +22,12 @@ OPS={0x0A:'+',0x0B:'-',0x0C:'*',0x0D:'/',0x0E:'==',0x0F:'<',0x10:'&&',0x11:'||',
 PROPS=['_x','_y','_xscale','_yscale','_currentframe','_totalframes','_alpha','_visible','_width','_height','_rotation','_target','_framesloaded','_name','_droptarget','_url','_highquality','_focusrect','_soundbuftime','_quality','_xmouse','_ymouse']
 def cstr(b,i):
     j=b.index(0,i); return b[i:j].decode('latin1'), j+1
+def numstr(v):
+    # full precision: embedded data tables (julian dates, coordinates) are useless
+    # once rounded to %g's six significant digits
+    if v != v or v in (float('inf'), float('-inf')): return repr(v)
+    if v == int(v) and abs(v) < 1e15: return str(int(v))
+    return repr(v)
 def decompile(code, pool, indent=0, out=None):
     out = out if out is not None else []
     st=[]; i=0; pad='  '*indent; reg={}
@@ -44,7 +50,7 @@ def decompile(code, pool, indent=0, out=None):
                 elif t==3: st.append('undefined')
                 elif t==4: st.append('r%d'%d[k]); k+=1
                 elif t==5: st.append('true' if d[k] else 'false'); k+=1
-                elif t==6: v=struct.unpack('<d',d[k+4:k+8]+d[k:k+4])[0]; st.append(('%g'%v)); k+=8
+                elif t==6: v=struct.unpack('<d',d[k+4:k+8]+d[k:k+4])[0]; st.append(numstr(v)); k+=8
                 elif t==7: st.append(str(struct.unpack('<i',d[k:k+4])[0])); k+=4
                 elif t==8: st.append(repr(pool[d[k]]) if d[k]<len(pool) else 'c%d'%d[k]); k+=1
                 elif t==9: ix=struct.unpack('<H',d[k:k+2])[0]; st.append(repr(pool[ix]) if ix<len(pool) else 'c%d'%ix); k+=2

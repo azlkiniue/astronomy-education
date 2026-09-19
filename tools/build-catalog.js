@@ -219,7 +219,24 @@ const READY = {
   threeviewsspectra: "threeviewsspectra",
   ca_extrasolarplanets_graph: "ca_extrasolarplanets_graph",
   eclipsetable: "eclipsetable",
-  lunar_phaser: "lunar_phaser"
+  lunar_phaser: "lunar_phaser",
+  pathtracer: "pathtracer",
+  radialvelocitydemo: "radialvelocitydemo",
+  formationtemps: "formationtemps",
+  solarsystemproperties: "solarsystemproperties",
+  ca_extrasolarplanets_starwobble: "ca_extrasolarplanets_starwobble",
+  bigdipper: "bigdipper",
+  gasretentionplot: "gasRetentionPlot",
+  milkywayrotationalvelocity: "milkywayrotationalvelocity",
+  sncurveexplorer: "snCurveExplorer",
+  clusterfittingexplorer: "clusterFittingExplorer",
+  antipodesexplorer: "antipodesexplorer",
+  seasonsim: "seasonsim",
+  phasedemonstrator: "phaseDemonstrator",
+  moonphases: "moonphases",
+  positionsdemonstrator: "positionsdemonstrator",
+  moonphaseshorizondiagram: "positionsdemonstrator",
+  fullmoondec: "fullmoondec"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a

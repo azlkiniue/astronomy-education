@@ -240,7 +240,7 @@ window.ANIM = {
   {
    "slug": "seasonsim",
    "topic": "sun",
-   "ready": null,
+   "ready": "seasonsim",
    "title": {
     "en": "Ecliptic Simulator",
     "id": "Simulator Ekliptika"
@@ -409,7 +409,7 @@ window.ANIM = {
   {
    "slug": "bigdipper",
    "topic": "coords",
-   "ready": null,
+   "ready": "bigdipper",
    "title": {
     "en": "Big Dipper 3D",
     "id": "Biduk 3D"
@@ -461,7 +461,7 @@ window.ANIM = {
   {
    "slug": "antipodesexplorer",
    "topic": "coords",
-   "ready": null,
+   "ready": "antipodesexplorer",
    "title": {
     "en": "Antipodes Explorer",
     "id": "Penjelajah Antipoda"
@@ -539,7 +539,7 @@ window.ANIM = {
   {
    "slug": "moonphases",
    "topic": "moon",
-   "ready": null,
+   "ready": "moonphases",
    "title": {
     "en": "Three Views Simulator",
     "id": "Simulator Tiga Pandangan"
@@ -617,7 +617,7 @@ window.ANIM = {
   {
    "slug": "phaseDemonstrator",
    "topic": "moon",
-   "ready": null,
+   "ready": "phaseDemonstrator",
    "title": {
     "en": "Phase Positions Demonstrator",
     "id": "Demonstrator Posisi Fase"
@@ -630,15 +630,15 @@ window.ANIM = {
   {
    "slug": "positionsdemonstrator",
    "topic": "moon",
-   "ready": null,
+   "ready": "positionsdemonstrator",
    "title": {
     "en": "Moon Phases and the Horizon Diagram",
     "id": "Fase Bulan dan Diagram Horizon"
    },
    "desc": "Provides a method of learning the correlation between the phase of the moon, the time of day, and the position of the moon in the sky.",
-   "preview": "originals/classaction/animations/lunarcycles/positionsdemonstrator.jpg",
-   "swf": "originals/classaction/animations/lunarcycles/positionsdemonstrator.swf",
-   "href": "classaction/animations/lunarcycles/positionsdemonstrator.html"
+   "preview": "originals/naap/lps/animations/moonPhasesHorizonDiagram.jpg",
+   "swf": "originals/naap/lps/animations/moonPhasesHorizonDiagram.swf",
+   "href": "naap/lps/animations/moonPhasesHorizonDiagram.html"
   },
   {
    "slug": "synodiclag",
@@ -656,7 +656,7 @@ window.ANIM = {
   {
    "slug": "fullmoondec",
    "topic": "moon",
-   "ready": null,
+   "ready": "fullmoondec",
    "title": {
     "en": "Full Moon Declination Simulator",
     "id": "Simulator Deklinasi Bulan Purnama"
@@ -734,7 +734,7 @@ window.ANIM = {
   {
    "slug": "pathtracer",
    "topic": "orbits",
-   "ready": null,
+   "ready": "pathtracer",
    "title": {
     "en": "Epicycles Demo",
     "id": "Demo Episiklus"
@@ -955,7 +955,7 @@ window.ANIM = {
   {
    "slug": "radialvelocitydemo",
    "topic": "light",
-   "ready": null,
+   "ready": "radialvelocitydemo",
    "title": {
     "en": "Extrasolar Planet Radial Velocity Demonstrator",
     "id": "Demonstrator Kecepatan Radial Planet Luar Surya"
@@ -1189,7 +1189,7 @@ window.ANIM = {
   {
    "slug": "milkywayrotationalvelocity",
    "topic": "galaxy",
-   "ready": null,
+   "ready": "milkywayrotationalvelocity",
    "title": {
     "en": "Milky Way Rotational Velocity",
     "id": "Kecepatan Rotasi Bima Sakti"
@@ -1241,7 +1241,7 @@ window.ANIM = {
   {
    "slug": "formationtemps",
    "topic": "solar",
-   "ready": null,
+   "ready": "formationtemps",
    "title": {
     "en": "Planet Formation Temperatures Plot",
     "id": "Plot Suhu Pembentukan Planet"
@@ -1254,7 +1254,7 @@ window.ANIM = {
   {
    "slug": "solarsystemproperties",
    "topic": "solar",
-   "ready": null,
+   "ready": "solarsystemproperties",
    "title": {
     "en": "Solar System Properties Explorer",
     "id": "Penjelajah Sifat Tata Surya"
@@ -1267,7 +1267,7 @@ window.ANIM = {
   {
    "slug": "ca_extrasolarplanets_starwobble",
    "topic": "exoplanets",
-   "ready": null,
+   "ready": "ca_extrasolarplanets_starwobble",
    "title": {
     "en": "Influence of Planets on the Sun",
     "id": "Pengaruh Planet terhadap Matahari"
@@ -1408,22 +1408,9 @@ window.ANIM = {
    "href": "naap/lps/animations/moonBisectorDemo.html"
   },
   {
-   "slug": "moonPhasesHorizonDiagram",
-   "topic": "moon",
-   "ready": null,
-   "title": {
-    "en": "Moon Phases and the Horizon Diagram",
-    "id": "Fase Bulan dan Diagram Horizon"
-   },
-   "desc": "Provides a method of learning the correlation between the phase of the moon, the time of day, and the position of the moon in the sky.",
-   "preview": "originals/naap/lps/animations/moonPhasesHorizonDiagram.jpg",
-   "swf": "originals/naap/lps/animations/moonPhasesHorizonDiagram.swf",
-   "href": "naap/lps/animations/moonPhasesHorizonDiagram.html"
-  },
-  {
    "slug": "gasRetentionPlot",
    "topic": "atmosphere",
-   "ready": null,
+   "ready": "gasRetentionPlot",
    "title": {
     "en": "Gas Retention Plot",
     "id": "Plot Retensi Gas"
@@ -1514,7 +1501,7 @@ window.ANIM = {
   {
    "slug": "clusterFittingExplorer",
    "topic": "cosmology",
-   "ready": null,
+   "ready": "clusterFittingExplorer",
    "title": {
     "en": "HR Diagram Star Cluster Fitting Explorer",
     "id": "Penjelajah Pencocokan Gugus Bintang Diagram HR"
@@ -1527,7 +1514,7 @@ window.ANIM = {
   {
    "slug": "snCurveExplorer",
    "topic": "cosmology",
-   "ready": null,
+   "ready": "snCurveExplorer",
    "title": {
     "en": "Supernova Light Curve Fitting Explorer",
     "id": "Penjelajah Pencocokan Kurva Cahaya Supernova"
@@ -1689,7 +1676,7 @@ window.ANIM = {
         "id": "Simulator Ekliptika"
        },
        "desc": "Shows how the sun's declination and right ascension change over the course of a year.",
-       "ready": null,
+       "ready": "seasonsim",
        "topic": "sun"
       },
       {
@@ -1871,7 +1858,7 @@ window.ANIM = {
         "id": "Biduk 3D"
        },
        "desc": "Demonstrates how the stars of the big dipper, which are at various distance from earth, project onto the celestial sphere to give the familiar asterism.",
-       "ready": null,
+       "ready": "bigdipper",
        "topic": "coords"
       },
       {
@@ -1927,7 +1914,7 @@ window.ANIM = {
         "id": "Penjelajah Antipoda"
        },
        "desc": "Demonstrates antipodal points, which are points on opposite sides of the Earth from each other.",
-       "ready": null,
+       "ready": "antipodesexplorer",
        "topic": "coords"
       },
       {
@@ -2019,7 +2006,7 @@ window.ANIM = {
         "id": "Simulator Tiga Pandangan"
        },
        "desc": "Shows how the phase of the moon depends on the viewing geometry by allowing the moon to be viewed from the earth, the sun, and an arbitrary point in space.",
-       "ready": null,
+       "ready": "moonphases",
        "topic": "moon"
       },
       {
@@ -2103,7 +2090,7 @@ window.ANIM = {
         "id": "Demonstrator Posisi Fase"
        },
        "desc": "Demonstrates how planet and moon phases depend on orbital geometry. Users can drag two bodies around to see how the observed appearances change.",
-       "ready": null,
+       "ready": "phaseDemonstrator",
        "topic": "moon"
       },
       {
@@ -2117,7 +2104,7 @@ window.ANIM = {
         "id": "Fase Bulan dan Diagram Horizon"
        },
        "desc": "Provides a method of learning the correlation between the phase of the moon, the time of day, and the position of the moon in the sky.",
-       "ready": null,
+       "ready": "positionsdemonstrator",
        "topic": "moon"
       },
       {
@@ -2145,7 +2132,7 @@ window.ANIM = {
         "id": "Simulator Deklinasi Bulan Purnama"
        },
        "desc": "Shows the declination range of the full moon over the course of a year, and the corresponding changes in altitude for a northern hemisphere observer.",
-       "ready": null,
+       "ready": "fullmoondec",
        "topic": "moon"
       },
       {
@@ -2237,7 +2224,7 @@ window.ANIM = {
         "id": "Demo Episiklus"
        },
        "desc": "Demonstrates that the heliocentric and geocentric models are equivalent for predictive purposes when limited to circular orbits. One can watch the same system in motion with different bodies held in fixed position.",
-       "ready": null,
+       "ready": "pathtracer",
        "topic": "orbits"
       },
       {
@@ -2483,7 +2470,7 @@ window.ANIM = {
         "id": "Demonstrator Kecepatan Radial Planet Luar Surya"
        },
        "desc": "Demonstrates how the spectrum of a star is shifted as it and its planet orbit their common center of mass.",
-       "ready": null,
+       "ready": "radialvelocitydemo",
        "topic": "light"
       },
       {
@@ -2775,7 +2762,7 @@ window.ANIM = {
         "id": "Kecepatan Rotasi Bima Sakti"
        },
        "desc": "A plot of the rotational velocity of stars at varying distances from the center of the milky way. A draggable cursor allows determining the contained mass implied by the curve.",
-       "ready": null,
+       "ready": "milkywayrotationalvelocity",
        "topic": "galaxy"
       },
       {
@@ -2847,7 +2834,7 @@ window.ANIM = {
         "id": "Plot Suhu Pembentukan Planet"
        },
        "desc": "Shows planet formation temperature as a function of distance from the Sun. Also indicates the state (gas or solid) of several substances at the given distance and temperature.",
-       "ready": null,
+       "ready": "formationtemps",
        "topic": "solar"
       },
       {
@@ -2861,7 +2848,7 @@ window.ANIM = {
         "id": "Penjelajah Sifat Tata Surya"
        },
        "desc": "Allows one to explore a set of histograms for characteristics like number of satellites, mass, orbital period, etc. for the terrestial and jovian planets, plus Pluto.",
-       "ready": null,
+       "ready": "solarsystemproperties",
        "topic": "solar"
       }
      ]
@@ -2883,7 +2870,7 @@ window.ANIM = {
         "id": "Pengaruh Planet terhadap Matahari"
        },
        "desc": "Shows the movement of the sun due to the gravitational pull of the planets. The contribution from each planet can be isolated by toggling checkboxes.",
-       "ready": null,
+       "ready": "ca_extrasolarplanets_starwobble",
        "topic": "exoplanets"
       },
       {
@@ -2925,7 +2912,7 @@ window.ANIM = {
         "id": "Demonstrator Kecepatan Radial Planet Luar Surya"
        },
        "desc": "Demonstrates how the spectrum of a star is shifted as it and its planet orbit their common center of mass.",
-       "ready": null,
+       "ready": "radialvelocitydemo",
        "topic": "exoplanets"
       },
       {
@@ -3250,7 +3237,7 @@ window.ANIM = {
         "id": "Fase Bulan dan Diagram Horizon"
        },
        "desc": "Provides a method of learning the correlation between the phase of the moon, the time of day, and the position of the moon in the sky.",
-       "ready": null,
+       "ready": "positionsdemonstrator",
        "topic": "moon"
       }
      ]
@@ -3374,7 +3361,7 @@ window.ANIM = {
         "id": "Plot Retensi Gas"
        },
        "desc": "Shows how the molecular mass, temperature, and escape speed determine whether a gas will remain gravitationally bound to a planet.",
-       "ready": null,
+       "ready": "gasRetentionPlot",
        "topic": "atmosphere"
       },
       {
@@ -3538,7 +3525,7 @@ window.ANIM = {
         "id": "Penjelajah Pencocokan Gugus Bintang Diagram HR"
        },
        "desc": "Allows determining the distance to a cluster by fitting the cluster's stars to the main sequence in an HR diagram.",
-       "ready": null,
+       "ready": "clusterFittingExplorer",
        "topic": "cosmology"
       },
       {
@@ -3552,7 +3539,7 @@ window.ANIM = {
         "id": "Penjelajah Pencocokan Kurva Cahaya Supernova"
        },
        "desc": "Allows determining the distance to a supernova by fitting observations to a theoretical Type Ia curve.",
-       "ready": null,
+       "ready": "snCurveExplorer",
        "topic": "cosmology"
       }
      ]
