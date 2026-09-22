@@ -305,7 +305,7 @@ window.ANIM = {
   {
    "slug": "zodiac",
    "topic": "sun",
-   "ready": null,
+   "ready": "zodiac",
    "title": {
     "en": "Ecliptic (Zodiac) Simulator",
     "id": "Simulator Ekliptika (Zodiak)"
@@ -357,7 +357,7 @@ window.ANIM = {
   {
    "slug": "sunmotionsoverview",
    "topic": "sun",
-   "ready": null,
+   "ready": "sunmotionsoverview",
    "title": {
     "en": "Sun Motions Overview",
     "id": "Ikhtisar Gerak Matahari"
@@ -422,28 +422,28 @@ window.ANIM = {
   {
    "slug": "eclipticsimulator",
    "topic": "sun",
-   "ready": null,
+   "ready": "seasons_ecliptic",
    "title": {
-    "en": "Seasons Simulator (NAAP)",
-    "id": "Simulator Musim (NAAP)"
+    "en": "Seasons and Ecliptic Simulator",
+    "id": "Simulator Musim dan Ekliptika"
    },
    "desc": "Shows the geometry of the earth and sun over the course of a year, demonstrating how seasons occur. This simulator allows both orbital and celestial sphere representations of the seasonal motions.",
-   "preview": "originals/classaction/animations/coordsmotion/eclipticsimulator.jpg",
-   "swf": "originals/classaction/animations/coordsmotion/eclipticsimulator.swf",
-   "href": "classaction/animations/coordsmotion/eclipticsimulator.html"
+   "preview": "originals/naap/motion1/animations/seasons_ecliptic.jpg",
+   "swf": "originals/naap/motion1/animations/seasons_ecliptic.swf",
+   "href": "naap/motion1/animations/seasons_ecliptic.html"
   },
   {
    "slug": "celhorcomp",
    "topic": "coords",
-   "ready": null,
+   "ready": "ce_hc",
    "title": {
-    "en": "Coordinate Systems Comparison",
-    "id": "Perbandingan Sistem Koordinat"
+    "en": "Rotating Sky Explorer",
+    "id": "Penjelajah Langit Berputar"
    },
    "desc": "Shows how the rotation of the earth leads to the apparent rotation of the sky, and how celestial sphere and horizon diagram representations of the sky are correlated.",
-   "preview": "originals/classaction/animations/coordsmotion/celhorcomp.jpg",
-   "swf": "originals/classaction/animations/coordsmotion/celhorcomp.swf",
-   "href": "classaction/animations/coordsmotion/celhorcomp.html"
+   "preview": "originals/naap/motion2/animations/ce_hc.jpg",
+   "swf": "originals/naap/motion2/animations/ce_hc.swf",
+   "href": "naap/motion2/animations/ce_hc.html"
   },
   {
    "slug": "daylighthoursexplorer",
@@ -487,7 +487,7 @@ window.ANIM = {
   {
    "slug": "celestialhorizon",
    "topic": "coords",
-   "ready": null,
+   "ready": "celestialhorizon",
    "title": {
     "en": "Celestial and Horizon Systems Comparison",
     "id": "Perbandingan Sistem Langit dan Horizon"
@@ -1020,7 +1020,7 @@ window.ANIM = {
   {
    "slug": "fusion01",
    "topic": "solar",
-   "ready": null,
+   "ready": "fusion01",
    "title": {
     "en": "Proton-Proton Animation",
     "id": "Animasi Proton-Proton"
@@ -1033,7 +1033,7 @@ window.ANIM = {
   {
    "slug": "fusion02",
    "topic": "solar",
-   "ready": null,
+   "ready": "fusion02",
    "title": {
     "en": "CNO Cycle Animation",
     "id": "Animasi Siklus CNO"
@@ -1202,7 +1202,7 @@ window.ANIM = {
   {
    "slug": "trafficdensity",
    "topic": "galaxy",
-   "ready": null,
+   "ready": "trafficdensity",
    "title": {
     "en": "Traffic Density Analogy",
     "id": "Analogi Kepadatan Lalu Lintas"
@@ -1332,7 +1332,7 @@ window.ANIM = {
   {
    "slug": "hammerthrower",
    "topic": "exoplanets",
-   "ready": null,
+   "ready": "hammerthrower",
    "title": {
     "en": "Hammer Thrower Comparison",
     "id": "Perbandingan Pelempar Martil"
@@ -1367,32 +1367,6 @@ window.ANIM = {
    "preview": "originals/naap/ssm/animations/ptolemaic.jpg",
    "swf": "originals/naap/ssm/animations/ptolemaic.swf",
    "href": "naap/ssm/animations/ptolemaic.html"
-  },
-  {
-   "slug": "seasons_ecliptic",
-   "topic": "sun",
-   "ready": null,
-   "title": {
-    "en": "Seasons and Ecliptic Simulator",
-    "id": "Simulator Musim dan Ekliptika"
-   },
-   "desc": "Shows the geometry of the earth and sun over the course of a year, demonstrating how seasons occur. This simulator allows both orbital and celestial sphere representations of the seasonal motions.",
-   "preview": "originals/naap/motion1/animations/seasons_ecliptic.jpg",
-   "swf": "originals/naap/motion1/animations/seasons_ecliptic.swf",
-   "href": "naap/motion1/animations/seasons_ecliptic.html"
-  },
-  {
-   "slug": "ce_hc",
-   "topic": "coords",
-   "ready": null,
-   "title": {
-    "en": "Rotating Sky Explorer",
-    "id": "Penjelajah Langit Berputar"
-   },
-   "desc": "Shows how the rotation of the earth leads to the apparent rotation of the sky, and how celestial sphere and horizon diagram representations of the sky are correlated.",
-   "preview": "originals/naap/motion2/animations/ce_hc.jpg",
-   "swf": "originals/naap/motion2/animations/ce_hc.swf",
-   "href": "naap/motion2/animations/ce_hc.html"
   },
   {
    "slug": "moonBisectorDemo",
@@ -1746,7 +1720,7 @@ window.ANIM = {
         "id": "Simulator Ekliptika (Zodiak)"
        },
        "desc": "Shows the sun's position in the sky relative to the background stars (the zodiac constellations) over the course of a year.",
-       "ready": null,
+       "ready": "zodiac",
        "topic": "sun"
       },
       {
@@ -1802,7 +1776,7 @@ window.ANIM = {
         "id": "Ikhtisar Gerak Matahari"
        },
        "desc": "Shows the paths of the sun on the celestial sphere.",
-       "ready": null,
+       "ready": "sunmotionsoverview",
        "topic": "sun"
       },
       {
@@ -1872,7 +1846,7 @@ window.ANIM = {
         "id": "Simulator Musim (NAAP)"
        },
        "desc": "Shows the geometry of the earth and sun over the course of a year, demonstrating how seasons occur. This simulator allows both orbital and celestial sphere representations of the seasonal motions.",
-       "ready": null,
+       "ready": "seasons_ecliptic",
        "topic": "sun"
       },
       {
@@ -1886,7 +1860,7 @@ window.ANIM = {
         "id": "Perbandingan Sistem Koordinat"
        },
        "desc": "Shows how the rotation of the earth leads to the apparent rotation of the sky, and how celestial sphere and horizon diagram representations of the sky are correlated.",
-       "ready": null,
+       "ready": "ce_hc",
        "topic": "coords"
       },
       {
@@ -1942,7 +1916,7 @@ window.ANIM = {
         "id": "Perbandingan Sistem Langit dan Horizon"
        },
        "desc": "Demonstrates how the celestial sphere and horizon diagram are related.",
-       "ready": null,
+       "ready": "celestialhorizon",
        "topic": "coords"
       },
       {
@@ -2556,7 +2530,7 @@ window.ANIM = {
         "id": "Animasi Proton-Proton"
        },
        "desc": "Shows an animated diagram of the proton-proton chain reaction, which is the dominant fusion reaction in the sun's core.",
-       "ready": null,
+       "ready": "fusion01",
        "topic": "solar"
       },
       {
@@ -2570,7 +2544,7 @@ window.ANIM = {
         "id": "Animasi Siklus CNO"
        },
        "desc": "Shows an animated diagram of the CNO cycle, which dominates in stars larger than the sun.",
-       "ready": null,
+       "ready": "fusion02",
        "topic": "solar"
       }
      ]
@@ -2776,7 +2750,7 @@ window.ANIM = {
         "id": "Analogi Kepadatan Lalu Lintas"
        },
        "desc": "The build-up of traffic behind a slow moving tractor provides an analogy to the density wave formation of spiral arms.",
-       "ready": null,
+       "ready": "trafficdensity",
        "topic": "galaxy"
       }
      ]
@@ -2968,7 +2942,7 @@ window.ANIM = {
         "id": "Perbandingan Pelempar Martil"
        },
        "desc": "Illustrates how the movement of a star and its planet about their center of mass compares to a hammer thrower swinging a heavy metal ball.",
-       "ready": null,
+       "ready": "hammerthrower",
        "topic": "exoplanets"
       }
      ]
@@ -3107,7 +3081,7 @@ window.ANIM = {
         "id": "Simulator Musim dan Ekliptika"
        },
        "desc": "Shows the geometry of the earth and sun over the course of a year, demonstrating how seasons occur. This simulator allows both orbital and celestial sphere representations of the seasonal motions.",
-       "ready": null,
+       "ready": "seasons_ecliptic",
        "topic": "sun"
       }
      ]
@@ -3129,7 +3103,7 @@ window.ANIM = {
         "id": "Penjelajah Langit Berputar"
        },
        "desc": "Shows how the rotation of the earth leads to the apparent rotation of the sky, and how celestial sphere and horizon diagram representations of the sky are correlated.",
-       "ready": null,
+       "ready": "ce_hc",
        "topic": "coords"
       }
      ]

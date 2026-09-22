@@ -236,7 +236,16 @@ const READY = {
   moonphases: "moonphases",
   positionsdemonstrator: "positionsdemonstrator",
   moonphaseshorizondiagram: "positionsdemonstrator",
-  fullmoondec: "fullmoondec"
+  fullmoondec: "fullmoondec",
+  celestialhorizon: "celestialhorizon",
+  ce_hc: "ce_hc", celhorcomp: "ce_hc",
+  fusion01: "fusion01",
+  fusion02: "fusion02",
+  hammerthrower: "hammerthrower",
+  trafficdensity: "trafficdensity",
+  seasons_ecliptic: "seasons_ecliptic", eclipticsimulator: "seasons_ecliptic",
+  zodiac: "zodiac",
+  sunmotionsoverview: "sunmotionsoverview"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a
