@@ -245,7 +245,21 @@ const READY = {
   trafficdensity: "trafficdensity",
   seasons_ecliptic: "seasons_ecliptic", eclipticsimulator: "seasons_ecliptic",
   zodiac: "zodiac",
-  sunmotionsoverview: "sunmotionsoverview"
+  sunmotionsoverview: "sunmotionsoverview",
+  moonbisector: "moonbisector", moonbisectordemo: "moonbisector",
+  siderealsolartime: "siderealSolarTime",
+  spectroparallax: "spectroparallax",
+  longlat: "longlat",
+  horizon: "horizon",
+  siderealtimeandhourangledemo: "siderealtimeandhourangledemo",
+  dipperclock: "dipperclock",
+  drivingthroughsnow: "drivingthroughsnow",
+  photometrysimulator: "photometrysimulator",
+  registrationsimulator: "registrationsimulator",
+  blinkcomparatorsimulator: "blinkcomparatorsimulator",
+  pulsarperiodsim001: "pulsarperiodsim001",
+  earthorbitplot: "earthorbitplot",
+  spectrum010: "spectrum010"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a

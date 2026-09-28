@@ -201,7 +201,7 @@ window.ANIM = {
   {
    "slug": "dipperclock",
    "topic": "coords",
-   "ready": null,
+   "ready": "dipperclock",
    "title": {
     "en": "Big Dipper Clock",
     "id": "Jam Biduk"
@@ -318,7 +318,7 @@ window.ANIM = {
   {
    "slug": "longlat",
    "topic": "coords",
-   "ready": null,
+   "ready": "longlat",
    "title": {
     "en": "Longitude/Latitude Demonstrator",
     "id": "Demonstrator Bujur/Lintang"
@@ -396,7 +396,7 @@ window.ANIM = {
   {
    "slug": "horizon",
    "topic": "sun",
-   "ready": null,
+   "ready": "horizon",
    "title": {
     "en": "Sun's Position on Horizon",
     "id": "Posisi Matahari di Ufuk"
@@ -474,7 +474,7 @@ window.ANIM = {
   {
    "slug": "siderealTimeAndHourAngleDemo",
    "topic": "coords",
-   "ready": null,
+   "ready": "siderealtimeandhourangledemo",
    "title": {
     "en": "Sidereal Time and Hour Angle Demonstrator",
     "id": "Demonstrator Waktu Sideris dan Sudut Jam"
@@ -500,7 +500,7 @@ window.ANIM = {
   {
    "slug": "siderealSolarTime",
    "topic": "coords",
-   "ready": null,
+   "ready": "siderealSolarTime",
    "title": {
     "en": "Sidereal and Solar Time Simulator",
     "id": "Simulator Waktu Sideris dan Surya"
@@ -682,15 +682,15 @@ window.ANIM = {
   {
    "slug": "moonbisector",
    "topic": "moon",
-   "ready": null,
+   "ready": "moonbisector",
    "title": {
-    "en": "Moon Phases With Bisectors",
-    "id": "Fase Bulan dengan Garis Bagi"
+    "en": "Moon Bisector Demo",
+    "id": "Demo Garis Bagi Bulan"
    },
-   "desc": "Demonstrates a method for determining moon phases using planes that bisect the earth and moon.",
-   "preview": "originals/classaction/animations/lunarcycles/moonbisector.jpg",
-   "swf": "originals/classaction/animations/lunarcycles/moonbisector.swf",
-   "href": "classaction/animations/lunarcycles/moonbisector.html"
+   "desc": "Outlines a proceedure for determining moon phases by using bisectors (planes that divide the moon in two halves).",
+   "preview": "originals/naap/lps/animations/moonBisectorDemo.jpg",
+   "swf": "originals/naap/lps/animations/moonBisectorDemo.swf",
+   "href": "naap/lps/animations/moonBisectorDemo.html"
   },
   {
    "slug": "venusphases",
@@ -825,7 +825,7 @@ window.ANIM = {
   {
    "slug": "earthorbitplot",
    "topic": "orbits",
-   "ready": null,
+   "ready": "earthorbitplot",
    "title": {
     "en": "Earth Orbit Plot",
     "id": "Plot Orbit Bumi"
@@ -877,7 +877,7 @@ window.ANIM = {
   {
    "slug": "spectrum010",
    "topic": "light",
-   "ready": null,
+   "ready": "spectrum010",
    "title": {
     "en": "Spectrum Explorer",
     "id": "Penjelajah Spektrum"
@@ -1085,7 +1085,7 @@ window.ANIM = {
   {
    "slug": "spectroparallax",
    "topic": "stars",
-   "ready": null,
+   "ready": "spectroparallax",
    "title": {
     "en": "Spectroscopic Parallax Simulator",
     "id": "Simulator Paralaks Spektroskopik"
@@ -1319,7 +1319,7 @@ window.ANIM = {
   {
    "slug": "pulsarPeriodSim001",
    "topic": "exoplanets",
-   "ready": null,
+   "ready": "pulsarperiodsim001",
    "title": {
     "en": "Pulsar Period Simulator",
     "id": "Simulator Periode Pulsar"
@@ -1345,7 +1345,7 @@ window.ANIM = {
   {
    "slug": "drivingthroughsnow",
    "topic": "solar",
-   "ready": null,
+   "ready": "drivingthroughsnow",
    "title": {
     "en": "Driving Through Snow",
     "id": "Berkendara Menembus Salju"
@@ -1367,19 +1367,6 @@ window.ANIM = {
    "preview": "originals/naap/ssm/animations/ptolemaic.jpg",
    "swf": "originals/naap/ssm/animations/ptolemaic.swf",
    "href": "naap/ssm/animations/ptolemaic.html"
-  },
-  {
-   "slug": "moonBisectorDemo",
-   "topic": "moon",
-   "ready": null,
-   "title": {
-    "en": "Moon Bisector Demo",
-    "id": "Demo Garis Bagi Bulan"
-   },
-   "desc": "Outlines a proceedure for determining moon phases by using bisectors (planes that divide the moon in two halves).",
-   "preview": "originals/naap/lps/animations/moonBisectorDemo.jpg",
-   "swf": "originals/naap/lps/animations/moonBisectorDemo.swf",
-   "href": "naap/lps/animations/moonBisectorDemo.html"
   },
   {
    "slug": "gasRetentionPlot",
@@ -1410,7 +1397,7 @@ window.ANIM = {
   {
    "slug": "registrationSimulator",
    "topic": "binary",
-   "ready": null,
+   "ready": "registrationsimulator",
    "title": {
     "en": "Registration Simulator",
     "id": "Simulator Registrasi"
@@ -1423,7 +1410,7 @@ window.ANIM = {
   {
    "slug": "blinkComparatorSimulator",
    "topic": "binary",
-   "ready": null,
+   "ready": "blinkcomparatorsimulator",
    "title": {
     "en": "Blink Comparator Simulator",
     "id": "Simulator Komparator Kedip"
@@ -1436,7 +1423,7 @@ window.ANIM = {
   {
    "slug": "photometrySimulator",
    "topic": "binary",
-   "ready": null,
+   "ready": "photometrysimulator",
    "title": {
     "en": "Photometry Simulator",
     "id": "Simulator Fotometri"
@@ -1600,7 +1587,7 @@ window.ANIM = {
         "id": "Jam Biduk"
        },
        "desc": "Shows how stars rotate around the North Star over time (both daily and seasonal motions are shown).",
-       "ready": null,
+       "ready": "dipperclock",
        "topic": "coords"
       }
      ]
@@ -1734,7 +1721,7 @@ window.ANIM = {
         "id": "Demonstrator Bujur/Lintang"
        },
        "desc": "Demonstrates latitude and longitude with an interactive globe, providing an analogy to the celestial and horizon coordinate systems.",
-       "ready": null,
+       "ready": "longlat",
        "topic": "coords"
       },
       {
@@ -1818,7 +1805,7 @@ window.ANIM = {
         "id": "Posisi Matahari di Ufuk"
        },
        "desc": "Shows how the direction of the sun at sunrise or sunset changes over the course of the year.",
-       "ready": null,
+       "ready": "horizon",
        "topic": "sun"
       },
       {
@@ -1902,7 +1889,7 @@ window.ANIM = {
         "id": "Demonstrator Waktu Sideris dan Sudut Jam"
        },
        "desc": "Shows how sidereal time and the hour angle of a star are related.",
-       "ready": null,
+       "ready": "siderealtimeandhourangledemo",
        "topic": "coords"
       },
       {
@@ -1930,7 +1917,7 @@ window.ANIM = {
         "id": "Simulator Waktu Sideris dan Surya"
        },
        "desc": "Helps demonstrate the difference between sidereal and solar time.",
-       "ready": null,
+       "ready": "siderealSolarTime",
        "topic": "coords"
       }
      ]
@@ -2134,7 +2121,7 @@ window.ANIM = {
         "id": "Fase Bulan dengan Garis Bagi"
        },
        "desc": "Demonstrates a method for determining moon phases using planes that bisect the earth and moon.",
-       "ready": null,
+       "ready": "moonbisector",
        "topic": "moon"
       }
      ]
@@ -2296,7 +2283,7 @@ window.ANIM = {
         "id": "Plot Orbit Bumi"
        },
        "desc": "Shows the orbital period as a function of orbital distance for satellites of Earth.",
-       "ready": null,
+       "ready": "earthorbitplot",
        "topic": "orbits"
       },
       {
@@ -2360,7 +2347,7 @@ window.ANIM = {
         "id": "Penjelajah Spektrum"
        },
        "desc": "Allows one to generate a variety of simulated spectra, depending on factors such as the type of source, luminosity class, spectral type, and individually selected elements.",
-       "ready": null,
+       "ready": "spectrum010",
        "topic": "light"
       },
       {
@@ -2608,7 +2595,7 @@ window.ANIM = {
         "id": "Simulator Paralaks Spektroskopik"
        },
        "desc": "Demonstrates how the technique of spectroscopic parallax works. Spectral type and luminosity class determine the observed spectrum of a star, from which the star's luminosity can be estimated.",
-       "ready": null,
+       "ready": "spectroparallax",
        "topic": "stars"
       },
       {
@@ -2928,7 +2915,7 @@ window.ANIM = {
         "id": "Simulator Periode Pulsar"
        },
        "desc": "Demonstrates how the movement of a pulsar and planet around their common center of mass affects the timing of pulse arrivals.",
-       "ready": null,
+       "ready": "pulsarperiodsim001",
        "topic": "exoplanets"
       },
       {
@@ -2964,7 +2951,7 @@ window.ANIM = {
         "id": "Berkendara Menembus Salju"
        },
        "desc": "Shows a snow shower from the perspective of a car driving through it, demonstrating how the snow seems to diverge from some central point (the radiant). Provides an analogy to a meteor shower.",
-       "ready": null,
+       "ready": "drivingthroughsnow",
        "topic": "solar"
       },
       {
@@ -3014,7 +3001,7 @@ window.ANIM = {
         "id": "Demonstrator Waktu Sideris dan Sudut Jam"
        },
        "desc": "Shows how sidereal time and the hour angle of a star are related.",
-       "ready": null,
+       "ready": "siderealtimeandhourangledemo",
        "topic": "coords"
       }
      ]
@@ -3139,7 +3126,7 @@ window.ANIM = {
         "id": "Simulator Waktu Sideris dan Surya"
        },
        "desc": "Helps demonstrate the difference between sidereal and solar time.",
-       "ready": null,
+       "ready": "siderealSolarTime",
        "topic": "sun"
       }
      ]
@@ -3183,7 +3170,7 @@ window.ANIM = {
         "id": "Demo Garis Bagi Bulan"
        },
        "desc": "Outlines a proceedure for determining moon phases by using bisectors (planes that divide the moon in two halves).",
-       "ready": null,
+       "ready": "moonbisector",
        "topic": "moon"
       },
       {
@@ -3407,7 +3394,7 @@ window.ANIM = {
         "id": "Simulator Registrasi"
        },
        "desc": "Allows one to adjust the relative positions of three images so that their contents are alligned.",
-       "ready": null,
+       "ready": "registrationsimulator",
        "topic": "binary"
       },
       {
@@ -3421,7 +3408,7 @@ window.ANIM = {
         "id": "Simulator Komparator Kedip"
        },
        "desc": "Cycles through multiple images of the same field, revealing variable stars. The variable stars identified in this simulator can then be analyzed with the Variable Star Photometry Analyzer.",
-       "ready": null,
+       "ready": "blinkcomparatorsimulator",
        "topic": "binary"
       },
       {
@@ -3435,7 +3422,7 @@ window.ANIM = {
         "id": "Simulator Fotometri"
        },
        "desc": "Demonstrates aperture photometry by allowing one to drag aperture discs over a star field.",
-       "ready": null,
+       "ready": "photometrysimulator",
        "topic": "binary"
       },
       {
@@ -3485,7 +3472,7 @@ window.ANIM = {
         "id": "Simulator Paralaks Spektroskopik"
        },
        "desc": "Demonstrates how the technique of spectroscopic parallax works. Spectral type and luminosity class determine the observed spectrum of a star, from which the star's luminosity can be estimated.",
-       "ready": null,
+       "ready": "spectroparallax",
        "topic": "cosmology"
       },
       {

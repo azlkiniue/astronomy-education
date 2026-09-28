@@ -72,8 +72,10 @@ via [`play.html?a=<slug>`](play.html), which runs the original `.swf` in the bro
 through the [Ruffle](https://ruffle.rs) emulator (no plugin needed). The original
 animations and their preview screenshots are bundled under `originals/` (~15 MB),
 and `tools/build-catalog.js` copies them there automatically from a local `astroUNL/`
-download when present. Ruffle itself is loaded from its CDN; vendor it under `assets/`
-and update the `<script>` in `play.html` for full offline use.
+download when present. Ruffle itself is loaded from its CDN, pinned to release 0.6.0 so
+a new Ruffle build can't change how the originals play unnoticed — to upgrade, bump the
+version in the `<script>` in `play.html` and re-check a few animations. Vendor it under
+`assets/` and point that `<script>` at it for full offline use.
 
 ### How the catalog works
 

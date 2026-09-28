@@ -15,6 +15,9 @@
 #                                matrices and every stop (ratio 0–255, colour, alpha)
 #    edges   <file.swf> <ids>    DefineShape outlines as M/L/Q path commands, each run
 #                                headed by the fill/line style it is drawn with
+#    canvas  <file.swf> <ids>    the same shapes as a JS object a canvas can draw: each
+#                                fill's region assembled into closed Path2D-ready paths,
+#                                strokes as runs, gradients with their matrices
 #
 #  Matrices are in Flash's form: x' = sx·x + r1·y + tx,  y' = r0·x + sy·y + ty.
 #  A linear/radial gradient spans ±819.2 px in its own space before its matrix,
@@ -57,7 +60,7 @@ def matrix(bits):
     if bits.ub(1): n = bits.ub(5); r0 = bits.sb(n) / 65536; r1 = bits.sb(n) / 65536
     n = bits.ub(5); tx = bits.sb(n) / 20; ty = bits.sb(n) / 20
     bits.align()
-    return (round(sx, 4), round(r0, 4), round(r1, 4), round(sy, 4), tx, ty)
+    return (round(sx, 6), round(r0, 6), round(r1, 6), round(sy, 6), tx, ty)
 
 def tags(body, off, end):
     while off < end:
@@ -108,8 +111,10 @@ def cmd_place(path, everything):
                     if add: [bits.sb(n) for _ in range(4)]
                     p = bits.byte()
                 if flags & 0x10: p += 2
-                if flags & 0x20: j = body.index(0, p); name = body[p:j].decode('latin1')
-                print('%s depth=%d id=%s name=%s mtx=%s' % (where, depth, cid, name, mtx))
+                if flags & 0x20: j = body.index(0, p); name = body[p:j].decode('latin1'); p = j + 1
+                clip = struct.unpack('<H', body[p:p + 2])[0] if flags & 0x40 else None
+                print('%s depth=%d id=%s name=%s mtx=%s%s' % (where, depth, cid, name, mtx,
+                      ' clipDepth=%d' % clip if clip else ''))
             elif code == 39 and everything:
                 walk(p0 + 4, p0 + ln, where + '/sprite%d' % struct.unpack('<H', body[:2])[0])
     walk(off, len(b), 'root')
@@ -164,9 +169,31 @@ def styles(bits, ver):
     if cnt == 0xff: cnt = bits.u16()
     lines = []
     for _ in range(cnt):
-        w = bits.u16(); c = [bits.u8() for _ in range(4)] if ver >= 3 else [bits.u8() for _ in range(3)] + [255]
+        w = bits.u16()
+        if ver == 4:                                 # LINESTYLE2: caps, join, maybe a fill
+            cap = bits.ub(2); join = bits.ub(2); has_fill = bits.ub(1)
+            bits.ub(3); bits.ub(5); bits.ub(1); bits.ub(2)
+            if join == 2: bits.u16()                 # miter limit
+            if has_fill:
+                sub = styles_one_fill(bits, ver)
+                lines.append((w / 20, sub, 255)); continue
+        c = [bits.u8() for _ in range(4)] if ver >= 3 else [bits.u8() for _ in range(3)] + [255]
         lines.append((w / 20, '#%02x%02x%02x' % tuple(c[:3]), c[3]))
     return fills, lines
+
+def styles_one_fill(bits, ver):
+    """One FILLSTYLE on its own (a LINESTYLE2 may carry one instead of a colour)."""
+    t = bits.u8()
+    rgba = lambda: [bits.u8() for _ in range(4)] if ver >= 3 else [bits.u8() for _ in range(3)] + [255]
+    if t == 0:
+        c = rgba(); return ('solid', '#%02x%02x%02x' % tuple(c[:3]), c[3])
+    if t in (0x10, 0x12, 0x13):
+        m = matrix(bits); bits.align(); ng = bits.u8() & 0x0f; stops = []
+        for _ in range(ng):
+            r = bits.u8(); c = rgba(); stops.append((r, '#%02x%02x%02x' % tuple(c[:3]), c[3]))
+        if t == 0x13: bits.u16()
+        return ('linear' if t == 0x10 else 'radial', m, stops)
+    return ('bitmap', bits.u16(), matrix(bits))
 
 def cmd_fills(path, ids):
     _, b, off = load(path)
@@ -232,9 +259,134 @@ def cmd_edges(path, ids):
                 walk(p0 + 4, p0 + ln)
     walk(off, len(b))
 
+def shape_layers(body, code):
+    """A DefineShape's art as drawing layers, one per style set (NewStyles starts a
+    new one, drawn over the last). Flash stores edges, not outlines: each edge
+    names the fill on its left (fill0) and right (fill1). A fill's region is every
+    edge that has it on either side — fill1 edges as they are, fill0 ones turned
+    round — chained end to start into closed contours. Coordinates stay in twips
+    while they are matched, so the chaining is exact."""
+    ver = {2: 1, 22: 2, 32: 3, 83: 4}[code]
+    bits = Bits(body, 2); rect(bits)
+    winding = False
+    if ver == 4: rect(bits); winding = bool(bits.u8() & 0x04)
+    fills, lines = styles(bits, ver)
+    bits.align(); nf, nl = bits.ub(4), bits.ub(4)
+    layers = [(fills, lines, [])]
+    x = y = 0; f0 = f1 = ln_ = 0
+    while True:
+        if bits.ub(1) == 0:
+            fl = bits.ub(5)
+            if fl == 0: break
+            if fl & 1: n = bits.ub(5); x = bits.sb(n); y = bits.sb(n)
+            n0 = bits.ub(nf) if fl & 2 else None
+            n1 = bits.ub(nf) if fl & 4 else None
+            nln = bits.ub(nl) if fl & 8 else None
+            if fl & 16:                              # a fresh style set; this record's
+                fills, lines = styles(bits, ver)     # indices already point into it
+                bits.align(); nf, nl = bits.ub(4), bits.ub(4)
+                layers.append((fills, lines, [])); f0 = f1 = ln_ = 0
+            if n0 is not None: f0 = n0
+            if n1 is not None: f1 = n1
+            if nln is not None: ln_ = nln
+        elif bits.ub(1):
+            n = bits.ub(4) + 2
+            if bits.ub(1): dx = bits.sb(n); dy = bits.sb(n)
+            elif bits.ub(1): dx = 0; dy = bits.sb(n)
+            else: dx = bits.sb(n); dy = 0
+            layers[-1][2].append(((x, y), None, (x + dx, y + dy), f0, f1, ln_)); x += dx; y += dy
+        else:
+            n = bits.ub(4) + 2
+            cx = x + bits.sb(n); cy = y + bits.sb(n); ex = cx + bits.sb(n); ey = cy + bits.sb(n)
+            layers[-1][2].append(((x, y), (cx, cy), (ex, ey), f0, f1, ln_)); x, y = ex, ey
+    out = []
+    for fills, lines, edges in layers:
+        lf = []
+        for k in range(1, len(fills) + 1):
+            mine = [(a, c, b) for a, c, b, g0, g1, _ in edges if g1 == k and g0 != k] + \
+                   [(b, c, a) for a, c, b, g0, g1, _ in edges if g0 == k and g1 != k]
+            if mine: lf.append((fills[k - 1], chain(mine)))
+        ll = []
+        for k in range(1, len(lines) + 1):
+            mine = [(a, c, b) for a, c, b, _, _, g in edges if g == k]
+            if mine: ll.append((lines[k - 1], runs(mine)))
+        out.append((lf, ll))
+    return out, winding
+
+def px(v):
+    s = ('%.2f' % (v / 20)).rstrip('0').rstrip('.')
+    return '0' if s in ('', '-0') else s
+
+def seg(c, b):
+    return ('Q%s %s %s %s' % (px(c[0]), px(c[1]), px(b[0]), px(b[1]))) if c else \
+           ('L%s %s' % (px(b[0]), px(b[1])))
+
+def chain(edges):
+    starts = {}
+    for i, (a, _, _) in enumerate(edges): starts.setdefault(a, []).append(i)
+    used = [False] * len(edges); d = []
+    for i in range(len(edges)):
+        if used[i]: continue
+        used[i] = True; a, c, b = edges[i]; first = a
+        d.append('M%s %s' % (px(a[0]), px(a[1]))); d.append(seg(c, b))
+        while b != first:
+            nxt = next((j for j in starts.get(b, ()) if not used[j]), None)
+            if nxt is None: break
+            used[nxt] = True; _, c, b = edges[nxt]; d.append(seg(c, b))
+        d.append('Z')
+    return ''.join(d)
+
+def runs(edges):
+    d = []; at = None
+    for a, c, b in edges:
+        if a != at: d.append('M%s %s' % (px(a[0]), px(a[1])))
+        d.append(seg(c, b)); at = b
+    return ''.join(d)
+
+def js_colour(hexc, alpha):
+    if alpha >= 255: return '"%s"' % hexc
+    r, g, b = int(hexc[1:3], 16), int(hexc[3:5], 16), int(hexc[5:7], 16)
+    return '"rgba(%d,%d,%d,%s)"' % (r, g, b, ('%.3f' % (alpha / 255)).rstrip('0').rstrip('.'))
+
+def js_fill(f):
+    if f[0] == 'solid': return js_colour(f[1], f[2])
+    if f[0] in ('linear', 'radial'):
+        sx, r0, r1, sy, tx, ty = f[1]
+        stops = ','.join('[%s,%s]' % (('%.4f' % (r / 255)).rstrip('0').rstrip('.') or '0', js_colour(c, a))
+                         for r, c, a in f[2])
+        return '{t:"%s",m:[%s,%s,%s,%s,%s,%s],s:[%s]}' % (f[0][0], sx, r0, r1, sy, tx, ty, stops)
+    return '"#808080"'                               # bitmap fills: not handled
+
+def cmd_canvas(path, ids):
+    """Print shapes as a JS object for a canvas renderer: per shape, its layers,
+    each [[fill, pathData]...] then [[width, stroke, pathData]...]. Gradients come as
+    {t:"l"|"r", m:[sx,r0,r1,sy,tx,ty], s:[[offset,colour]...]} in Flash's ±819.2 px
+    gradient square; path data is SVG syntax, ready for new Path2D()."""
+    _, b, off = load(path)
+    want = set(ids); found = {}
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            cid = struct.unpack('<H', body[:2])[0] if ln >= 2 else None
+            if code in (2, 22, 32, 83) and cid in want: found[cid] = shape_layers(body, code)
+            elif code == 39: walk(p0 + 4, p0 + ln)
+    walk(off, len(b))
+    print('{')
+    for cid in ids:
+        if cid not in found: continue
+        layers, winding = found[cid]
+        parts = []
+        for lf, ll in layers:
+            fs = ','.join('[%s,"%s"]' % (js_fill(f), d) for f, d in lf)
+            ls = ','.join('[%s,%s,"%s"]' % (w, js_fill(s) if isinstance(s, tuple) else js_colour(s, a), d)
+                          for (w, s, a), d in ll)
+            parts.append('[[%s],[%s]]' % (fs, ls))
+        print('  %d: {nz:%s, layers:[%s]},' % (cid, 'true' if winding else 'false', ','.join(parts)))
+    print('}')
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges <file.swf> [...]'); sys.exit(1)
+        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges|canvas <file.swf> [...]'); sys.exit(1)
     cmd, path = sys.argv[1], sys.argv[2]
     ids = [int(x) for x in sys.argv[3].split(',')] if len(sys.argv) > 3 and sys.argv[3] != 'all' else []
     if cmd == 'text': cmd_text(path)
@@ -242,4 +394,5 @@ if __name__ == '__main__':
     elif cmd == 'shapes': cmd_shapes(path, ids)
     elif cmd == 'fills': cmd_fills(path, ids)
     elif cmd == 'edges': cmd_edges(path, ids)
+    elif cmd == 'canvas': cmd_canvas(path, ids)
     else: print('unknown command', cmd); sys.exit(1)

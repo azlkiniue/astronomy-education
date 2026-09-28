@@ -10,3 +10,5 @@ launch.json
 node_modules/
 
 astroUNL/
+
+__pycache__
