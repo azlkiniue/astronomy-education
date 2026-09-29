@@ -18,6 +18,14 @@
 #    canvas  <file.swf> <ids>    the same shapes as a JS object a canvas can draw: each
 #                                fill's region assembled into closed Path2D-ready paths,
 #                                strokes as runs, gradients with their matrices
+#    statictext <file.swf> [ids] glyph-drawn DefineText labels decoded back into
+#                                strings through each font's code table: matrix, and per
+#                                run its font (name, bold/italic), size, colour, x, y
+#    bitmaps <file.swf> [outdir] every embedded bitmap: id, tag, size; with an outdir,
+#                                each is written out as <id>.jpg / <id>.png (JPEGTables
+#                                merged, the bogus FFD9FFD8 prefix stripped, lossless
+#                                formats 3/4/5 un-premultiplied into RGBA PNGs, JPEG3
+#                                alpha merged via ffmpeg into a PNG)
 #
 #  Matrices are in Flash's form: x' = sx·x + r1·y + tx,  y' = r0·x + sy·y + ty.
 #  A linear/radial gradient spans ±819.2 px in its own space before its matrix,
@@ -80,15 +88,19 @@ def cmd_text(path):
                 cid = struct.unpack('<H', body[:2])[0]
                 bits = Bits(body, 2); rect(bits); p = bits.byte()
                 f1, f2 = body[p], body[p + 1]; p += 2
-                if f1 & 0x01: p += 4
+                font = size = None
+                if f1 & 0x01: font = struct.unpack('<H', body[p:p + 2])[0]; p += 2
                 if f2 & 0x80: p = body.index(0, p) + 1
+                if f1 & 0x01: size = struct.unpack('<H', body[p:p + 2])[0] / 20; p += 2
                 color = None
                 if f1 & 0x04: color = body[p:p + 4].hex(); p += 4
                 if f1 & 0x02: p += 2
-                if f2 & 0x20: p += 9
+                align = None
+                if f2 & 0x20: align = ['left', 'right', 'center', 'justify'][body[p] & 3]; p += 9
                 j = body.index(0, p); var = body[p:j].decode('latin1'); p = j + 1
                 txt = body[p:body.index(0, p)].decode('latin1') if f1 & 0x80 else ''
-                print('  ' * depth + 'EditText id=%d var=%r color=%s html=%s text=%r' % (cid, var, color, bool(f2 & 2), txt[:300]))
+                print('  ' * depth + 'EditText id=%d var=%r font=%s size=%s align=%s color=%s html=%s text=%r' % (
+                    cid, var, font, size, align, color, bool(f2 & 2), txt[:300]))
             elif code == 39:
                 walk(p0 + 4, p0 + ln, depth + 1)
     walk(off, len(b), 0)
@@ -384,9 +396,181 @@ def cmd_canvas(path, ids):
         print('  %d: {nz:%s, layers:[%s]},' % (cid, 'true' if winding else 'false', ','.join(parts)))
     print('}')
 
+def png_bytes(w, h, rgba):
+    raw = b''.join(b'\x00' + rgba[y * w * 4:(y + 1) * w * 4] for y in range(h))
+    def chunk(t, d): return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) +
+            chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
+
+def jpeg_clean(d):
+    # Flash-era encoders wrote an erroneous FFD9FFD8 before the real SOI
+    while d[:4] == b'\xff\xd9\xff\xd8': d = d[4:]
+    return d
+
+def jpeg_size(d):
+    p = 2
+    while p < len(d) - 8:
+        if d[p] != 0xFF: p += 1; continue
+        m = d[p + 1]
+        if m in (0xC0, 0xC1, 0xC2):
+            h, w = struct.unpack('>HH', d[p + 5:p + 9]); return w, h
+        if m in (0xD8, 0x01) or 0xD0 <= m <= 0xD7: p += 2; continue
+        p += 2 + struct.unpack('>H', d[p + 2:p + 4])[0]
+    return None
+
+def lossless_rgba(body, alpha2):
+    fmt = body[2]; w, h = struct.unpack('<HH', body[3:7])
+    if fmt == 3:
+        n = body[7] + 1; data = zlib.decompress(body[8:])
+        cw = 4 if alpha2 else 3; table = data[:n * cw]; pix = data[n * cw:]
+        stride = (w + 3) & ~3; out = bytearray(w * h * 4)
+        for y in range(h):
+            for x in range(w):
+                i = pix[y * stride + x]; c = table[i * cw:i * cw + cw]
+                out[(y * w + x) * 4:(y * w + x) * 4 + 4] = bytes(c) + (b'' if alpha2 else b'\xff')
+    elif fmt == 4:
+        data = zlib.decompress(body[7:]); stride = (w * 2 + 3) & ~3; out = bytearray(w * h * 4)
+        for y in range(h):
+            for x in range(w):
+                v = struct.unpack('>H', data[y * stride + x * 2:y * stride + x * 2 + 2])[0]
+                out[(y * w + x) * 4:(y * w + x) * 4 + 4] = bytes(
+                    (((v >> 10) & 31) * 255 // 31, ((v >> 5) & 31) * 255 // 31, (v & 31) * 255 // 31, 255))
+    else:
+        data = zlib.decompress(body[7:]); out = bytearray(w * h * 4)
+        for i in range(w * h):
+            a, r, g, b = data[i * 4:i * 4 + 4]
+            if not alpha2: a = 255
+            elif 0 < a < 255: r, g, b = (min(255, c * 255 // a) for c in (r, g, b))
+            out[i * 4:i * 4 + 4] = bytes((r, g, b, a))
+    # un-premultiply the colour-mapped RGBA table too
+    if alpha2 and fmt == 3:
+        for i in range(0, len(out), 4):
+            a = out[i + 3]
+            if 0 < a < 255: out[i:i + 3] = bytes(min(255, c * 255 // a) for c in out[i:i + 3])
+    return w, h, bytes(out)
+
+def fonts_of(b, off):
+    """font id -> {'name', 'bold', 'italic', 'codes': [char code per glyph]}"""
+    fonts = {}
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            if code == 39: walk(p0 + 4, p0 + ln)
+            elif code == 10:
+                fid = struct.unpack('<H', body[:2])[0]
+                n = struct.unpack('<H', body[2:4])[0] // 2 if ln > 3 else 0
+                fonts[fid] = {'name': '?', 'bold': False, 'italic': False, 'codes': [], 'n': n}
+            elif code in (13, 62):
+                fid = struct.unpack('<H', body[:2])[0]; nl = body[2]
+                name = body[3:3 + nl].decode('latin1').rstrip('\0'); fl = body[3 + nl]; p = 4 + nl
+                if code == 62: p += 1
+                wide = code == 62 or fl & 1
+                f = fonts.setdefault(fid, {'n': 0}); n = f.get('n') or (len(body) - p) // (2 if wide else 1)
+                f.update(name=name, bold=bool(fl & 2), italic=bool(fl & 4),
+                         codes=[struct.unpack('<H', body[p + 2 * i:p + 2 * i + 2])[0] if wide else body[p + i]
+                                for i in range(n)])
+            elif code in (48, 75):
+                fid = struct.unpack('<H', body[:2])[0]; fl = body[2]; nl = body[4]
+                name = body[5:5 + nl].decode('latin1').rstrip('\0'); p = 5 + nl
+                n = struct.unpack('<H', body[p:p + 2])[0]; p += 2
+                wo, wc = fl & 0x08, fl & 0x04; ot = p
+                if n:
+                    cto = struct.unpack('<I', body[ot + 4 * n:ot + 4 * n + 4])[0] if wo else \
+                        struct.unpack('<H', body[ot + 2 * n:ot + 2 * n + 2])[0]
+                    cp = ot + cto
+                    codes = [struct.unpack('<H', body[cp + 2 * i:cp + 2 * i + 2])[0] if wc else body[cp + i]
+                             for i in range(n)]
+                else: codes = []
+                fonts[fid] = {'name': name, 'bold': bool(fl & 1), 'italic': bool(fl & 2), 'codes': codes}
+    walk(off, len(b))
+    return fonts
+
+def cmd_statictext(path, ids):
+    _, b, off = load(path)
+    fonts = fonts_of(b, off)
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            if code == 39: walk(p0 + 4, p0 + ln)
+            elif code in (11, 33):
+                cid = struct.unpack('<H', body[:2])[0]
+                if ids and cid not in ids: continue
+                bits = Bits(body, 2); bnd = rect(bits); mtx = matrix(bits); p = bits.byte()
+                gb, ab = body[p], body[p + 1]; p += 2
+                print('text id=%d bounds=%s mtx=%s' % (cid, bnd, mtx))
+                font = None; size = colour = None; x = y = 0
+                while p < len(body) and body[p]:
+                    fl = body[p]; p += 1
+                    if fl & 0x08: font = struct.unpack('<H', body[p:p + 2])[0]; p += 2
+                    if fl & 0x04:
+                        n = 4 if code == 33 else 3; colour = '#' + body[p:p + 3].hex() + (
+                            '' if n == 3 or body[p + 3] == 255 else '/%d' % body[p + 3]); p += n
+                    if fl & 0x01: x = struct.unpack('<h', body[p:p + 2])[0] / 20; p += 2
+                    if fl & 0x02: y = struct.unpack('<h', body[p:p + 2])[0] / 20; p += 2
+                    if fl & 0x08: size = struct.unpack('<H', body[p:p + 2])[0] / 20; p += 2
+                    count = body[p]; p += 1
+                    bits = Bits(body, p); chars = []; adv = 0
+                    f = fonts.get(font, {})
+                    for _ in range(count):
+                        g = bits.ub(gb); a = bits.sb(ab); adv += a / 20
+                        cs = f.get('codes', [])
+                        chars.append(chr(cs[g]) if g < len(cs) else '?')
+                    p = bits.byte()
+                    print('  font=%s %s%s%s size=%s colour=%s x=%s y=%s w=%.2f %r' % (
+                        font, f.get('name', '?'), ' bold' if f.get('bold') else '', ' italic' if f.get('italic') else '',
+                        size, colour, x, y, adv, ''.join(chars)))
+                    x += adv
+    walk(off, len(b))
+
+def cmd_bitmaps(path, outdir):
+    import os, subprocess
+    _, b, off = load(path)
+    tables = [None]
+    if outdir: os.makedirs(outdir, exist_ok=True)
+    def save(name, data):
+        if outdir: open(os.path.join(outdir, name), 'wb').write(data)
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            if code == 8: tables[0] = jpeg_clean(body)
+            elif code == 39: walk(p0 + 4, p0 + ln)
+            elif code in (6, 21, 35, 90):
+                cid = struct.unpack('<H', body[:2])[0]
+                if code == 6:
+                    img = jpeg_clean(body[2:])
+                    if tables[0]: img = tables[0][:-2] + img[2:]
+                    alpha = None
+                elif code == 21: img = jpeg_clean(body[2:]); alpha = None
+                else:
+                    ao = struct.unpack('<I', body[2:6])[0]; s = 8 if code == 90 else 6
+                    img = jpeg_clean(body[s:s + ao]); alpha = zlib.decompress(body[s + ao:]) if len(body) > s + ao else None
+                kind = 'png' if img[:4] == b'\x89PNG' else 'gif' if img[:3] == b'GIF' else 'jpg'
+                size = jpeg_size(img) if kind == 'jpg' else None
+                print('bitmap id=%d tag=%d %s %s%s' % (cid, code, kind, '%dx%d' % size if size else '?',
+                      ' +alpha' if alpha else ''))
+                if alpha and kind == 'jpg' and size and outdir:
+                    rgb = subprocess.run(['ffmpeg', '-v', 'error', '-i', '-', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
+                                         input=img, capture_output=True).stdout
+                    w, h = size; rgba = bytearray(w * h * 4)
+                    for i in range(w * h):
+                        rgba[i * 4:i * 4 + 3] = rgb[i * 3:i * 3 + 3]; rgba[i * 4 + 3] = alpha[i]
+                    save('%d.png' % cid, png_bytes(w, h, bytes(rgba)))
+                else:
+                    save('%d.%s' % (cid, kind), img)
+            elif code in (20, 36):
+                cid = struct.unpack('<H', body[:2])[0]
+                w, h, rgba = lossless_rgba(body, code == 36)
+                print('bitmap id=%d tag=%d lossless fmt=%d %dx%d' % (cid, code, body[2], w, h))
+                save('%d.png' % cid, png_bytes(w, h, rgba))
+    walk(off, len(b))
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges|canvas <file.swf> [...]'); sys.exit(1)
+        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges|canvas|bitmaps <file.swf> [...]'); sys.exit(1)
+    if sys.argv[1] == 'bitmaps':
+        cmd_bitmaps(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None); sys.exit(0)
+    if sys.argv[1] == 'statictext':
+        cmd_statictext(sys.argv[2], [int(x) for x in sys.argv[3].split(',')] if len(sys.argv) > 3 else []); sys.exit(0)
     cmd, path = sys.argv[1], sys.argv[2]
     ids = [int(x) for x in sys.argv[3].split(',')] if len(sys.argv) > 3 and sys.argv[3] != 'all' else []
     if cmd == 'text': cmd_text(path)

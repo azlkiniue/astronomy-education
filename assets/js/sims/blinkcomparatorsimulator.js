@@ -9,11 +9,12 @@
    spanning epochs 1.72 to 22.00 days, each with the noise seed that makes its
    grain reproducible.
 
-   The variable stars follow the SWF's own prototypes. A PulsatingStar is a Fourier
-   sum, m = centre + sum A_k cos((k+1) theta + phi_k) with theta = 2 pi epoch /
-   period; the eclipsing binary TW Cas is two uniform discs of the given radii and
-   temperatures on a circular orbit inclined 74.7 degrees, whose period follows
-   from Kepler's third law at a separation of 8.17 solar radii.                */
+   The variable stars follow the SWF's own prototypes, shared with the Variable
+   Star Photometry Analyzer in _vspdata.js: a PulsatingStar is a Fourier sum,
+   m = centre + sum A_k cos((k+1) theta + phi_k) with theta = 2 pi epoch / period;
+   the eclipsing binary TW Cas is two uniform discs on an orbit inclined 74.7
+   degrees, weighted by visual surface brightness, whose period (1.42503 d)
+   follows from Kepler's third law at a separation of 8.17 solar radii.        */
 Sim.create({
   id: "blinkcomparatorsimulator",
   width: 784, height: 408,
@@ -56,108 +57,14 @@ Sim.create({
     var FONT = "Verdana, Geneva, sans-serif";
     var MONO = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
 
-    /* fieldParameters, from settings.xml */
-    var FW = 400, FH = 300, FX = 12, FY = 40;
-    var NOISE_MEAN = 2300, NOISE_SIGMA = 330, SAT_MAG = 3, PSF_R = 5;
+    /* fieldParameters, the stars, the 113 observations and the variable-star
+       models are the lab's shared settings.xml, in _vspdata.js              */
+    var F = VSP.FIELD, STARS = VSP.STARS, OBS = VSP.OBS, magnitudeAt = VSP.magnitudeAt;
+    var FW = F.width, FH = F.height, FX = 12, FY = 40;
+    var NOISE_MEAN = F.noiseMean, NOISE_SIGMA = F.noiseSigma, SAT_MAG = F.saturationMagnitude, PSF_R = F.psfRadius;
     var LIST_A = { x: 426, y: 40, w: 166, h: 300 };
     var LIST_B = { x: 604, y: 40, w: 166, h: 300 };
     var ROW = 20;
-
-    var STARS = [
-      {k:"c",m:3.95,x:29,y:42}, {k:"e",m:3.2,x:331,y:22,p:"TW_Cas"}, {k:"p",m:4.2,x:64,y:113,p:"MT_Tel"},
-      {k:"p",m:4.5,x:308,y:175,p:"del_Cep"}, {k:"p",m:4,x:124,y:259,p:"PZ_Aql"}, {k:"c",m:4.46,x:43,y:26},
-      {k:"c",m:4.23,x:29,y:157}, {k:"c",m:4.73,x:129,y:105}, {k:"c",m:3.2,x:111,y:54},
-      {k:"c",m:4.26,x:213,y:220}, {k:"c",m:4.89,x:57,y:192}, {k:"c",m:4.78,x:239,y:252},
-      {k:"c",m:5.1,x:323,y:84}, {k:"c",m:3.77,x:296,y:243}, {k:"c",m:4.85,x:246,y:82},
-      {k:"c",m:4.02,x:121,y:26}, {k:"c",m:4.89,x:62,y:255}, {k:"c",m:4.15,x:169,y:204},
-      {k:"c",m:5.87,x:259,y:147}, {k:"c",m:4.57,x:287,y:41}, {k:"c",m:3.89,x:359,y:129},
-      {k:"c",m:3.42,x:113,y:186}, {k:"c",m:5.02,x:343,y:272}, {k:"c",m:6.2,x:341,y:215},
-      {k:"c",m:3.89,x:169,y:52}, {k:"p",m:3.7,x:131,y:201,p:"RR_Leo"},
-    ];
-    /* epoch, noise seed — the SWF's 113 observations */
-    var OBS = [
-      [1.7215,1256978718], [1.7422,1785390230], [1.7691,1382680561], [1.8123,1742185764],
-      [1.8526,710265087], [1.9156,1066486183], [1.9812,1058998707], [2.7147,51459824],
-      [2.768,1972335412], [2.8578,1343915649], [2.9237,439876688], [3.7344,782899726],
-      [3.7833,1806118830], [3.8127,863406004], [3.8765,1134287060], [3.9185,2014380068],
-      [3.9687,260793590], [3.9901,560787509], [4.701,2039223079], [4.712,1383056705],
-      [4.758,334011648], [4.8253,650444998], [4.8678,1533482619], [4.9125,947130937],
-      [4.9758,466707171], [5.7012,1102868459], [5.768,1700291428], [5.8125,1225051256],
-      [5.8735,422685015], [5.9858,947825811], [5.9564,1130423571], [7.7788,378344826],
-      [7.826,334337871], [7.9145,97763772], [7.9845,2019259761], [8.7025,563134417],
-      [8.7525,1058706842], [8.7845,1861643419], [8.8125,1959485046], [8.8226,2128826760],
-      [8.8514,338299181], [8.8847,391630794], [8.9051,478658298], [8.92456,974094161],
-      [8.946,1518012349], [8.987,977973922], [8.992,1345149825], [9.8453,1226434322],
-      [9.9458,699621619], [10.8245,461278720], [10.8874,298765266], [10.9256,1772726031],
-      [10.9785,160593917], [11.73,1691674262], [11.7468,44305564], [11.7746,1893314026],
-      [11.7945,139024690], [11.8246,218340389], [11.869,1456980283], [11.9145,169069842],
-      [11.9877,1299197317], [12.856,626914566], [12.9147,813106012], [12.9682,1735412833],
-      [14.87,342551949], [14.95,406023499], [15.7234,2045040691], [15.7481,1006521879],
-      [15.7896,790956861], [15.8465,179188123], [15.8879,1829230385], [15.9236,968013572],
-      [15.9478,1252509015], [15.9689,537516409], [15.9868,1373484650], [15.9978,1552091327],
-      [16.7246,1979619431], [16.7896,233906902], [16.8355,144395622], [16.8798,1432660673],
-      [16.9024,774857072], [16.9387,1340574206], [16.9789,8901314], [17.7365,1556295523],
-      [17.8135,594204072], [17.9022,1579063958], [17.9847,1226140192], [18.7149,699600884],
-      [18.7458,207512030], [18.8125,274329189], [18.8566,150394260], [18.885,952547410],
-      [18.9021,761675836], [18.9285,1383633344], [18.9624,604471612], [19.812,1552913782],
-      [19.874,927649061], [19.9452,142240048], [19.9987,781575733], [20.7124,236368276],
-      [20.7587,243326267], [20.8435,83280748], [20.9025,354767634], [20.9902,528950464],
-      [21.732,1790701462], [21.7546,2131261980], [21.7896,1385672575], [21.8125,924250012],
-      [21.827,1080889661], [21.8799,1736180932], [21.9125,1964361350], [21.9364,1554201757],
-      [21.9987,815966561],
-    ];
-
-    /* PulsatingStar.PRESETS, the entries settings.xml names */
-    var PULSE = {
-      del_Cep: { period: 5.366341, terms: [[0.3496, 2.491], [0.1385, 3.084],
-        [0.05499, 3.811], [0.02277, 4.083], [0.009765, 4.709]] },
-      PZ_Aql: { period: 8.7513, terms: [[0.365, 4.66], [0.0459, 1.75],
-        [0.0208, 2.76], [0.0188, 5.98]] },
-      MT_Tel: { period: 0.316897, terms: [[0.26, 1.93], [0.0735, 1.89], [0.0166, 1.85],
-        [0.01, 1.95], [0.0056, 1.35], [0.00489, 1.48], [0.00453, 1.62], [0.00151, 1.11]] },
-      RR_Leo: { period: 0.4523933, terms: [[0.455, 0.691], [0.228, 5.16], [0.161, 3.69],
-        [0.0991, 2.33], [0.0779, 1.02], [0.0491, 5.81], [0.0327, 4.45], [0.0314, 2.97]] }
-    };
-    /* EclipsingBinary.PRESETS.TW_Cas */
-    var TW_CAS = { inclination: 74.7, separation: 8.17, mass1: 2.5, radius1: 2,
-      temperature1: 10500, mass2: 1.1, radius2: 2.6, temperature2: 5400 };
-    var R_SUN_AU = 0.00465047;
-    TW_CAS.period = 365.25 * Math.sqrt(Math.pow(TW_CAS.separation * R_SUN_AU, 3) /
-      (TW_CAS.mass1 + TW_CAS.mass2));
-
-    function pulsingMag(st, epoch) {
-      var p = PULSE[st.p], th = TAU * epoch / p.period, m = st.m;
-      for (var k = 0; k < p.terms.length; k++) {
-        m += p.terms[k][0] * Math.cos((k + 1) * th + p.terms[k][1]);
-      }
-      return m;
-    }
-    /* two uniform discs on a circular orbit: the overlap area times the hidden
-       star's surface brightness is the light that goes missing                */
-    function binaryMag(st, epoch) {
-      var b = TW_CAS, i = b.inclination * Math.PI / 180;
-      var ph = TAU * epoch / b.period;
-      var d = b.separation * Math.sqrt(Math.sin(ph) * Math.sin(ph) +
-        Math.cos(i) * Math.cos(i) * Math.cos(ph) * Math.cos(ph));
-      var s1 = Math.pow(b.temperature1, 4), s2 = Math.pow(b.temperature2, 4);
-      var f1 = Math.PI * b.radius1 * b.radius1 * s1;
-      var f2 = Math.PI * b.radius2 * b.radius2 * s2;
-      var lost = 0, A = overlap(b.radius1, b.radius2, d);
-      if (A > 0) lost = A * (Math.cos(ph) > 0 ? s1 : s2);
-      return st.m - 2.5 * Math.log((f1 + f2 - lost) / (f1 + f2)) / Math.LN10;
-    }
-    function overlap(r1, r2, d) {
-      if (d >= r1 + r2) return 0;
-      if (d <= Math.abs(r1 - r2)) { var r = Math.min(r1, r2); return Math.PI * r * r; }
-      var a1 = Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
-      var a2 = Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
-      return r1 * r1 * (a1 - Math.sin(2 * a1) / 2) + r2 * r2 * (a2 - Math.sin(2 * a2) / 2);
-    }
-    function magnitudeAt(st, epoch) {
-      return st.k === "p" ? pulsingMag(st, epoch)
-        : st.k === "e" ? binaryMag(st, epoch) : st.m;
-    }
-
     var queue = [], shown = -1, scrollA = 0, scrollB = 0;
     var crosshairs = true, invert = false, cursor = null, rate = 2;
     var cache = {}, cacheOrder = [];

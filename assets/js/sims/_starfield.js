@@ -1,8 +1,8 @@
 /* Shared CCD star-field engine ---------------------------------------------------
    The `StarField`, `AiryDisc`, `GammaTransferFunction` and `PixelMask` classes out
    of NAAP's Variable Star Photometry SWFs (photometrySimulator,
-   registrationSimulator, blinkComparatorSimulator), disassembled with
-   tools/swf-abc.py. All three labs share them, so they live here.
+   registrationSimulator, blinkComparatorSimulator, variableStarPhotometry-
+   Analyzer), disassembled with tools/swf-abc.py. All four share them.
 
    The model, in the original's own terms: a 16-bit detector (peak 65535) reads a
    Gaussian noise floor, and each star adds an Airy disc scaled by
@@ -10,9 +10,10 @@
    through a gamma 1.8 transfer function.
 
    The noise comes from the SWF's own generator — a Lehmer LCG (seed · 16807 mod
-   2^31−1) feeding polar Box–Muller — and is then shuffled in chunks of
-   ceil(w·h / round(0.7·w)) (forced odd) by a Fisher–Yates pass driven by the same
-   LCG, so a given seed always produces the same frame.                        */
+   2^31−1) feeding polar Box–Muller, started at a fixed 1, so every frame draws on
+   the same pool — which is then shuffled in chunks of ceil(w·h / int(0.7·w))
+   (forced even) by a Fisher–Yates pass driven by the same LCG from the frame's
+   own noise seed. A given seed always produces the same frame.               */
 (function () {
   "use strict";
 
@@ -65,26 +66,39 @@
     return psfCache[radius];
   }
 
-  /* StarField.generateNoise + shuffleNoise, giving the noise already in pixel
-     order so callers can just add stars on top                                */
-  function noiseField(w, h, mean, sigma, seed) {
-    var numChunks = Math.round(0.7 * w) || 1;
-    var chunkSize = Math.ceil(w * h / numChunks);
-    if (chunkSize % 2 !== 1) chunkSize += 1;
-    var total = numChunks * chunkSize;
+  /* StarField.generateNoise: ONE pool of Gaussian noise per field size and
+     noise level, always drawn from seed 1 — every SWF of the lab starts its
+     LCG at a literal 1 there. A frame's noise seed only shuffles that pool.  */
+  var poolCache = {};
+  function noisePool(total, mean, sigma) {
+    var key = total + "|" + mean + "|" + sigma;
+    if (poolCache[key]) return poolCache[key];
     var raw = new Float64Array(total);
-    var s = seed >>> 0 || 1, i, u1, u2, q, f;
-    function next() { s = (s * 16807) % 2147483647; return s; }
+    var s = 1, i, u1, u2, q, f;
     for (i = 0; i < total;) {
       do {
-        u1 = 2 * (s / 2147483647) - 1; next();
-        u2 = 2 * (s / 2147483647) - 1; next();
+        u1 = 2 * (s / 2147483647) - 1; s = (s * 16807) % 2147483647;
+        u2 = 2 * (s / 2147483647) - 1; s = (s * 16807) % 2147483647;
         q = u1 * u1 + u2 * u2;
       } while (q >= 1 || q === 0);
       f = Math.sqrt(-2 * Math.log(q) / q);
       raw[i++] = mean + sigma * u1 * f;
       if (i < total) raw[i++] = mean + sigma * u2 * f;
     }
+    return (poolCache[key] = raw);
+  }
+
+  /* StarField.shuffleNoise: the pool cut into chunks and the chunks dealt out
+     by a Fisher–Yates pass on the frame's seed, returned in pixel order so
+     callers can just add stars on top                                         */
+  function noiseField(w, h, mean, sigma, seed) {
+    var numChunks = (0.7 * w) | 0 || 1;          // an int property: truncated
+    var chunkSize = Math.ceil(w * h / numChunks);
+    if (chunkSize % 2 === 1) chunkSize += 1;       // "ifne": an odd size is bumped to even
+    var total = numChunks * chunkSize;
+    var raw = noisePool(total, mean, sigma);
+    var s, i;
+    function next() { s = (s * 16807) % 2147483647; return s; }
     var table = new Int32Array(numChunks);
     for (i = 0; i < numChunks; i++) table[i] = i;
     s = seed >>> 0 || 1;

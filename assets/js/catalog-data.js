@@ -188,7 +188,7 @@ window.ANIM = {
   {
    "slug": "heliacalrisingsim",
    "topic": "coords",
-   "ready": null,
+   "ready": "heliacalrisingsim",
    "title": {
     "en": "Heliacal Rising Simulator",
     "id": "Simulator Terbit Heliakal"
@@ -253,7 +253,7 @@ window.ANIM = {
   {
    "slug": "transitmovie",
    "topic": "sun",
-   "ready": null,
+   "ready": "transitmovie",
    "title": {
     "en": "Union Seasons Demonstrator",
     "id": "Demonstrator Musim Union"
@@ -279,7 +279,7 @@ window.ANIM = {
   {
    "slug": "daylightsimulator",
    "topic": "sun",
-   "ready": null,
+   "ready": "daylightsimulator",
    "title": {
     "en": "Daylight Simulator",
     "id": "Simulator Cahaya Siang"
@@ -526,7 +526,7 @@ window.ANIM = {
   {
    "slug": "basketball",
    "topic": "moon",
-   "ready": null,
+   "ready": "basketball",
    "title": {
     "en": "Basketball Phases Simulator",
     "id": "Simulator Fase Bola Basket"
@@ -669,7 +669,7 @@ window.ANIM = {
   {
    "slug": "lunarphasequizzer",
    "topic": "moon",
-   "ready": null,
+   "ready": "lunarphasequizzer",
    "title": {
     "en": "Lunar Phase Quizzer",
     "id": "Kuis Fase Bulan"
@@ -864,7 +864,7 @@ window.ANIM = {
   {
    "slug": "meltednail",
    "topic": "light",
-   "ready": null,
+   "ready": "meltednail",
    "title": {
     "en": "Blackbody Curves of Melting",
     "id": "Kurva Benda Hitam Peleburan"
@@ -1384,7 +1384,7 @@ window.ANIM = {
   {
    "slug": "gasRetentionSimulator",
    "topic": "atmosphere",
-   "ready": null,
+   "ready": "gasRetentionSimulator",
    "title": {
     "en": "Gas Retention Simulator",
     "id": "Simulator Retensi Gas"
@@ -1436,7 +1436,7 @@ window.ANIM = {
   {
    "slug": "variableStarPhotometryAnalyzer",
    "topic": "binary",
-   "ready": null,
+   "ready": "variableStarPhotometryAnalyzer",
    "title": {
     "en": "Variable Star Photometry Analyzer",
     "id": "Penganalisis Fotometri Bintang Variabel"
@@ -1501,7 +1501,7 @@ window.ANIM = {
   {
    "slug": "milkyWayHabitability",
    "topic": "atmosphere",
-   "ready": null,
+   "ready": "milkyWayHabitability",
    "title": {
     "en": "Milky Way Habitability Explorer",
     "id": "Penjelajah Kelayakhunian Bima Sakti"
@@ -1573,7 +1573,7 @@ window.ANIM = {
         "id": "Simulator Terbit Heliakal"
        },
        "desc": "Demonstrates how the day of the year when a star is first visible in the morning (the heliacal rising) depends on the observer's latitude and the star's position on the celestial sphere.",
-       "ready": null,
+       "ready": "heliacalrisingsim",
        "topic": "coords"
       },
       {
@@ -1651,7 +1651,7 @@ window.ANIM = {
         "id": "Demonstrator Musim Union"
        },
        "desc": "Demonstrates the changing declination of the sun with a time-lapse movie, which shows how the shadow of a building changes over the course of a year.",
-       "ready": null,
+       "ready": "transitmovie",
        "topic": "sun"
       },
       {
@@ -1679,7 +1679,7 @@ window.ANIM = {
         "id": "Simulator Cahaya Siang"
        },
        "desc": "Simulation showing daylight and nighttime regions on a flat map of Earth.  Daily and yearly motions of the sunlight pattern can be shown.",
-       "ready": null,
+       "ready": "daylightsimulator",
        "topic": "sun"
       },
       {
@@ -1953,7 +1953,7 @@ window.ANIM = {
         "id": "Simulator Fase Bola Basket"
        },
        "desc": "Shows an illuminated basketball that can be viewed from multiple directions, providing an analogy to moon phases.",
-       "ready": null,
+       "ready": "basketball",
        "topic": "moon"
       },
       {
@@ -2107,7 +2107,7 @@ window.ANIM = {
         "id": "Kuis Fase Bulan"
        },
        "desc": "Shows the standard orbital view of the Moon, but with the option to hide the Moon's phase, the Moon's position, or the Sun's direction.",
-       "ready": null,
+       "ready": "lunarphasequizzer",
        "topic": "moon"
       },
       {
@@ -2333,7 +2333,7 @@ window.ANIM = {
         "id": "Kurva Benda Hitam Peleburan"
        },
        "desc": "A movie showing the heating and eventual melting of a nail, and the theoretical blackbody curve produced in the process.",
-       "ready": null,
+       "ready": "meltednail",
        "topic": "light"
       },
       {
@@ -3336,7 +3336,7 @@ window.ANIM = {
         "id": "Simulator Retensi Gas"
        },
        "desc": "Demonstrates how gases of different molecular masses behave when maintained at thermodynamic equilibrium in a chamber. The chamber can be set to allow particles that exceed a certain speed to escape, providing an analogy for the bleeding of a planet's atmosphere into space.",
-       "ready": null,
+       "ready": "gasRetentionSimulator",
        "topic": "atmosphere"
       }
      ]
@@ -3436,7 +3436,7 @@ window.ANIM = {
         "id": "Penganalisis Fotometri Bintang Variabel"
        },
        "desc": "Demonstrates variable star analysis through period determination and lightcurve folding.",
-       "ready": null,
+       "ready": "variableStarPhotometryAnalyzer",
        "topic": "binary"
       }
      ]
@@ -3536,7 +3536,7 @@ window.ANIM = {
         "id": "Penjelajah Kelayakhunian Bima Sakti"
        },
        "desc": "Shows how two factors important to life – metallicity and extinction risk – vary throughout the Milky Way Galaxy.",
-       "ready": null,
+       "ready": "milkyWayHabitability",
        "topic": "atmosphere"
       }
      ]

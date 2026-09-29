@@ -259,7 +259,16 @@ const READY = {
   blinkcomparatorsimulator: "blinkcomparatorsimulator",
   pulsarperiodsim001: "pulsarperiodsim001",
   earthorbitplot: "earthorbitplot",
-  spectrum010: "spectrum010"
+  spectrum010: "spectrum010",
+  milkywayhabitability: "milkyWayHabitability",
+  meltednail: "meltednail",
+  lunarphasequizzer: "lunarphasequizzer",
+  variablestarphotometryanalyzer: "variableStarPhotometryAnalyzer",
+  gasretentionsimulator: "gasRetentionSimulator",
+  transitmovie: "transitmovie",
+  daylightsimulator: "daylightsimulator",
+  heliacalrisingsim: "heliacalrisingsim",
+  basketball: "basketball"
 };
 
 // href-specific overrides — for slugs that collide between DIFFERENT animations sharing a
