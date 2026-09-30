@@ -170,28 +170,6 @@ Drag-and-drop the folder, or point the host at the repo root. No build needed.
 
 ---
 
-## The 11 interactive simulations so far
-
-| Topic | Simulation |
-|---|---|
-| Math | Small-Angle Approximation |
-| Light | Inverse-Square Law |
-| Sun & Seasons | Motions of the Sun |
-| Lunar | Lunar Phase Simulator |
-| Orbits | Planetary Orbit Simulator (Kepler's laws) |
-| Blackbody | Blackbody Curves & Wien's Law |
-| Spectra | Hydrogen Atom & Spectral Lines |
-| H-R | H-R Diagram Explorer |
-| Binary | Eclipsing Binary Simulator |
-| Exoplanets | Exoplanet Transit Simulator |
-| Cosmology | Stellar Parallax |
-
-The full catalog of **126 original animations** (≈106 unique) is browsable on the
-home page and the [All 126](originals.html) page; the remaining ones are scaffolded
-and ready to be rebuilt with the pattern above.
-
----
-
 ## Credits & attribution
 
 The original simulations were created by the **University of Nebraska–Lincoln

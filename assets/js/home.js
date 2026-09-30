@@ -4,7 +4,7 @@
    =========================================================================== */
 (function () {
   var lang = function () { return I18N.getLang(); };
-  var state = { q: "", topic: "all", status: "all" };
+  var state = { q: "", topic: "all" };
 
   function mount() {
     document.body.prepend(UI.header());
@@ -22,7 +22,6 @@
   }
 
   function renderHero(main) {
-    var ready = ANIM.sims.filter(function (s) { return s.ready; }).length;
     var total = ANIM.sims.length;
     var hero = document.createElement("section");
     hero.className = "hero";
@@ -30,8 +29,7 @@
       '<h1 data-i18n="home.heroTitle"></h1>' +
       '<p data-i18n="home.heroLead"></p>' +
       '<p style="margin-top:14px">' +
-      '<span class="stat">' + ready + '</span> <span data-i18n="home.readyLabel"></span>' +
-      ' · <span class="stat">' + total + '</span> <span data-i18n="home.statLabel"></span></p>';
+      '<span class="stat">' + total + '</span> <span data-i18n="home.statLabel"></span></p>';
     main.appendChild(hero);
   }
 
@@ -50,21 +48,6 @@
     search.appendChild(input);
     bar.appendChild(search);
 
-    var status = document.createElement("div");
-    status.className = "chips";
-    [["all", "home.all"], ["ready", "home.ready"], ["planned", "home.planned"]].forEach(function (p) {
-      var c = document.createElement("button");
-      c.className = "chip" + (state.status === p[0] ? " active" : "");
-      c.setAttribute("data-i18n", p[1]);
-      c.addEventListener("click", function () {
-        state.status = p[0];
-        status.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("active"); });
-        c.classList.add("active");
-        renderResults();
-      });
-      status.appendChild(c);
-    });
-    bar.appendChild(status);
     main.appendChild(bar);
 
     var cats = document.createElement("div");
@@ -100,8 +83,6 @@
 
   function matches(sim) {
     if (state.topic !== "all" && sim.topic !== state.topic) return false;
-    if (state.status === "ready" && !sim.ready) return false;
-    if (state.status === "planned" && sim.ready) return false;
     if (state.q) {
       var hay = (sim.title.en + " " + sim.title.id + " " + (sim.desc || "")).toLowerCase();
       if (hay.indexOf(state.q) === -1) return false;
@@ -116,8 +97,7 @@
     ANIM.topics.forEach(function (t) {
       var sims = ANIM.sims.filter(function (s) { return s.topic === t.id && matches(s); });
       if (!sims.length) return;
-      // ready first, then alphabetical
-      sims.sort(function (a, b) { return (b.ready ? 1 : 0) - (a.ready ? 1 : 0) || a.title.en.localeCompare(b.title.en); });
+      sims.sort(function (a, b) { return a.title.en.localeCompare(b.title.en); });
       any = true;
       var block = document.createElement("section");
       block.className = "category-block";
@@ -143,22 +123,16 @@
   }
 
   function card(sim) {
-    var el = document.createElement(sim.ready ? "a" : "div");
-    el.className = "card " + (sim.ready ? "ready" : "planned");
-    if (sim.ready) el.href = "sims/" + sim.ready + ".html";
+    var el = document.createElement("a");
+    el.className = "card";
+    el.href = "sims/" + sim.ready + ".html";
     var thumb = '<div class="thumb">' + thumbFor(sim.topic) +
       (sim.preview ? '<img src="' + esc(sim.preview) + '" loading="lazy" alt="" onerror="this.remove()">' : "") +
       "</div>";
-    // a planned card is a <div>, so we can add a "play original" link inside it
-    var actions = (!sim.ready && sim.swf) ?
-      '<div class="card-actions"><a class="mini-btn flash" href="play.html?a=' + encodeURIComponent(sim.slug) +
-      '&s=' + encodeURIComponent(sim.swf) + '" data-i18n="card.playOriginal"></a></div>' : "";
     el.innerHTML =
       thumb +
-      '<span class="badge ' + (sim.ready ? "ready" : "planned") + '" data-i18n="' +
-        (sim.ready ? "badge.ready" : "badge.planned") + '"></span>' +
       "<h3>" + esc(sim.title[lang()]) + "</h3>" +
-      "<p>" + esc(sim.desc || "") + "</p>" + actions;
+      "<p>" + esc(sim.desc || "") + "</p>";
     I18N.apply(el);
     return el;
   }
