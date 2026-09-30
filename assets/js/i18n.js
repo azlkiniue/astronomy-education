@@ -85,7 +85,7 @@ I18N.add({
     "orig.planned": "Not yet rebuilt",
     "home.heroTitle": "Astronomy Simulations & Animations",
     "home.heroLead":
-      "A modern, open recreation of the classic UNL Flash astronomy applets — rebuilt in plain HTML & JavaScript so they run on any device, forever.",
+      "A modern, open recreation of the classic UNL Flash astronomy applets — rebuilt in plain HTML & JavaScript so they run on any modern device.",
     "home.searchPlaceholder": "Search simulations…",
     "home.all": "All",
     "home.ready": "Ready",
@@ -100,6 +100,7 @@ I18N.add({
     "footer.note":
       "Educational recreation inspired by the UNL Astronomy Education Group (NAAP & ClassAction). Not affiliated with UNL.",
     "footer.source": "Open source",
+    "footer.unl": "Original UNL Astronomy Education site",
     "sim.backToCatalog": "← All simulations",
     "sim.aboutTitle": "About this simulation",
     "sim.reset": "Reset",
@@ -123,7 +124,7 @@ I18N.add({
     "orig.planned": "Belum dibangun ulang",
     "home.heroTitle": "Simulasi & Animasi Astronomi",
     "home.heroLead":
-      "Pembuatan ulang modern dan terbuka dari applet astronomi Flash klasik UNL — dibangun ulang dengan HTML & JavaScript murni agar berjalan di perangkat apa pun, selamanya.",
+      "Pembuatan ulang modern dan terbuka dari applet astronomi Flash klasik UNL — dibangun ulang dengan HTML & JavaScript murni agar berjalan di perangkat modern.",
     "home.searchPlaceholder": "Cari simulasi…",
     "home.all": "Semua",
     "home.ready": "Siap",
@@ -138,6 +139,7 @@ I18N.add({
     "footer.note":
       "Pembuatan ulang edukatif terinspirasi oleh UNL Astronomy Education Group (NAAP & ClassAction). Tidak berafiliasi dengan UNL.",
     "footer.source": "Sumber terbuka",
+    "footer.unl": "Situs asli UNL Astronomy Education",
     "sim.backToCatalog": "← Semua simulasi",
     "sim.aboutTitle": "Tentang simulasi ini",
     "sim.reset": "Atur ulang",

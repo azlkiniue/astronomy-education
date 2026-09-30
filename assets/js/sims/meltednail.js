@@ -210,6 +210,7 @@ Sim.create({
     /* --------------------------------------------------------------- paint */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       panel(ctx, LEFT, null, t);
       panel(ctx, RIGHT, t("mn.title"), t);
@@ -228,10 +229,11 @@ Sim.create({
       if (!title) return;
       ctx.font = "14px " + FONT; ctx.fillStyle = "#333333";
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      var tw = ctx.measureText(title).width;
-      ctx.fillText(title, b.x + 5, b.y + 18);
-      ctx.strokeStyle = "#cccccc";
-      ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 12.5); ctx.lineTo(b.x + b.w - 5, b.y + 12.5); ctx.stroke();
+      var tw = FlashText.textWidth(ctx, title);                          // tmc.textWidth: whole px
+      FlashText.fill(ctx, title, b.x + 5, b.y + 18);
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 14.44); ctx.lineTo(b.x + b.w - 5, b.y + 14.44); ctx.stroke();
+      ctx.lineCap = "butt";
     }
 
     function film(ctx, t) {
@@ -243,14 +245,14 @@ Sim.create({
         ctx.drawImage(still, MOVIE.x, MOVIE.y, MOVIE.w, MOVIE.h);
       } else {
         ctx.fillStyle = "#888888"; ctx.font = "12px " + FONT; ctx.textAlign = "center";
-        ctx.fillText(t("mn.loading"), MOVIE.x + MOVIE.w / 2, MOVIE.y + MOVIE.h / 2);
+        FlashText.fill(ctx, t("mn.loading"), MOVIE.x + MOVIE.w / 2, MOVIE.y + MOVIE.h / 2);
       }
       /* "temperature:" (static text 109) and temperatureField (EditText 110) */
       ctx.fillStyle = "#ffffff"; ctx.font = "bold 12px " + FONT;
       ctx.textBaseline = "alphabetic";
       var lab = t("mn.tempLabel"), right = 80.1 + 23.35 + 89.15;
-      ctx.textAlign = "right"; ctx.fillText(lab, right, 65.5 + OY);
-      ctx.textAlign = "left"; ctx.fillText(Math.floor(temperature(frame)) + " K", 198.6, 65.5 + OY);
+      ctx.textAlign = "right"; FlashText.fillStatic(ctx, lab, right, 65.5 + OY);
+      ctx.textAlign = "left"; FlashText.fill(ctx, Math.floor(temperature(frame)) + " K", 198.6, 65.5 + OY);
     }
 
     /* the FUI push button: #e8e8e8 face, #999999 edge, white and #cccccc bevels */
@@ -267,8 +269,8 @@ Sim.create({
       ctx.lineTo(b.x + 1.5, b.y + b.h - 1.5); ctx.stroke();
       ctx.strokeStyle = "#999999"; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
       ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(t(label()), b.x + b.w / 2 + (down ? 1 : 0), b.y + b.h / 2 + (down ? 1 : 0));
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, t(label()), b.x + b.w / 2 + (down ? 1 : 0), b.y + b.h / 2 + 5.05 + (down ? 1 : 0));   // FPushButton: 17.55 down a 25 px button
     }
 
     /* StandardSliderClassV6: a 6 px bar, 1 px #c0c0c0 border, #fafafa→#d0d0d0,
@@ -359,17 +361,17 @@ Sim.create({
       for (var k = 6; k <= 16; k++) {
         var x = Math.round(hs * (k * 5e-8 - P.min)) + 0.5, major = k % 2 === 0;
         ctx.moveTo(x, 0); ctx.lineTo(x, major ? 10 : 7);
-        if (major) ctx.fillText(k * 50 + " nm", x, 22.8);
+        if (major) FlashText.fill(ctx, k * 50 + " nm", x - 0.5, 22.8);        // centred on the tick's integer x, not on its hairline
       }
       ctx.stroke();
       ctx.restore();
       /* the two bold axis titles (static texts 103 and 104) */
       ctx.font = "bold 12px " + FONT; ctx.fillStyle = "#000000";
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("mn.wavelength"), 581.45, 325.65 + OY);
+      FlashText.fillStatic(ctx, t("mn.wavelength"), 581.45, 325.65 + OY);
       ctx.save();
       ctx.translate(387.75, 170 + OY); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(t("mn.intensity"), 0, 0);
+      FlashText.fillStatic(ctx, t("mn.intensity"), 0, 0);
       ctx.restore();
     }
 
@@ -386,9 +388,9 @@ Sim.create({
       ctx.restore();
       ctx.fillStyle = "#000000"; ctx.font = "8px " + FONT;
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillText("0 µm", 407.55, 149.95 + OY);
-      ctx.fillText("5 µm", 454.55, 149.95 + OY);
-      ctx.fillText("10 µm", 499, 149.95 + OY);
+      FlashText.fill(ctx, "0 µm", 407.55, 149.95 + OY);
+      FlashText.fill(ctx, "5 µm", 454.55, 149.95 + OY);
+      FlashText.fill(ctx, "10 µm", 499, 149.95 + OY);
     }
 
     syncButton();

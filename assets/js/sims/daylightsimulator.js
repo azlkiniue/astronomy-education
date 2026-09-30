@@ -78,7 +78,7 @@ Sim.create({
   build: function (S) {
     var TAU = Math.PI * 2, RAD = Math.PI / 180;
     var FONT = "Verdana, Geneva, sans-serif", TREB = "'Trebuchet MS', 'Lucida Grande', sans-serif";
-    var ASC = 1.0059, TB = -0.2;
+    var ASC = 1.0059, TB = 0;                       // TB: a TextField's baseline is field top + 2 + ascent
 
     /* ---- the Flat Map Component 007, as the SWF places it ---- */
     var MAP = { x: 131.25, y: 35.45, h: 258.75 };
@@ -404,22 +404,25 @@ Sim.create({
         ctx.moveTo(x0 - B, Math.round(ly) + 0.5); ctx.lineTo(x0 + W + B, Math.round(ly) + 0.5);
       });
       ctx.stroke();
-      // border labels, Verdana 12 in the border's dark colour
+      // border labels, Verdana 12 in the border's dark colour. attachBorderLabels makes each with
+      // createTextField(name, depth, x, y, 0, 0), which truncates x and y to integers (FlashText.int)
       font(ctx, 12); ctx.fillStyle = BORDER_DARK; ctx.textBaseline = "alphabetic";
-      var fh = 1.2159 * 12 + 4;
+      var fh = 18.4, INK = 2 + ASC * 12 + TB;                // fh: borderLabelsField._height (18.25 < fh ≤ 18.5 fits Ruffle's rows)
       ctx.textAlign = "center";
+      var yTop = y0 + FlashText.int(-B - LABEL_GAP - fh), yBot = y0 + FlashText.int(H + B + LABEL_GAP);
       for (i = 0; i < LON_DIV; i++) {
         var L = -180 + i * 45, lx = lonToX(L);
         var txt = L === 0 ? "0°" : Math.abs(L) === 180 ? "180°" : Math.abs(L) + t(L < 0 ? "dl.dW" : "dl.dE");
         if (lx > x0 + W - 0.5) lx -= W;
-        ctx.fillText(txt, lx, y0 - B - LABEL_GAP - fh + 2 + ASC * 12 + TB);
-        ctx.fillText(txt, lx, y0 + H + B + LABEL_GAP + 2 + ASC * 12 + TB);
+        FlashText.fill(ctx, txt, lx, yTop + INK);          // _x = position − _width / 2 keeps its fraction
+        FlashText.fill(ctx, txt, lx, yBot + INK);
       }
+      var xRight = x0 + FlashText.int(W + B + LABEL_GAP);
       for (i = 0; i <= LAT_DIV; i++) {
-        var lat = 90 - i * 30, yy = y0 + i * H / LAT_DIV - fh / 2 + 2 + ASC * 12 + TB;
+        var lat = 90 - i * 30, yy = y0 + FlashText.int(i * H / LAT_DIV - fh / 2) + INK;
         var lt = lat === 0 ? "0°" : Math.abs(lat) + t(lat > 0 ? "dl.dN" : "dl.dS");
-        ctx.textAlign = "right"; ctx.fillText(lt, x0 - B - LABEL_GAP - 2, yy);
-        ctx.textAlign = "left"; ctx.fillText(lt, x0 + W + B + LABEL_GAP + 2, yy);
+        ctx.textAlign = "right"; FlashText.fill(ctx, lt, x0 - B - LABEL_GAP - 2, yy);
+        ctx.textAlign = "left"; FlashText.fill(ctx, lt, xRight + 2, yy);
       }
       ctx.restore();
     }
@@ -429,15 +432,15 @@ Sim.create({
       ctx.strokeStyle = "#666666"; ctx.lineWidth = 1; ctx.strokeRect(-s.hw + 0.5, -2.25, 2 * s.hw - 1, 4.5);
       font(ctx, 12, "bold"); ctx.fillStyle = "#ffffff"; ctx.textBaseline = "alphabetic";
       var base = -35 + 2 + ASC * 12 + TB;
-      ctx.textAlign = "left"; ctx.fillText(t(s.title), -s.hw - 10, base);
+      ctx.textAlign = "left"; FlashText.fill(ctx, t(s.title), -s.hw - 10, base);
       var v = s.value, vt = String(v);
       if (s.minSuffix && v < 0) vt = -v + t(s.minSuffix);
       else if (s.maxSuffix && v > 0) vt = v + t(s.maxSuffix);
-      ctx.textAlign = "right"; ctx.fillText(vt, s.hw + 10, base);
+      ctx.textAlign = "right"; FlashText.fill(ctx, vt, s.hw + 10, base);
       font(ctx, 10, "bold"); ctx.textAlign = "center";
       var mb = 14 + 2 + ASC * 10 + TB;
-      ctx.fillText(Math.abs(s.min) + (s.minSuffix ? t(s.minSuffix) : ""), -s.hw, mb);
-      ctx.fillText(s.max + (s.maxSuffix ? t(s.maxSuffix) : ""), s.hw, mb);
+      FlashText.fill(ctx, Math.abs(s.min) + (s.minSuffix ? t(s.minSuffix) : ""), -s.hw, mb);
+      FlashText.fill(ctx, s.max + (s.maxSuffix ? t(s.maxSuffix) : ""), s.hw, mb);
       // SliderV3Grabber (shape 204): #cccccc, a hairline #666666 and three grip lines
       ctx.translate(grabX(s) - s.x, -2.2);
       ctx.fillStyle = "#cccccc"; ctx.fill(GRABBER);
@@ -455,7 +458,7 @@ Sim.create({
       ctx.fillStyle = down ? "#999999" : "#cccccc"; ctx.fillRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
       ctx.fillStyle = "#e8e8e8"; ctx.fillRect(b.x + 2, b.y + 2, b.w - 4, b.h - 4);
       font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t(key), b.x + b.w / 2 + (down ? 1 : 0), b.y + 17.2 + (down ? 1 : 0));
+      FlashText.fill(ctx, t(key), b.x + b.w / 2 + (down ? 1 : 0), b.y + 17.55 + (down ? 1 : 0));
     }
     function radio(ctx, r, on) {                    // FRadioButton (frb_states), 10 px
       var down = press && press.kind === "radio" && press.r === r && press.inside;
@@ -466,28 +469,29 @@ Sim.create({
       if (on) { ctx.fillStyle = "#000000"; ctx.beginPath(); ctx.arc(5, 5, 2, 0, TAU); ctx.fill(); }
       ctx.restore();
       font(ctx, 12); ctx.fillStyle = "#ffffff"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t(r.key), r.tx, r.ty);
+      FlashText.fillStatic(ctx, t(r.key), r.tx, r.ty);          // static text
     }
     function readouts(ctx) {
       var f = info();
-      font(ctx, 14, "bold", TREB); ctx.fillStyle = "#ffffff"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("dl.cDate"), 173.2, 365.2);
-      ctx.fillText(t("dl.cTime"), 173.2, 394.2);
-      ctx.fillText(t("dl.cDec"), 173.2, 422.2);
-      ctx.fillText(t("dl.cRays"), 173.2, 452);
-      ctx.fillText(t("dl.cHours"), 173.2, 479.4);
+      font(ctx, 14, "bold", TREB); ctx.fillStyle = "#ffffff"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";   // static texts, the labels
+      FlashText.fillStatic(ctx, t("dl.cDate"), 173.2, 365.2);
+      FlashText.fillStatic(ctx, t("dl.cTime"), 173.2, 394.2);
+      FlashText.fillStatic(ctx, t("dl.cDec"), 173.2, 422.2);
+      FlashText.fillStatic(ctx, t("dl.cRays"), 173.2, 452);
+      FlashText.fillStatic(ctx, t("dl.cHours"), 173.2, 479.4);
       font(ctx, 14, "", TREB); ctx.textAlign = "left";
       [[f.date, 352.2], [f.time, 381.2], [f.dec, 409.2], [f.rays, 439], [f.hours, 466.4]].forEach(function (r) {
-        ctx.fillText(r[0], 182, r[1] + 15.1);                       // the embedded Trebuchet's ascent, as Ruffle sets it
+        FlashText.fill(ctx, r[0], 182, r[1] + 15.1);                       // the embedded Trebuchet's ascent, as Ruffle sets it
       });
       font(ctx, 14, "bold", TREB); ctx.textAlign = "left";
-      ctx.fillText(t("dl.cMode"), 595.55, 345.75);
+      FlashText.fillStatic(ctx, t("dl.cMode"), 595.55, 345.75);
       font(ctx, 12, "", TREB); ctx.textAlign = "right";          // static text 222, ends at 776.1
-      ctx.fillText(t("dl.credit"), 776.1, 508.65);
+      FlashText.fillStatic(ctx, t("dl.credit"), 776.1, 508.65);
     }
 
     function draw() {
       var ctx = S.ctx;
+      FlashText.begin(ctx);
       ctx.save();
       ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, S.W, S.H);
       map(ctx);

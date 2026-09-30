@@ -55,6 +55,7 @@ window.Sim = (function () {
     refreshers.push(function () {
       var l = I18N.getLang();
       h1.textContent = entry ? entry.title[l] : (cfg.title ? cfg.title[l] : cfg.id);
+      document.title = h1.textContent + " \u2014 " + I18N.t("site.title");
       // catalog descriptions are English-only for now (translated in a later pass)
       lead.textContent = entry ? entry.desc : (cfg.desc ? (cfg.desc[l] || cfg.desc.en) : "");
     });

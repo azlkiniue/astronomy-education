@@ -664,7 +664,7 @@ Sim.create({
       return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height - OY };
     }
     function inRect(p, x, y, w, h) { return p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h; }
-    function textW(str, size) { S.ctx.font = size + "px " + FONT; return ftextW(S.ctx, str); }
+    function textW(str, size) { S.ctx.font = size + "px " + FONT; return FlashText.width(S.ctx, str); }
     function radioX(r) { return r.x[isID() ? "id" : "en"]; }
     function listGeom(c) {
       var n = comboItems(c).length, shown = Math.min(c === CB_MONTH ? 12 : 8, n);
@@ -826,24 +826,6 @@ Sim.create({
 
     /* ------------------------------------------------ drawing helpers */
     function font(ctx, size, bold) { ctx.font = (bold ? "bold " : "") + size + "px " + FONT; }
-    /* Flash text as Ruffle sets it: unkerned, each glyph's advance floored to a whole twip */
-    var advCache = {};
-    function advances(ctx, str) {
-      var f = ctx.font, xs = [], x = 0;
-      for (var i = 0; i < str.length; i++) {
-        var k = f + "|" + str[i], a = advCache[k];
-        if (a === undefined) a = advCache[k] = Math.floor(ctx.measureText(str[i]).width * 20) / 20;
-        xs.push(x); x += a;
-      }
-      return { xs: xs, w: x };
-    }
-    function ftext(ctx, str, x, y, align) {          // → the laid-out width (TextField.textWidth)
-      var L = advances(ctx, str), x0 = align === "center" ? x - L.w / 2 : align === "right" ? x - L.w : x;
-      ctx.textAlign = "left";
-      for (var i = 0; i < str.length; i++) if (str[i] !== " ") ctx.fillText(str[i], x0 + L.xs[i], y);
-      return L.w;
-    }
-    function ftextW(ctx, str) { return advances(ctx, str).w; }
     function lineH(size) { return EM_H * size + 4; }            // an autosized TextField's height
     function roundRect(ctx, x, y, w, h, r) {
       ctx.beginPath();
@@ -860,9 +842,9 @@ Sim.create({
       ctx.strokeStyle = "#666666"; ctx.lineWidth = 1;
       ctx.strokeRect(b.x, b.y, b.w, b.h);
       font(ctx, 14); ctx.fillStyle = "#333333"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      var tw = ftext(ctx, t(b.key), b.x + 5, b.y + 18, "left");
+      FlashText.fill(ctx, t(b.key), b.x + 5, b.y + 18, "left");
       ctx.strokeStyle = "#cccccc";
-      tw = Math.floor(tw);                            // Ruffle's textWidth is whole pixels
+      var tw = FlashText.textWidth(ctx, t(b.key));    // Ruffle's textWidth is whole pixels
       ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 14.44); ctx.lineTo(b.x + b.w - 5, b.y + 14.44); ctx.stroke();
       ctx.lineCap = "butt";
@@ -872,8 +854,8 @@ Sim.create({
       ctx.save(); ctx.translate(f.x, f.y);
       font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
       var base = -lineH(12) / 2 + 2 + ASC * 12 + TB + 0.25;      // + 0.25: measured in Ruffle
-      ftext(ctx, t(f.label), -9.8 - Math.floor(ftextW(ctx, t(f.label))), base, "left");   // textWidth is whole px
-      if (f.units) ftext(ctx, t(f.units), f.w + 9.8, base, "left");
+      FlashText.fill(ctx, t(f.label), -9.8 - FlashText.textWidth(ctx, t(f.label)), base, "left");   // textWidth is whole px
+      if (f.units) FlashText.fill(ctx, t(f.units), f.w + 9.8, base, "left");
       roundRect(ctx, -4.8, -10.5, f.w + 9.6, 21, 4.8); ctx.fillStyle = "#c0c0c0"; ctx.fill();
       roundRect(ctx, -3.8, -9.5, f.w + 7.6, 19, 3.8); ctx.fillStyle = f.active ? "#ffffee" : "#ffffff"; ctx.fill();
       ctx.restore();
@@ -896,7 +878,7 @@ Sim.create({
       ctx.fillStyle = "rgba(102,102,102,0.5)"; ctx.fillRect(c.x, c.y - px / 2, c.w - h, px);
       font(ctx, 12); ctx.fillStyle = hi ? SEL_TEXT : "#000000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ctx.save(); ctx.beginPath(); ctx.rect(c.x, c.y, c.w - h, h); ctx.clip();
-      ftext(ctx, t(comboItems(c)[comboSel(c)]), c.x + 3.9, c.y + 14.1, "left");
+      FlashText.fill(ctx, t(comboItems(c)[comboSel(c)]), c.x + 3.9, c.y + 14.1, "left");
       ctx.restore();
       arrowButton(ctx, c.x + c.w - h, c.y, h);
     }
@@ -911,7 +893,7 @@ Sim.create({
         var y = g.y + i * ROW_H;
         if (i === listHi) { ctx.fillStyle = SEL_BG; ctx.fillRect(g.x, y, g.w, COMBO_H); }
         ctx.fillStyle = i === listHi ? SEL_TEXT : "#000000";
-        ftext(ctx, t(items[i]), g.x + 3.9, y + 14.1, "left");
+        FlashText.fill(ctx, t(items[i]), g.x + 3.9, y + 14.1, "left");
       }
       ctx.restore();
       ctx.fillStyle = "#666666"; ctx.fillRect(g.x - px / 2, g.y, px, g.h); ctx.fillRect(g.x + g.w - px / 2, g.y, px, g.h);
@@ -928,7 +910,7 @@ Sim.create({
       if (on) { ctx.fillStyle = "#000000"; ctx.beginPath(); ctx.arc(5, 5, 2, 0, TAU); ctx.fill(); }
       ctx.restore();
       font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ftext(ctx, t(r.key), x + 16.2, r.y + 10.1, "left");    // the SWF's ' label': its space takes no room
+      FlashText.fill(ctx, t(r.key), x + 16.2, r.y + 10.1, "left");    // the SWF's ' label': its space takes no room
     }
 
     /* ------------------------------------------------ the panels */
@@ -944,7 +926,7 @@ Sim.create({
       font(ctx, 11); ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
       for (var i = 0; i < 12; i++) {                 // Day Of Year Labels
         var mx = STRIP.k * (MONTH_PTS[i] + (MONTH_PTS[i + 1] - MONTH_PTS[i]) / 2);
-        ftext(ctx, t("hr.s" + i), mx + 0.025, -8.65 + 2 + ASC * 11 + TB, "center");
+        FlashText.fill(ctx, t("hr.s" + i), mx + 0.025, -8.65 + 2 + ASC * 11 + TB, "center");
       }
       ctx.translate(STRIP.k * (doy + 0.5), -22);     // Day Of Year Cursor
       ctx.fillStyle = "#f02000"; ctx.strokeStyle = "#f02000";
@@ -1014,18 +996,18 @@ Sim.create({
       vis.bars.forEach(function (b) { ctx.fillRect(b[0], y1, b[1] - b[0], y2 - y1); });
       font(ctx, 12); ctx.textAlign = "center";
       vis.texts.forEach(function (tx) {             // createTextField(…, x, …) takes an integer x;
-        ftext(ctx, t(tx.key), Math.floor(tx.x), tx.y - EM_H * 12 + 2 + ASC * 12 + TB - 1.125, "center");
+        FlashText.fill(ctx, t(tx.key), FlashText.int(tx.x), tx.y - EM_H * 12 + 2 + ASC * 12 + TB - 1.125, "center");
       });                                            // _y = y − textHeight (as measured in Ruffle)
       ctx.restore();
     }
     function hourLabel(ctx, s, x, base) {           // '3<font size="-3">AM</font>', centred
       var parts = s.split("|"), w0, w1 = 0;
-      font(ctx, 12); w0 = ftextW(ctx, parts[0]);
-      if (parts[1]) { font(ctx, 9); w1 = ftextW(ctx, parts[1]); }
-      var left = Math.floor(x) - (w0 + w1) / 2;     // createTextField takes an integer x
+      font(ctx, 12); w0 = FlashText.width(ctx, parts[0]);
+      if (parts[1]) { font(ctx, 9); w1 = FlashText.width(ctx, parts[1]); }
+      var left = FlashText.int(x) - (w0 + w1) / 2;  // createTextField takes an integer x
       ctx.fillStyle = "#000000";
-      font(ctx, 12); ftext(ctx, parts[0], left, base, "left");
-      if (parts[1]) { font(ctx, 9); ftext(ctx, parts[1], left + w0, base, "left"); }
+      font(ctx, 12); FlashText.fill(ctx, parts[0], left, base, "left");
+      if (parts[1]) { font(ctx, 9); FlashText.fill(ctx, parts[1], left + w0, base, "left"); }
     }
     function timeCursor(ctx) {                       // timeOfDayCursor, #f02000 or #505050 when locked
       if (!cursorShown) return;
@@ -1042,7 +1024,7 @@ Sim.create({
     function draw() {
       var ctx = S.ctx;
       ctx.save();
-      ctx.fontKerning = "none";                      // Flash lays text out without kerning
+      FlashText.begin(ctx);                          // Flash lays text out without kerning
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       ctx.translate(0, OY);
       ctx.fillStyle = "#000000"; ctx.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);

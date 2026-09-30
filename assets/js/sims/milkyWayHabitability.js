@@ -184,6 +184,7 @@ Sim.create({
     /* --------------------------------------------------------------- paint */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       galaxy(ctx, t);
       PLOTS.forEach(function (P) { panel(ctx, t, P); });
@@ -210,9 +211,9 @@ Sim.create({
       ctx.beginPath(); ctx.arc(GAL.x + 159.05, GAL.y + 1.65, 2.5, 0, TAU);
       ctx.fillStyle = "#ffffff"; ctx.fill();
       ctx.font = "bold 11px " + FONT; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("mh.sun"), GAL.x + 165.35, GAL.y + 5);
+      FlashText.fillStatic(ctx, t("mh.sun"), GAL.x + 165.35, GAL.y + 5);
       ctx.font = "italic 10px " + FONT; ctx.textAlign = "right";
-      ctx.fillText(t("mh.credit"), GAL.x + 417, GAL.y + 145.4);
+      FlashText.fill(ctx, t("mh.credit"), GAL.x + 417, GAL.y + 145.4);
     }
 
     /* the "Panel Background" component: #fafafa, 1 px #666666, a 14 px #333333
@@ -224,21 +225,22 @@ Sim.create({
       ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
       ctx.font = "14px " + FONT; ctx.fillStyle = "#333333";
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      var title = t(P.title), tw = ctx.measureText(title).width;
-      ctx.fillText(title, b.x + 5, b.y + 18);
-      ctx.strokeStyle = "#cccccc";
-      ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 12.5); ctx.lineTo(b.x + b.w - 5, b.y + 12.5); ctx.stroke();
+      var title = t(P.title), tw = FlashText.textWidth(ctx, title);      // tmc.textWidth: whole px
+      FlashText.fill(ctx, title, b.x + 5, b.y + 18);
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 14.44); ctx.lineTo(b.x + b.w - 5, b.y + 14.44); ctx.stroke();
+      ctx.lineCap = "butt";
       ctx.font = "italic 11px " + FONT; ctx.fillStyle = "#000000";
-      wrap(ctx, t(P.desc), P.descX, 378 + OY + 11.5, P.descW, 15.4);
+      wrap(ctx, t(P.desc), P.descX, 378 + OY + 11.05, P.descW, 15.4);      // 11.05: measured against Ruffle (was 11.5); the description is a wrapped TextField, so floored advances
     }
     function wrap(ctx, text, x, y, w, lh) {
       var words = text.split(" "), line = "";
       words.forEach(function (word) {
         var test = line ? line + " " + word : word;
-        if (ctx.measureText(test).width > w && line) { ctx.fillText(line, x, y); y += lh; line = word; }
+        if (FlashText.width(ctx, test) > w && line) { FlashText.fill(ctx, line, x, y); y += lh; line = word; }
         else line = test;
       });
-      if (line) ctx.fillText(line, x, y);
+      if (line) FlashText.fill(ctx, line, x, y);
     }
 
     /* the axes, ticks and labels both plots share (shapes 41, 47, 48; texts 40, 42–46) */
@@ -256,17 +258,19 @@ Sim.create({
         ctx.closePath(); ctx.fill();
         ctx.restore();
       });
-      ctx.font = "12px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      [0, 5, 10, 15, 20].forEach(function (d) { ctx.fillText(String(d), d * PLOT_SCALE, 228.45); });
-      ctx.font = fit(ctx, t("mh.xAxis"), 14, 330);
-      ctx.fillText(t("mh.xAxis"), 177.4, 249.9);
+      // static texts 42–46, each placed by hand in sprite 56 (left x; baseline = 216.45 + 12)
+      ctx.font = "12px " + FONT; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      [0, 5, 10, 15, 20].forEach(function (d, i) { FlashText.fillStatic(ctx, String(d), TICK_X[i], 228.45); });
+      ctx.font = fit(ctx, t("mh.xAxis"), 14, 330); ctx.textAlign = "center";
+      FlashText.fillStatic(ctx, t("mh.xAxis"), 177.4, 249.9);
       ctx.save();
       ctx.translate(-24.05, P.axisY); ctx.rotate(-Math.PI / 2);
       ctx.font = fit(ctx, t(P.axis), 14, P.axisY - 4);
       ctx.textAlign = "left";
-      ctx.fillText(t(P.axis), 0, 14);
+      FlashText.fillStatic(ctx, t(P.axis), 0, 14);
       ctx.restore();
     }
+    var TICK_X = [-3.8, 69.45, 139.25, 212.5, 286.5];
     function fit(ctx, text, size, max) {
       ctx.font = size + "px " + FONT;
       var w = ctx.measureText(text).width;

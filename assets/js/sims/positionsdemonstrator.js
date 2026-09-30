@@ -273,6 +273,7 @@ Sim.create({
     /* ================================= drawing ================================= */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       S.clear();
       ctx.fillStyle = "#fafafa"; ctx.fillRect(0, 0, S.W, S.H);
       panel(ctx, PANEL, t("pd.diagram"));
@@ -313,12 +314,13 @@ Sim.create({
       ctx.strokeStyle = "#666666"; ctx.lineWidth = 1;
       ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
       ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT;
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(title, b.x + 7, b.y + 6);
-      ctx.strokeStyle = "#cccccc";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, title, b.x + 5, b.y + 4 + 1.0059 * 12);      // a field at (xMargin, 4): baseline = top + 2 + ascent
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(b.x + 14 + ctx.measureText(title).width, b.y + 10.5);
-      ctx.lineTo(b.x + b.w - 5, b.y + 10.5); ctx.stroke();
+      ctx.moveTo(b.x + 10 + FlashText.textWidth(ctx, title), b.y + 13.25);   // 2·xMargin + tmc.textWidth; 13.25 down for a 12 px title
+      ctx.lineTo(b.x + b.w - 5, b.y + 13.25); ctx.stroke();
+      ctx.lineCap = "butt";
     }
     function discClip(ctx) { ctx.beginPath(); ctx.arc(C.x, C.y, R, 0, TAU); ctx.clip(); }
 
@@ -383,7 +385,7 @@ Sim.create({
       enter(ctx, o.s, frame(unit(o.p)), vecC);
       ctx.fillStyle = "#d11818"; ctx.font = "bold 16px " + FONT;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(String(o.n), 0, 1.5);
+      FlashText.fill(ctx, String(o.n), 0, 1.5);
     }
     function sunGlyph(ctx, o) {                            // Sun Disc: shape 88 + ring 89 (90 on hover)
       enter(ctx, o.s, frame(unit(o.p)), vecC);
@@ -502,10 +504,10 @@ Sim.create({
       ctx.beginPath(); ctx.arc(0, 0, 100, 0, TAU); ctx.fill();
       ctx.fillStyle = "#ffffff"; ctx.font = "bold 12px " + FONT;
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("pd.N"), 0, -80.3);                  // Direction Labels Light
-      ctx.fillText(t("pd.S"), 0, 88.7);
-      ctx.fillText(t("pd.E"), 83.25, 4.75);
-      ctx.fillText(t("pd.W"), -83, 4.75);
+      FlashText.fillStatic(ctx, t("pd.N"), 0, -80.3);                  // Direction Labels Light
+      FlashText.fillStatic(ctx, t("pd.S"), 0, 88.7);
+      FlashText.fillStatic(ctx, t("pd.E"), 83.25, 4.75);
+      FlashText.fillStatic(ctx, t("pd.W"), -83, 4.75);
       var alt = toHorizon(sunRa(), 0).alt;                 // updateShadow: darker as the Sun sinks
       var dark = showSun ? Math.min(40, 40 * Math.pow(1 - alt / 90, 4)) : 0;
       if (dark > 0) {
@@ -589,17 +591,17 @@ Sim.create({
       ctx.strokeRect(SIDE.x + 0.5, SIDE.y + 0.5, SIDE.w - 1, SIDE.h - 1);
       ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT;
       ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillText(t("pd.moon"), DISC.x, SIDE.y + 6);
+      FlashText.fill(ctx, t("pd.moon"), DISC.x, SIDE.y + 6);
       ctx.fillStyle = "#d0d0d0";                           // drawPhaseDisc radius 30
       ctx.beginPath(); ctx.arc(DISC.x, DISC.y, DISC.r, 0, TAU); ctx.fill();
       shade(ctx, DISC.x, DISC.y, DISC.r, phaseAngle() * RAD, "#909090");
       ctx.strokeStyle = "#909090"; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(DISC.x, DISC.y, DISC.r, 0, TAU); ctx.stroke();
       ctx.fillStyle = "#000000"; ctx.font = "11px " + FONT;
-      ctx.fillText(t(phaseKey()), DISC.x, DISC.y + DISC.r + 8);
+      FlashText.fill(ctx, t(phaseKey()), DISC.x, DISC.y + DISC.r + 8);
       if (showTime) {
         ctx.font = "12px " + FONT;
-        ctx.fillText(timeString(), DISC.x, DISC.y + DISC.r + 28);
+        FlashText.fill(ctx, timeString(), DISC.x, DISC.y + DISC.r + 28);
       }
     }
     // the dark half of a phase: angle 0 = fully lit, π = fully dark

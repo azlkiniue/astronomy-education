@@ -46,6 +46,8 @@ Sim.create({
   build: function (S) {
     var TAU = Math.PI * 2;
     var G = { x: 66.85, y: 498.8 };                  // the plot ("thing"): x 0–600, y −450–0
+    var YEAR_C = [11.3, 111.35, 211, 311.45, 411.15, 510.95];               // centres of the year labels (left x + 33/2)
+    var MONTH_C = -27.36, MONTH_Y = [-438.8, -402.45, -366.05, -328.45, -290.85, -253.2, -215.6, -177.4, -139.8, -102.2, -64.6, -27];
     /* ---- the SWF's own tables ---- */
     var SOLAR = [
       [2, -405.6, 3, 1, 5, 2000, 150, 0.579, "-", "Antarctica"],
@@ -241,6 +243,7 @@ Sim.create({
     /* ================================= drawing ================================= */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       S.clear();
       ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, S.W, S.H);
       ctx.save();
@@ -252,9 +255,9 @@ Sim.create({
       if (showSolar) SOLAR.forEach(function (e, i) { icon(ctx, e, "solar", active && active.kind === "solar" && active.i === i); });
       if (active) panel(ctx, t, active);
       ctx.restore();
-      ctx.fillStyle = "#222222"; ctx.font = "italic 13px Verdana, system-ui, sans-serif";
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(t("et.credit"), 371.95, 516);
+      ctx.fillStyle = "#222222"; ctx.font = "italic 12px Verdana, system-ui, sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      FlashText.fillStatic(ctx, t("et.credit"), 371.95, 513.9 + 12.05);       // static text 52 at (371.95, 513.9), baseline +12.05
     });
 
     // shape 31: #f7f7f7 bands on the first year of each five, #dfdfdf year lines, then the labels
@@ -265,11 +268,13 @@ Sim.create({
       for (var yr = 0; yr <= 30; yr++) {
         ctx.beginPath(); ctx.moveTo(yr * 20 + 0.5, -450); ctx.lineTo(yr * 20 + 0.5, 0); ctx.stroke();
       }
+      // the labels are static texts, each placed by hand in sprite 50 (baseline = its y + 13.05): their
+      // centres wander a little from a regular grid, so the SWF's own positions are kept
       ctx.fillStyle = "#000000"; ctx.font = "13px Verdana, system-ui, sans-serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      for (var y5 = 0; y5 < 6; y5++) ctx.fillText(String(2000 + 5 * y5), y5 * 100 + 12, -466);
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      for (var y5 = 0; y5 < 6; y5++) FlashText.fillStatic(ctx, String(2000 + 5 * y5), YEAR_C[y5], -474.35 + 13.05);
       var names = t("et.months").split(",");
-      for (var m = 0; m < 12; m++) ctx.fillText(names[m], -27, -450 + (m + 0.5) * 37.5);
+      for (var m = 0; m < 12; m++) FlashText.fillStatic(ctx, names[m], MONTH_C, MONTH_Y[m] + 13.05);
     }
 
     // the eclipse seasons: centred every 173.31 days (the 2000 July 16 season is one of them); each node's
@@ -331,23 +336,23 @@ Sim.create({
       ctx.fillStyle = "#000000"; ctx.textBaseline = "top";
       ctx.font = "13px Verdana, system-ui, sans-serif"; ctx.textAlign = "center";
       var title = t(a.kind === "solar" ? "et.solarOf" : "et.lunarOf") + " " + months[e[3]] + " " + e[4] + ", " + e[5];
-      ctx.fillText(title, px + W / 2, py + 9);
+      FlashText.fill(ctx, title, px + W / 2, py + 9);
       ctx.fillRect(px + 11, py + 27.2, 227, 0.9);
       ctx.font = "12px Verdana, system-ui, sans-serif"; ctx.textAlign = "left";
-      ctx.fillText(t("et.type"), px + 10, py + 40);
-      ctx.fillText(t(types[e[2]]), px + 92, py + 40);
-      ctx.fillText(t("et.saros"), px + 168, py + 40);
-      ctx.fillText(String(e[6]), px + 212, py + 40);
-      ctx.fillText(t("et.duration"), px + 10, py + 62);
-      ctx.fillText(e[8], px + 71, py + 62);
-      ctx.fillText(t("et.visibility"), px + 10, py + 84);
-      lines.forEach(function (ln, k) { ctx.fillText(ln, px + 72, py + 84 + k * 15); });
+      FlashText.fillStatic(ctx, t("et.type"), px + 10, py + 40);
+      FlashText.fill(ctx, t(types[e[2]]), px + 92, py + 40);
+      FlashText.fillStatic(ctx, t("et.saros"), px + 168, py + 40);
+      FlashText.fill(ctx, String(e[6]), px + 212, py + 40);
+      FlashText.fillStatic(ctx, t("et.duration"), px + 10, py + 62);
+      FlashText.fill(ctx, e[8], px + 71, py + 62);
+      FlashText.fillStatic(ctx, t("et.visibility"), px + 10, py + 84);
+      lines.forEach(function (ln, k) { FlashText.fill(ctx, ln, px + 72, py + 84 + k * 15); });
     }
     function wrapLines(ctx, text, maxw) {
       var words = text.split(" "), out = [], line = "";
       words.forEach(function (w) {
         var test = line ? line + " " + w : w;
-        if (ctx.measureText(test).width > maxw && line) { out.push(line); line = w; } else line = test;
+        if (FlashText.width(ctx, test) > maxw && line) { out.push(line); line = w; } else line = test;
       });
       out.push(line);
       return out;

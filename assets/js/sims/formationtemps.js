@@ -69,14 +69,23 @@ Sim.create({
     ];
     var TICKS_T = [[2000, 0], [1000, 1], [500, 0], [200, 0], [100, 1], [50, 0], [20, 0]];
     var TICKS_D = [[0.1, 1], [0.2, 0], [0.5, 0], [1, 1], [2, 0], [5, 0], [10, 1], [20, 0], [50, 0]];
-    var TICK_TEXT = { 0.1: "0.1", 0.2: "0.2", 0.5: "0.5", 1: "1.0", 2: "2.0", 5: "5.0", 10: "10", 20: "20", 50: "50" };
-    // the condensation labels: their own y in the layout, and the temperature each stands for
+    // the tick labels are static text in myGraph: [text, size, left x, baseline y], relative to the graph (from the SWF's own matrices)
+    var TICK_LABELS = [
+      ["2000", 12, -48.8, 4.722], ["1000", 14, -59.4, 49.426], ["500", 12, -40.25, 95.022], ["200", 12, -40.25, 154.722],
+      ["100", 14, -49.45, 199.426], ["50", 12, -31.7, 244.722], ["20", 12, -31.7, 304.722],
+      ["0.1", 14, -12.5, 381.031], ["0.2", 12, 28.25, 374.127], ["0.5", 12, 79.85, 374.027], ["1.0", 14, 117.2, 381.026],
+      ["2.0", 12, 157.95, 374.027], ["5.0", 12, 209.45, 374.027], ["10", 14, 249.25, 381.026],
+      ["20", 12, 289.75, 374.027], ["50", 12, 341.35, 374.027]
+    ];
+    // the condensation labels: the temperature each stands for, its centre x on the stage and its baseline in the layout
+    // (read off the SWF; every one is bold 12 px static text except the metal-oxide and argon-neon TextFields, which are device-font
+    // fields: Ruffle sets them in its own thinner fallback face, which 10.5 px regular Verdana matches best)
     var SEQ = [
-      { key: "ft.metalox", T: 1500, y: 36.3, bold: false }, { key: "ft.feni", T: 1300, y: 95.1, bold: true },
-      { key: "ft.silic", T: 1200, y: 124.4, bold: true }, { key: "ft.feld", T: 1000, y: 182.9, bold: true },
-      { key: "ft.troil", T: 680, y: 276.6, bold: true }, { key: "ft.water", T: 175, y: 422.4, bold: true },
-      { key: "ft.ammon", T: 150, y: 431.7, bold: true }, { key: "ft.meth", T: 120, y: 442.5, bold: true },
-      { key: "ft.arne", T: 65, y: 456.6, bold: false }
+      { key: "ft.metalox", T: 1500, cx: 652.3, by: 39.732, dyn: true }, { key: "ft.feni", T: 1300, cx: 652.45, by: 98.43 },
+      { key: "ft.silic", T: 1200, cx: 652.175, by: 127.73 }, { key: "ft.feld", T: 1000, cx: 652.275, by: 186.23 },
+      { key: "ft.troil", T: 680, cx: 652.2, by: 279.93 }, { key: "ft.water", T: 175, cx: 652.25, by: 425.791 },
+      { key: "ft.ammon", T: 150, cx: 652.35, by: 435.03 }, { key: "ft.meth", T: 120, cx: 652.1, by: 445.83 },
+      { key: "ft.arne", T: 65, cx: 652.13, by: 460.062, dyn: true }
     ];
     // layoutClass anchors the overlay on the centres of the first and last label clips
     var PX_HIGH = 35.6, PX_LOW = 455.9, TEMP_HIGH = 1500, TEMP_LOW = 65;
@@ -138,6 +147,7 @@ Sim.create({
     /* ================================= drawing ================================= */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       S.clear();
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       ctx.fillStyle = "#fafafa"; ctx.fillRect(7, 37 + OY, 746, 516);        // the window panel
@@ -176,22 +186,16 @@ Sim.create({
         ctx.beginPath();
         ctx.moveTo(x, G.y + AXIS_Y - 1.5); ctx.lineTo(x, G.y + (d[1] ? 366 : 361)); ctx.stroke();
       });
-      ctx.fillStyle = "#000000"; ctx.textBaseline = "middle";
-      ctx.textAlign = "right";
-      TICKS_T.forEach(function (k) {                                         // 4 px clear of each tick
-        ctx.font = "bold " + (k[1] ? 12.5 : 11) + "px " + FONT;
-        ctx.fillText(String(k[0]), G.x - (k[1] ? 20.5 : 15.5), findY(k[0]));
-      });
-      ctx.textAlign = "center";
-      TICKS_D.forEach(function (d) {
-        ctx.font = "bold " + (d[1] ? 12.5 : 11) + "px " + FONT;
-        ctx.fillText(TICK_TEXT[d[0]], findX(d[0]), G.y + (d[1] ? 376.2 : 369.7));
+      ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+      TICK_LABELS.forEach(function (k) {
+        ctx.font = "bold " + k[1] + "px " + FONT;
+        FlashText.fillStatic(ctx, k[0], G.x + k[2], G.y + k[3]);
       });
       ctx.font = "bold 14px " + FONT;
-      ctx.fillText(t("ft.xAxis"), G.x + 189.4, G.y + 402);
+      FlashText.fillStatic(ctx, t("ft.xAxis"), G.x + 189.65, G.y + 406.3, "center");
       ctx.save();
-      ctx.translate(G.x - 72.4, G.y + 173); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(t("ft.yAxis"), 0, 0);
+      ctx.translate(G.x - 68.5, G.y + 172.9); ctx.rotate(-Math.PI / 2);
+      FlashText.fillStatic(ctx, t("ft.yAxis"), 0, 0, "center");
       ctx.restore();
     }
 
@@ -203,17 +207,21 @@ Sim.create({
       ctx.beginPath(); ctx.rect(PANEL.x, PANEL.y, PANEL.w, PANEL.h); ctx.clip();   // shape 108 masks the overlay
       ctx.fillStyle = "rgba(0,153,0,0.2)"; ctx.fillRect(PANEL.x, PANEL.y, PANEL.w, ly - PANEL.y);
       ctx.fillStyle = "rgba(71,173,222,0.2)"; ctx.fillRect(PANEL.x, ly, PANEL.w, PANEL.y + PANEL.h - ly);
-      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#46576d";
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#46576d";
       SEQ.forEach(function (s) {
-        ctx.font = (s.bold ? "bold 12px " : "10.5px ") + FONT;
-        ctx.fillText(t(s.key), PANEL.x + PANEL.w / 2, L.y + s.y, PANEL.w - 6);
+        var str = t(s.key);
+        ctx.font = (s.dyn ? "10.5px " : "bold 12px ") + FONT;
+        var lw = s.dyn ? FlashText.width(ctx, str) : FlashText.widthStatic(ctx, str);
+        ctx.save(); ctx.translate(s.cx, L.y + s.by); ctx.scale(Math.min(1, (PANEL.w - 6) / lw), 1);   // a translation too long for the panel is squeezed to fit
+        if (s.dyn) FlashText.fill(ctx, str, 0, 0); else FlashText.fillStatic(ctx, str, 0, 0);
+        ctx.restore();
       });
       ctx.fillStyle = "#ff0000"; ctx.fillRect(L.x + 530.5, ly - 1.5, 173, 3);
       ctx.font = "bold 12px " + FONT;
-      ctx.save(); ctx.translate(OVL - 70.4, ly - 22.5); ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = "#009900"; ctx.fillText(t("ft.solid"), 0, 0); ctx.restore();
-      ctx.save(); ctx.translate(OVL - 71.8, ly + 19.2); ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = "#47adde"; ctx.fillText(t("ft.gas"), 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(OVL - 65.976, ly - 22.16); ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = "#009900"; FlashText.fillStatic(ctx, t("ft.solid"), 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(OVL - 65.976, ly + 19.24); ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = "#47adde"; FlashText.fillStatic(ctx, t("ft.gas"), 0, 0); ctx.restore();
       ctx.restore();
       ctx.strokeStyle = "#c4d5e5"; ctx.lineWidth = 3;
       ctx.strokeRect(PANEL.x - 1.5, PANEL.y - 1.5, PANEL.w + 3, PANEL.h + 3);
@@ -229,10 +237,10 @@ Sim.create({
       ctx.strokeStyle = "#c4d5e5"; ctx.lineWidth = 3;
       ctx.strokeRect(x - 1.5, y - 47.8 - head, 81, 49.3 + head);
       ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      if (head) { ctx.font = "bold 12px " + FONT; ctx.fillText(t(hover.key), x + 6, y - 35); }
+      if (head) { ctx.font = "bold 12px " + FONT; FlashText.fill(ctx, t(hover.key), x + 6, y - 35); }
       ctx.font = "14px " + FONT;
-      ctx.fillText(hot + " K", x + 6, y - 25);
-      ctx.fillText(dist + " AU", x + 6, y - 5.5);
+      FlashText.fill(ctx, hot + " K", x + 6, y - 25);
+      FlashText.fill(ctx, dist + " AU", x + 6, y - 5.5);
     }
 
     upd();

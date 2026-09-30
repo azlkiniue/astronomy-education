@@ -3,8 +3,7 @@
 A modern, **bilingual (English / Bahasa Indonesia)** recreation of the classic
 [UNL Astronomy](https://astro.unl.edu/animationsLinks.html) Flash applets
 (the **NAAP** and **ClassAction** projects), rebuilt in **plain HTML + vanilla
-JavaScript** so they run on any device with no plugins — Flash is long gone, but
-the physics is forever.
+JavaScript** so they run on any device with no plugins.
 
 - **No build step, no framework, no runtime dependencies.** Just static files.
 - **HiDPI `<canvas>` rendering** with a small shared simulation framework.

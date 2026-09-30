@@ -49,6 +49,8 @@ Sim.create({
     var SIN_E = 0.39714789063478056, COS_E = 0.9177546256839811;          // sin/cos of 23.4°
     var MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     var MONTH_TICKS = [0, 34, 65, 99, 132, 165, 198, 232, 266, 299, 333, 366, 400];
+    var DEG_BASE = [141.45, 106.95, 72.45, 38, 3.5, -30, -64.5, -98, -133.95];       // baselines of −40°…40° (top y + 12.05)
+    var MONTH_C = [17.125, 49.675, 82.3, 116.55, 148.8, 181.975, 215.125, 250.6, 283.325, 316.625, 350.2, 383.875];
     var NORTH = { x: 1, y: 0, z: 0 }, EAST = { x: 0, y: -1, z: 0 };
     var TILT = 23.4 * RAD, BAND = 5.1;
 
@@ -192,6 +194,7 @@ Sim.create({
     /* ================================= drawing ================================= */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       S.clear();
       ctx.fillStyle = "#fafafa"; ctx.fillRect(0, 0, S.W, S.H);
       panel(ctx, 7, 37 + OY, 495, 386, t("fd.plot"));
@@ -207,12 +210,13 @@ Sim.create({
       ctx.fillStyle = "#fafafa"; ctx.fillRect(x, y, w, h);
       ctx.strokeStyle = "#666666"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
       ctx.fillStyle = "#333333"; ctx.font = "14px " + FONT;
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(title, x + 5, y + 4);
-      ctx.strokeStyle = "#cccccc";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, title, x + 5, y + 4 + 1.0059 * 14);           // a field at (xMargin, 4): baseline = top + 2 + ascent
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(x + 10 + ctx.measureText(title).width, y + 13.5); ctx.lineTo(x + w - 5, y + 13.5);
+      ctx.moveTo(x + 10 + FlashText.textWidth(ctx, title), y + 14.44); ctx.lineTo(x + w - 5, y + 14.44);   // 2·xMargin + textWidth
       ctx.stroke();
+      ctx.lineCap = "butt";
     }
 
     /* ---- Moon Dec Plot: static art (shapes 59 and 81, texts 60–80) plus the curve and band ---- */
@@ -253,12 +257,14 @@ Sim.create({
       ctx.stroke();
       ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT;
       ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
-      [-40, -30, -20, -10, 0, 10, 20, 30, 40].forEach(function (v) {
-        ctx.fillText(v + "°", -10.2, -v * 3.4375 + 3.55);
+      // static texts, each placed by hand in sprite 82 (baseline = y + 12.05): the degree labels end at
+      // −10.2 on rows that are not quite the 3.4375 px a degree of the ticks; the months are centred by hand
+      [-40, -30, -20, -10, 0, 10, 20, 30, 40].forEach(function (v, k) {
+        FlashText.fillStatic(ctx, v + "°", -10.2, DEG_BASE[k]);
       });
       ctx.textAlign = "center";
       for (i = 0; i < 12; i++) {
-        ctx.fillText(t("m" + (i + 1)), (MONTH_TICKS[i] + MONTH_TICKS[i + 1]) / 2, 157.4);
+        FlashText.fillStatic(ctx, t("m" + (i + 1)), MONTH_C[i], 157.4);
       }
       var cx = doy * PLOT.w / 365;                         // doyCursor, shape 86
       ctx.fillStyle = "#9a9bfe"; ctx.strokeStyle = "#9a9bfe";
@@ -401,10 +407,10 @@ Sim.create({
       ctx.beginPath(); ctx.arc(0, 0, 100, 0, TAU); ctx.fill();
       ctx.fillStyle = "#ffffff"; ctx.font = "bold 16px " + FONT;
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("fd.N"), 0, -73.85);
-      ctx.fillText(t("fd.S"), 0, 86.15);
-      ctx.fillText(t("fd.E"), 81.93, 6.35);
-      ctx.fillText(t("fd.W"), -77.08, 6.35);
+      FlashText.fillStatic(ctx, t("fd.N"), 0, -73.85);
+      FlashText.fillStatic(ctx, t("fd.S"), 0, 86.15);
+      FlashText.fillStatic(ctx, t("fd.E"), 81.93, 6.35);
+      FlashText.fillStatic(ctx, t("fd.W"), -77.08, 6.35);
       ctx.restore();
     }
 

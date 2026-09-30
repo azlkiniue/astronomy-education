@@ -13,7 +13,7 @@
    left out; the page carries the credits. Beyond the SWF: pressing anywhere on the orbit
    circle moves the eye there (the SWF only drags the eye itself), and the eye moves at
    the display's frame rate rather than the SWF's 12 fps, at the same angular speed.
-   Text is set as Ruffle sets the SWF's: unkerned, each advance floored to a twip.     */
+   Text is set as Ruffle sets the SWF's (sims/_flashtext.js): unkerned, advances floored to a twip. */
 Sim.create({
   id: "basketball",
   width: 720, height: 430,
@@ -223,7 +223,7 @@ Sim.create({
       return { x: (sx - ANIM.x) / ANIM.a, y: (sy - ANIM.y) / ANIM.d };
     }
     function eyePos() { return { x: -R_ORBIT * Math.cos(angle * RAD), y: -R_ORBIT * Math.sin(angle * RAD) }; }
-    function textW(str, size, bold) { S.ctx.font = (bold ? "bold " : "") + size + "px " + SANS; return ftextW(S.ctx, str); }
+    function textW(str, size, bold) { S.ctx.font = (bold ? "bold " : "") + size + "px " + SANS; return FlashText.width(S.ctx, str); }
     function grabberX() { return (speed - SPEED_MIN) * PX_PER_UNIT - 80; }
     function hit(p) {
       var e = eyePos(), c = Math.cos(-angle * RAD), s = Math.sin(-angle * RAD);
@@ -304,23 +304,6 @@ Sim.create({
 
     /* ------------------------------------------------ drawing helpers */
     function font(ctx, size, bold, family) { ctx.font = (bold ? "bold " : "") + size + "px " + (family || SANS); }
-    var advCache = {};
-    function advances(ctx, str) {                    // Ruffle: unkerned, advances floored to a twip
-      var f = ctx.font, xs = [], x = 0;
-      for (var i = 0; i < str.length; i++) {
-        var k = f + "|" + str[i], a = advCache[k];
-        if (a === undefined) a = advCache[k] = Math.floor(ctx.measureText(str[i]).width * 20) / 20;
-        xs.push(x); x += a;
-      }
-      return { xs: xs, w: x };
-    }
-    function ftext(ctx, str, x, y, align) {
-      var L = advances(ctx, str), x0 = align === "center" ? x - L.w / 2 : align === "right" ? x - L.w : x;
-      ctx.textAlign = "left";
-      for (var i = 0; i < str.length; i++) if (str[i] !== " ") ctx.fillText(str[i], x0 + L.xs[i], y);
-      return L.w;
-    }
-    function ftextW(ctx, str) { return advances(ctx, str).w; }
     /* a Flash gradient fill: clip to the shape, map the gradient square (±819.2) through its matrix */
     function gfill(ctx, path, g) {
       ctx.save();
@@ -364,7 +347,7 @@ Sim.create({
       ctx.save();                                    // static text 254: "Smith", Comic Sans 24
       ctx.transform(SMITH[0], SMITH[1], SMITH[2], SMITH[3], SMITH[4], SMITH[5]);
       font(ctx, 24, false, COMIC); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
-      ftext(ctx, "Smith", 0, 26.45, "left");
+      FlashText.fill(ctx, "Smith", 0, 26.45, "left");
       ctx.restore();
       ctx.fillStyle = "#000000"; ctx.fill(MARKS);
       var e = eyePos();                              // the_eye: 63 %, turned by the angle, at 50 %
@@ -413,7 +396,7 @@ Sim.create({
           ctx.fillStyle = down ? "#cccccc" : "#ffffff"; ctx.beginPath(); ctx.arc(5, y + 5, 3, 0, TAU); ctx.fill();
           if (sel === i) { ctx.fillStyle = "#000000"; ctx.beginPath(); ctx.arc(5, y + 5, 2, 0, TAU); ctx.fill(); }
           font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
-          ftext(ctx, t(G.keys[i]), 13, y + 9.8, "left");   // Arial in the SWF's label field
+          FlashText.fill(ctx, t(G.keys[i]), 13, y + 9.8, "left");   // Arial in the SWF's label field
         }
         ctx.restore();
       });
@@ -428,17 +411,17 @@ Sim.create({
         ctx.restore();
       });
       font(ctx, 24, true, VERDANA); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
-      ftext(ctx, t("bb.light"), -6.4, 9.79, "center");
+      FlashText.fill(ctx, t("bb.light"), -6.4, 9.79, "center");
       ctx.restore();
     }
     function slider(ctx) {                           // Slider v2
       ctx.save(); ctx.translate(SLIDER.x, SLIDER.y); ctx.scale(SLIDER.sx, SLIDER.sy);
       font(ctx, 11, true); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
-      ftext(ctx, t("bb.speed"), -93.4, -22.85 + 0.905 * 11, "left");
+      FlashText.fill(ctx, t("bb.speed"), -93.4, -22.85 + 0.905 * 11, "left");
       ctx.strokeStyle = "#333333"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.stroke(TRACK);
       font(ctx, 10);
-      ftext(ctx, t("bb.slow"), -97 + 16.5, 25.3 + 0.905 * 10, "center");
-      ftext(ctx, t("bb.fast"), 62.45 + 16.775, 25.4 + 0.905 * 10, "center");
+      FlashText.fill(ctx, t("bb.slow"), -97 + 16.5, 25.3 + 0.905 * 10, "center");
+      FlashText.fill(ctx, t("bb.fast"), 62.45 + 16.775, 25.4 + 0.905 * 10, "center");
       ctx.translate(grabberX(), 11.15);
       ctx.fillStyle = "#9ca9ab"; ctx.fill(GRABBER);
       ctx.lineWidth = 0.75; ctx.stroke(GRIP);
@@ -449,7 +432,7 @@ Sim.create({
       var m = VIEW_TEXT;
       ctx.save(); ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
       font(ctx, 29, false, VERDANA); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
-      ftext(ctx, t("bb.view"), 0.35, 29.15, "left");
+      FlashText.fill(ctx, t("bb.view"), 0.35, 29.15, "left");
       ctx.restore();
     }
     function button(ctx) {                           // hide_show: FPushButton 130 × 20 (#999 / #ccc / #e8e8e8)
@@ -459,14 +442,14 @@ Sim.create({
       ctx.fillStyle = down ? "#999999" : "#cccccc"; ctx.fillRect(1, 1, w - 2, h - 2);
       ctx.fillStyle = "#e8e8e8"; ctx.fillRect(2, 2, w - 4, h - 4);
       font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
-      ftext(ctx, t(hidden ? "bb.show" : "bb.hide"), w / 2 + (down ? 1 : 0), 14.8 + (down ? 1 : 0), "center");
+      FlashText.fill(ctx, t(hidden ? "bb.show" : "bb.hide"), w / 2 + (down ? 1 : 0), 14.8 + (down ? 1 : 0), "center");
       ctx.restore();
     }
 
     function draw() {
       var ctx = S.ctx;
       ctx.save();
-      ctx.fontKerning = "none";
+      FlashText.begin(ctx);
       ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, S.W, S.H);
       ctx.transform(ANIM.a, 0, 0, ANIM.d, ANIM.x, ANIM.y);
       panels(ctx);

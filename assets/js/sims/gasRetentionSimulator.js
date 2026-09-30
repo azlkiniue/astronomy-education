@@ -83,7 +83,7 @@ Sim.create({
     var OY = -30;                                   // the SWF's title bar is the page header here
     var FONT = "Verdana, Geneva, sans-serif";
     var ASC = 1.0059, EM_H = 1.2159;               // Verdana ascent, ascent + descent (em)
-    var TB = -0.2;                                  // where Ruffle puts a TextField's baseline vs Flash
+    var TB = 0;                                     // a TextField's baseline is field top + 2 + ascent (measured: −0.2 was 0.2 px too high)
 
     /* ---- the SWF's numbers ---- */
     var K_B = 1.3806503e-23, AMU = 1.66053886e-27, R_KMOL = 8314.47147;
@@ -577,7 +577,7 @@ Sim.create({
       var x1 = BARS.x + i * (BARS.w + BARS.gap) - xOff;
       return { x1: x1, x2: x1 + BARS.w, y: BARS.y - g.fraction * BARS.h };
     }
-    function checkWidth(c) { S.ctx.font = "12px " + FONT; return c.tx - c.x + S.ctx.measureText(I18N.t(c.key)).width; }
+    function checkWidth(c) { S.ctx.font = "12px " + FONT; return c.tx - c.x + FlashText.widthStatic(S.ctx, I18N.t(c.key)); }
     function comboItems() { return menuItems(); }
     function comboRowAt(p) {
       var items = comboItems(), top = COMBO.y + COMBO.h;
@@ -752,7 +752,7 @@ Sim.create({
     function displayText(ctx, str, x, y, o) {
       var size = o.size || 12, ss = size / (o.ratio || 1.5), rs = runs(str);
       var lh = lineH(size), sh = lineH(ss), total = 0;
-      rs.forEach(function (r) { font(ctx, r.sub ? ss : size, o.bold); r.w = ctx.measureText(r.s).width; total += r.w; });
+      rs.forEach(function (r) { font(ctx, r.sub ? ss : size, o.bold); r.w = FlashText.textWidth(ctx, r.s); total += r.w; });      // tf.textWidth: whole px
       total += 0.5 * (rs.length - 1);
       var left = o.h === "left" ? x : o.h === "right" ? x - total : x - total / 2;
       var top = o.v === "top" ? y - 2 : o.v === "bottom" ? y - lh + 2 : y - lh / 2;
@@ -760,7 +760,7 @@ Sim.create({
       rs.forEach(function (r) {
         var sz = r.sub ? ss : size;
         font(ctx, sz, o.bold);
-        ctx.fillText(r.s, left, top + (r.sub ? lh - sh : 0) + 2 + ASC * sz + TB);
+        FlashText.fill(ctx, r.s, left, top + (r.sub ? lh - sh : 0) + 2 + ASC * sz + TB);
         left += r.w + 0.5;
       });
       return total;
@@ -780,10 +780,11 @@ Sim.create({
       ctx.strokeStyle = "#666666"; ctx.lineWidth = 1;
       ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
       font(ctx, 14); ctx.fillStyle = "#333333"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      var title = t(b.key), tw = ctx.measureText(title).width;
-      ctx.fillText(title, b.x + 5, b.y + 18);
-      ctx.strokeStyle = "#cccccc";
-      ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 12.5); ctx.lineTo(b.x + b.w - 5, b.y + 12.5); ctx.stroke();
+      var title = t(b.key), tw = FlashText.textWidth(ctx, title);
+      FlashText.fill(ctx, title, b.x + 5, b.y + 18);
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";                // the rule: 2·xMargin + textWidth, half the title clip down (14.44)
+      ctx.beginPath(); ctx.moveTo(b.x + 10 + tw, b.y + 14.44); ctx.lineTo(b.x + b.w - 5, b.y + 14.44); ctx.stroke();
+      ctx.lineCap = "butt";
     }
     /* FPushButton (fpb_states): #999 frame, #ccc inner frame (#999 when down), #e8e8e8 face */
     function pushButton(ctx, b, key, enabled) {
@@ -793,7 +794,7 @@ Sim.create({
       ctx.fillStyle = "#e8e8e8"; ctx.fillRect(b.x + 2, b.y + 2, b.w - 4, b.h - 4);
       font(ctx, 12); ctx.fillStyle = enabled ? "#000000" : "#888888";
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t(key), b.x + b.w / 2 + (down ? 1 : 0), b.y + 17.2 + (down ? 1 : 0));
+      FlashText.fill(ctx, t(key), b.x + b.w / 2 + (down ? 1 : 0), b.y + 17.55 + (down ? 1 : 0));
     }
     /* FCheckBox (fcb_states): #808080 frame, #d4d0d8 inner frame, white well (#ccc when
        pressed or disabled), black tick (#808080 disabled); its label is static text */
@@ -808,15 +809,16 @@ Sim.create({
         ctx.restore();
       }
       font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t(c.key), c.tx, c.ty);
+      FlashText.fillStatic(ctx, t(c.key), c.tx, c.ty);
     }
     /* Standard Slider v6: label, rounded field, units, 6 px bar and a 9 × 17 grabber */
     function slider(ctx, sl, enabled) {
       ctx.save(); ctx.translate(sl.x, sl.y);
       font(ctx, 12); ctx.fillStyle = "#000000"; ctx.textBaseline = "alphabetic";
       var base = -lineH(12) / 2 + 2 + ASC * 12 + TB;           // displayText, vAlign centre
-      ctx.textAlign = "right"; ctx.fillText(t(sl.label), -9.8, base);
-      ctx.textAlign = "left"; ctx.fillText(t(sl.units), 69.8, base);
+      ctx.textAlign = "left";                                  // labelTextMC._x = −fieldMargin − labelOffset − totalWidth
+      FlashText.fill(ctx, t(sl.label), -9.8 - FlashText.textWidth(ctx, t(sl.label)), base);
+      FlashText.fill(ctx, t(sl.units), 69.8, base);
       roundRect(ctx, -4.8, -10.5, 69.6, 21, 4.8); ctx.fillStyle = "#c0c0c0"; ctx.fill();
       roundRect(ctx, -3.8, -9.5, 67.6, 19, 3.8);
       ctx.fillStyle = !enabled ? "#f4f4f4" : sl.active ? "#ffffee" : "#ffffff"; ctx.fill();
@@ -938,14 +940,14 @@ Sim.create({
     function axisLabels(ctx) {                       // static texts 219 (turned) and 220
       font(ctx, 12, true); ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
       ctx.save(); ctx.translate(438.95, 211.85); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(t("gr.yAxis"), 0, 0);
+      FlashText.fillStatic(ctx, t("gr.yAxis"), 0, 0);
       ctx.restore();
-      ctx.fillText(t("gr.xAxis"), 649.8, 375.45);
+      FlashText.fillStatic(ctx, t("gr.xAxis"), 649.8, 375.45);
     }
     function escapeLabel(ctx) {                      // escapeSpeedLabelMC, text 221
       if (!allowEscape) return;
       font(ctx, 10); ctx.fillStyle = "#606060"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("gr.escLine"), PLOT.x + (vEsc() - PLOT.xMin) * PLOT.xScale, 78.95);
+      FlashText.fillStatic(ctx, t("gr.escLine"), PLOT.x + (vEsc() - PLOT.xMin) * PLOT.xScale, 78.95);
     }
     /* Maxwell Plot Cursor Overlay */
     function cursorOverlay(ctx) {
@@ -955,12 +957,12 @@ Sim.create({
       ctx.fillRect(cursorX - hw, top, 2 * hw, PLOT.h + 15);
       var v = PLOT.xMin + (cursorX - PLOT.x) / PLOT.xScale;
       var str = Math.round(v) + " " + t("gr.ms");
-      font(ctx, 11); var bw = ctx.measureText(str).width + 4, bh = lineH(11);
+      font(ctx, 11); var bw = FlashText.width(ctx, str) + 4, bh = lineH(11);
       var bx = cursorX - bw / 2, by = top + PLOT.h + 8;
       ctx.fillStyle = "#ffffff"; ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = "#ee9090"; ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
       ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(str, cursorX, by + 2 + ASC * 11 + TB);
+      FlashText.fill(ctx, str, cursorX, by + 2 + ASC * 11 + TB);
       if (!showInfo || !selected) return;
       var a = Math.sqrt(T() * K_B / (AMU * selected.def.mass)), c = cdf(a, v), left, right;
       if (c === 0) { left = "0.0%"; right = "100.0%"; }
@@ -973,17 +975,17 @@ Sim.create({
       var lines = [t("gr.of"), "", t("gr.moves")];
       [[-1, left, t("gr.slower")], [1, right, t("gr.faster")]].forEach(function (side) {
         var dir = side[0], text = lines.concat([side[2]]);
-        font(ctx, 11); var vw = ctx.measureText(side[1]).width + 4;
+        font(ctx, 11); var vw = FlashText.width(ctx, side[1]) + 4;
         font(ctx, 10); var ew = 0;
-        text.forEach(function (s) { ew = Math.max(ew, ctx.measureText(s).width); });
+        text.forEach(function (s) { ew = Math.max(ew, FlashText.width(ctx, s)); });
         ew += 4;                                     // the symbol clip is not measured in the SWF
         var w = Math.max(vw, ew), h = 15 + 4 * 10 * EM_H + 4;
         ctx.fillStyle = "rgba(255,255,255,0.85)";
         ctx.fillRect(dir < 0 ? cursorX - 5 - w : cursorX + 5, top + 1, w, h);
         ctx.fillStyle = "#000000"; ctx.textAlign = dir < 0 ? "right" : "left";
-        font(ctx, 11); ctx.fillText(side[1], cursorX + dir * 7, top + 1 + 2 + ASC * 11 + TB);
+        font(ctx, 11); FlashText.fill(ctx, side[1], cursorX + dir * 7, top + 1 + 2 + ASC * 11 + TB);
         font(ctx, 10);
-        text.forEach(function (s, i) { ctx.fillText(s, cursorX + dir * 7, top + 16 + 2 + ASC * 10 + TB + i * 10 * EM_H); });
+        text.forEach(function (s, i) { FlashText.fill(ctx, s, cursorX + dir * 7, top + 16 + 2 + ASC * 10 + TB + i * 10 * EM_H); });
         displayText(ctx, selected.def.sym, cursorX + dir * 7, top + 31,
           { size: 10, ratio: 1.3, h: dir < 0 ? "right" : "left", v: "top" });
       });
@@ -1047,7 +1049,7 @@ Sim.create({
       font(ctx, 12); ctx.fillStyle = en ? "#000000" : "#888888";
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ctx.save(); ctx.beginPath(); ctx.rect(c.x, c.y, c.w - c.h, c.h); ctx.clip();
-      ctx.fillText(t(items[0].key), c.x + 3.7, c.y + 13.6);
+      FlashText.fill(ctx, t(items[0].key), c.x + 4.0, c.y + 14.05);
       ctx.restore();
       arrowButton(ctx, c.x + c.w - c.h, c.y, c.h, en);
     }
@@ -1060,12 +1062,13 @@ Sim.create({
         var y = top + 1 + i * c.row;
         if (i === comboHover) { ctx.fillStyle = "#999999"; ctx.fillRect(c.x + 1, y, c.w - 2, c.row); }
         ctx.fillStyle = i === comboHover ? "#ffffff" : "#000000";
-        ctx.fillText(t(it.key), c.x + 4, y + 12.6);
+        FlashText.fill(ctx, t(it.key), c.x + 4, y + 12.6);
       });
     }
 
     function draw() {
       var ctx = S.ctx;
+      FlashText.begin(ctx);
       ctx.save();
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       ctx.translate(0, OY);

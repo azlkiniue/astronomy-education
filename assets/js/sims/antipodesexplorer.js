@@ -253,6 +253,7 @@ Sim.create({
     /* ================================= drawing ================================= */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       S.clear();
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       panel(ctx, 7, 37 + OY, 746, 375, null);
@@ -290,7 +291,7 @@ Sim.create({
       if (!title) return;
       ctx.fillStyle = "#333333"; ctx.font = "13px " + FONT;
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(title, x + 9, y + 13);
+      FlashText.fill(ctx, title, x + 9, y + 13);
       ctx.strokeStyle = "#cccccc";
       ctx.beginPath();
       ctx.moveTo(x + 13 + ctx.measureText(title).width, y + 13); ctx.lineTo(x + w - 9, y + 13);
@@ -326,18 +327,21 @@ Sim.create({
       ctx.strokeStyle = "#000000"; ctx.lineWidth = 1;
       ctx.strokeRect(MAP.x - bw - 0.5, MAP.y - bw - 0.5, MAP.w + 2 * bw + 1, MAP.h + 2 * bw + 1);
       ctx.strokeRect(MAP.x - 0.5, MAP.y - 0.5, MAP.w + 1, MAP.h + 1);
-      ctx.fillStyle = "#000000"; ctx.font = "11px " + FONT;
-      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      // the degree labels: Flat Map Component 007's attachBorderLabels, the same as daylightsimulator's — createTextField
+      // (name, depth, x, y, 0, 0) truncates x and y, and a field's top + 2 + ascent is its baseline; fh = borderLabelsField._height
+      ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      var GAP = 5, fh = 18.4, INK = 2 + 1.0059 * 12, yTop = MAP.y + FlashText.int(-bw - GAP - fh);
       for (var l = -180; l < 180; l += 360 / LON_DIV) {      // one label every 45°, on round degrees
         var x = xOf(l);
         if (x < MAP.x + 12 || x > MAP.x + MAP.w - 12) continue;
-        ctx.fillText(l === -180 ? "180°" : (l === 0 ? "0°" : lonStr(l)), x, MAP.y - bw - 4);
+        FlashText.fill(ctx, l === -180 ? "180°" : (l === 0 ? "0°" : lonStr(l)), x, yTop + INK);
       }
-      ctx.textBaseline = "middle";
+      var xRight = MAP.x + FlashText.int(MAP.w + bw + GAP);
       for (var m = 0; m <= LAT_DIV; m++) {
-        var lat = 90 - m * 180 / LAT_DIV, y = MAP.y + m * MAP.h / LAT_DIV;
-        ctx.textAlign = "right"; ctx.fillText(lat === 0 ? "0°" : latStr(lat), MAP.x - bw - 6, y);
-        ctx.textAlign = "left"; ctx.fillText(lat === 0 ? "0°" : latStr(lat), MAP.x + MAP.w + bw + 6, y);
+        var lat = 90 - m * 180 / LAT_DIV, yy = MAP.y + FlashText.int(m * MAP.h / LAT_DIV - fh / 2) + INK;
+        ctx.textAlign = "right"; FlashText.fill(ctx, lat === 0 ? "0°" : latStr(lat), MAP.x - bw - GAP - 2, yy);
+        ctx.textAlign = "left"; FlashText.fill(ctx, lat === 0 ? "0°" : latStr(lat), xRight + 2, yy);
       }
     }
     function points(ctx, t) {
@@ -346,12 +350,12 @@ Sim.create({
         dot(ctx, x + 22, p[2] + 18, 6, p[1]);
         ctx.fillStyle = "#333333"; ctx.font = "13px " + FONT;
         ctx.textAlign = "right"; ctx.textBaseline = "middle";
-        ctx.fillText(t("ap.lat"), x + 130, p[2] + 4);
-        ctx.fillText(t("ap.lon"), x + 130, p[2] + 32);
+        FlashText.fill(ctx, t("ap.lat"), x + 130, p[2] + 4);
+        FlashText.fill(ctx, t("ap.lon"), x + 130, p[2] + 32);
         ctx.fillStyle = p[1] === RED ? "#c03030" : "#4040c0";
         ctx.textAlign = "left";
-        ctx.fillText(latStr(p[0].lat), x + 140, p[2] + 4);
-        ctx.fillText(lonStr(p[0].lon), x + 140, p[2] + 32);
+        FlashText.fill(ctx, latStr(p[0].lat), x + 140, p[2] + 4);
+        FlashText.fill(ctx, lonStr(p[0].lon), x + 140, p[2] + 32);
       });
     }
     function dot(ctx, x, y, r, col) {

@@ -67,7 +67,10 @@ I18N.add({
     var h1 = document.createElement("h1");
     var lead = document.createElement("p");
     head.appendChild(h1); head.appendChild(lead);
-    var refresh = function () { h1.textContent = item.title[I18N.getLang()]; };
+    var refresh = function () {
+      h1.textContent = item.title[I18N.getLang()];
+      document.title = h1.textContent + " \u2014 " + I18N.t("play.original") + " \u2014 " + I18N.t("site.title");
+    };
     lead.textContent = item.desc || "";
     refresh();
     window.addEventListener("langchange", refresh);

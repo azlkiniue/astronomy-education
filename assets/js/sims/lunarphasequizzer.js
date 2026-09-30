@@ -68,8 +68,8 @@ Sim.create({
     var OY = -30;                                   // the SWF's title bar is the page header here
     var FONT = "Verdana, Geneva, sans-serif";
     var HIDE_SUN = "hideSunlight", HIDE_MOON = "hideMoon", HIDE_PHASE = "hideMoonAppearance", SHOW_ALL = "showAll";
-    var QUESTIONS = [{ mode: HIDE_SUN, key: "lq.qSun", y: 149.3 }, { mode: HIDE_MOON, key: "lq.qMoon", y: 173.8 },
-      { mode: HIDE_PHASE, key: "lq.qPhase", y: 198.3 }];
+    var QUESTIONS = [{ mode: HIDE_SUN, key: "lq.qSun", y: 149.3, ty: -0.165 }, { mode: HIDE_MOON, key: "lq.qMoon", y: 173.8, ty: 0.334 },
+      { mode: HIDE_PHASE, key: "lq.qPhase", y: 198.3, ty: -0.164 }];      // ty: each label's own baseline, measured against Ruffle
 
     /* ------------------------------------------------ the SWF's own art */
     var ART = {
@@ -289,7 +289,7 @@ Sim.create({
     function local(p) { return { x: p.x - C.x, y: p.y - C.y }; }
     function btnWidth() {
       var ctx = S.ctx; ctx.font = "12px " + FONT;
-      return Math.max(BTN.w, ctx.measureText(I18N.t(mode === SHOW_ALL ? "lq.hideBtn" : "lq.showBtn")).width + 20);
+      return Math.max(BTN.w, FlashText.width(ctx, I18N.t(mode === SHOW_ALL ? "lq.hideBtn" : "lq.showBtn")) + 20);
     }
     function hit(p) {
       /* the diagram's draggables, topmost first: sunlight is above the Moon */
@@ -310,7 +310,7 @@ Sim.create({
       for (var i = 0; i < QUESTIONS.length; i++) {
         var Q = QUESTIONS[i], y = Q.y + OY;
         S.ctx.font = "12px " + FONT;
-        if (p.x >= 595.3 && p.x <= 595.3 + 30 + S.ctx.measureText(I18N.t(Q.key)).width && p.y >= y && p.y <= y + 22) {
+        if (p.x >= 595.3 && p.x <= 595.3 + 30 + FlashText.width(S.ctx, I18N.t(Q.key)) && p.y >= y && p.y <= y + 22) {
           return mode === SHOW_ALL ? null : "q" + i;
         }
       }
@@ -469,6 +469,7 @@ Sim.create({
 
     function paint() {
       var ctx = S.ctx, t = I18N.t.bind(I18N), A = alphas();
+      FlashText.begin(ctx);
       ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
       diagram(ctx, t, A);
       chooser(ctx, t);
@@ -483,11 +484,11 @@ Sim.create({
       /* first-run instructions (EditTexts 87 and 88), fading after the first drag */
       if (firstRunAlpha > 0) {
         ctx.globalAlpha = firstRunAlpha;
-        ctx.fillStyle = "#ffffff"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#ffffff"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";     // the y's below are 0.5 up from the SWF's numbers: measured against Ruffle
         ctx.font = "16px " + FONT;
         var key = mode === HIDE_SUN ? "lq.instrSun" : mode === HIDE_MOON ? "lq.instrMoon" : "lq.instrAll";
-        lines(ctx, t(key), 378).forEach(function (l, i) { ctx.fillText(l, -0.1, 188.43 + 21.44 * i); });
-        lines(ctx, t("lq.instrShift"), 394).forEach(function (l, i) { ctx.fillText(l, 0, 244.63 + 21.44 * i); });
+        lines(ctx, t(key), 378).forEach(function (l, i) { FlashText.fill(ctx, l, -0.1, 187.93 + 21.44 * i); });
+        lines(ctx, t("lq.instrShift"), 394).forEach(function (l, i) { FlashText.fill(ctx, l, 0, 244.13 + 21.44 * i); });
         ctx.globalAlpha = 1;
       }
       ctx.beginPath(); ctx.arc(0, 0, MOON_R, 0, TAU);              // shape 90
@@ -506,7 +507,7 @@ Sim.create({
         (para.match(/[^ -]+-?|\s+/g) || []).forEach(function (w) {
           if (/^\s+$/.test(w)) { line += line ? " " : ""; return; }
           var test = line + w;
-          if (ctx.measureText(test.trim()).width > width && line.trim()) { out.push(line.trim()); line = w; }
+          if (FlashText.width(ctx, test.trim()) > width && line.trim()) { out.push(line.trim()); line = w; }
           else line = test;
         });
         out.push(line.trim());
@@ -575,13 +576,13 @@ Sim.create({
       var label = t("lq.sunlight");
       ctx.font = fit(ctx, label, 28, 190);
       ctx.fillStyle = "#fff8a4"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(label, 120.575, 26.64);
+      FlashText.fill(ctx, label, 120.575, 28.18);         // baseline: measured against Ruffle (the arrows sit turned half a circle at rest)
       ctx.restore();
       ctx.restore();
     }
     function fit(ctx, text, size, max) {
       ctx.font = size + "px " + FONT;
-      var w = ctx.measureText(text).width;
+      var w = FlashText.width(ctx, text);
       return (w > max ? Math.floor(size * max / w * 10) / 10 : size) + "px " + FONT;
     }
 
@@ -592,11 +593,11 @@ Sim.create({
       ctx.translate(x, y); ctx.scale(0.7, 0.7);
       ctx.globalAlpha = alpha;
       ctx.font = "24px " + FONT;
-      var bw = Math.max(w, ctx.measureText(text).width + 40);
+      var bw = Math.max(w, FlashText.width(ctx, text) + 40);
       roundRect(ctx, -bw / 2, -23, bw, 46, 20);
       ctx.fillStyle = "#b4ed9a"; ctx.fill();
       ctx.fillStyle = "rgba(0,0,0,0.851)"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(text, 0, 9.4);
+      FlashText.fill(ctx, text, 0, 9.4);
       ctx.restore();
     }
 
@@ -618,16 +619,16 @@ Sim.create({
       ctx.font = "14px " + FONT; ctx.fillStyle = "#000000";
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       var title = t(titleKey);
-      ctx.fillText(title, 584, titleY);
+      FlashText.fill(ctx, title, 582, titleY - 0.53);         // −2, −0.53: measured against Ruffle
       ctx.strokeStyle = "#cccccc";
-      ctx.beginPath(); ctx.moveTo(584 + ctx.measureText(title).width + 6, ruleY + 0.5);
+      ctx.beginPath(); ctx.moveTo(584 + FlashText.width(ctx, title) + 6, ruleY + 0.5);
       ctx.lineTo(821, ruleY + 0.5); ctx.stroke();
     }
 
     function chooser(ctx, t) {
       panelBox(ctx, t, 37 + OY, 279 + OY, "lq.chooser", 59.57 + OY, 54 + OY);
       ctx.font = "12px " + FONT; ctx.fillStyle = "rgba(0,0,0,0.851)";
-      lines(ctx, t("lq.choose"), 236).forEach(function (l, i) { ctx.fillText(l, 589.95, 85.51 + OY + 16.58 * i); });
+      lines(ctx, t("lq.choose"), 236).forEach(function (l, i) { FlashText.fill(ctx, l, 587.95, 85.01 + OY + 16.58 * i); });
       var dis = mode === SHOW_ALL;
       QUESTIONS.forEach(function (Q, i) {
         var y = Q.y + OY, on = Q.mode === selected, st = "q" + i;
@@ -638,7 +639,7 @@ Sim.create({
         ctx.restore();
         ctx.fillStyle = dis ? "#606060" : "#000000"; ctx.font = "12px " + FONT;
         ctx.textAlign = "left";
-        ctx.fillText(t(Q.key), 595.3 + 26, y + 16);
+        FlashText.fill(ctx, t(Q.key), 595.3 + 25.71, y + 16 + Q.ty);
       });
       /* the CS3 Button, 9-sliced; widened only if a translation needs it */
       var bw = btnWidth(), bx = BTN.cx - bw / 2;
@@ -646,7 +647,7 @@ Sim.create({
         hover === "btn" ? [39, [5, 76, 5, 16]] : [49, [7, 75, 5, 16]];
       draw9(ctx, skin[0], skin[1], 82, 22, bx, BTN.y, bw, BTN.h);
       ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(t(mode === SHOW_ALL ? "lq.hideBtn" : "lq.showBtn"), BTN.cx, BTN.y + BTN.h / 2 + 0.5);
+      FlashText.fill(ctx, t(mode === SHOW_ALL ? "lq.hideBtn" : "lq.showBtn"), BTN.cx + 0.52, BTN.y + BTN.h / 2 + 0.844);
       ctx.textBaseline = "alphabetic";
     }
 
@@ -667,13 +668,13 @@ Sim.create({
         ctx.strokeStyle = "#606060"; ctx.lineWidth = 1; ctx.stroke();
         ctx.translate(cx, 429.55 + OY); ctx.scale(0.8, 0.8);
         ctx.font = "24px " + FONT;
-        var w1 = ctx.measureText(t("lq.qPhase1")).width, w2 = ctx.measureText(t("lq.qPhase2")).width;
+        var w1 = FlashText.width(ctx, t("lq.qPhase1")), w2 = FlashText.width(ctx, t("lq.qPhase2"));
         var bw = Math.max(205.9, Math.max(w1, w2) + 36);
         roundRect(ctx, -bw / 2, -36.95, bw, 75, 20);
         ctx.fillStyle = "#b4ed9a"; ctx.fill();
         ctx.fillStyle = "rgba(0,0,0,0.851)"; ctx.textAlign = "center";
-        ctx.fillText(t("lq.qPhase1"), 0, -5.65);
-        ctx.fillText(t("lq.qPhase2"), 0, 25.35);
+        FlashText.fill(ctx, t("lq.qPhase1"), 0, -5.65);
+        FlashText.fill(ctx, t("lq.qPhase2"), 0, 25.35);
         ctx.restore();
       }
       phaseSlider(ctx, A);
