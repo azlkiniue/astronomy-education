@@ -51,10 +51,8 @@ Sim.create({
     var MONTH_TICKS = [0, 34, 65, 99, 132, 165, 198, 232, 266, 299, 333, 366, 400];
     var DEG_BASE = [141.45, 106.95, 72.45, 38, 3.5, -30, -64.5, -98, -133.95];       // baselines of −40°…40° (top y + 12.05)
     var MONTH_C = [17.125, 49.675, 82.3, 116.55, 148.8, 181.975, 215.125, 250.6, 283.325, 316.625, 350.2, 383.875];
-    var NORTH = { x: 1, y: 0, z: 0 }, EAST = { x: 0, y: -1, z: 0 };
-    var TILT = 23.4 * RAD, BAND = 5.1;
 
-    var doy = 45, lat = 41, theta = 200, phi = 20, drag = null;   // reset(): (200, 20), day 45
+    var doy = 45, lat = 41, drag = null;               // reset(): day 45, view (200, 20)
 
     S.group("fd.ctl");
     var hint = document.createElement("p");
@@ -70,7 +68,7 @@ Sim.create({
       format: function (v) { return v + "°"; },
       on: function (v) { lat = v; upd(); }
     });
-    S.button({ labelKey: "fd.reset", on: function () { theta = 200; phi = 20; doyCtl.set(45); } });
+    S.button({ labelKey: "fd.reset", on: function () { sph.setThetaAndPhi(200, 20); doyCtl.set(45); } });
     var outDate = S.readout({ labelKey: "fd.rDate" });
     var outMoon = S.readout({ labelKey: "fd.rMoon" });
     var outSun = S.readout({ labelKey: "fd.rSun" });
@@ -96,62 +94,43 @@ Sim.create({
       return -Math.asin(SIN_E * Math.sin(L)) * DEG;
     }
 
-    /* ---- the CelestialSphere projection, with the full moon on the meridian ---- */
-    function mats() {
-      var s = sun(doy), sT = (s.ra + 12) / 24 * TAU;       // siderealTime = sunRA + 12
-      var ct = Math.cos(theta * RAD), st = Math.sin(theta * RAD);
-      var cp = Math.cos(phi * RAD), sp = Math.sin(phi * RAD);
-      var a = { a0: -R * st, a1: R * ct, a3: R * ct * sp, a4: R * st * sp, a5: -R * cp,
-        a6: R * ct * cp, a7: R * st * cp, a8: R * sp };
-      var m2 = Math.cos(lat * RAD), m3 = Math.sin(sT), m4 = -Math.cos(sT), m8 = Math.sin(lat * RAD);
-      var m = { m0: m4 * m8, m1: -m3 * m8, m2: m2, m3: m3, m4: m4, m6: -m2 * m4, m7: m2 * m3, m8: m8 };
-      var b = {
-        b0: a.a0 * m.m0 + a.a1 * m.m3, b1: a.a0 * m.m1 + a.a1 * m.m4, b2: a.a0 * m.m2,
-        b3: a.a3 * m.m0 + a.a4 * m.m3 + a.a5 * m.m6, b4: a.a3 * m.m1 + a.a4 * m.m4 + a.a5 * m.m7,
-        b5: a.a3 * m.m2 + a.a5 * m.m8,
-        b6: a.a6 * m.m0 + a.a7 * m.m3 + a.a8 * m.m6, b7: a.a6 * m.m1 + a.a7 * m.m4 + a.a8 * m.m7,
-        b8: a.a6 * m.m2 + a.a8 * m.m8 };
-      return { a: a, m: m, b: b };
-    }
-    var M = mats();
-    function cart(ra, dec) {
-      var d = dec * RAD, h = ra * 15 * RAD;
-      return { x: Math.cos(d) * Math.cos(h), y: Math.cos(d) * Math.sin(h), z: Math.sin(d) };
-    }
-    function hCart(az, alt) {
-      var A = -az * RAD, h = alt * RAD;
-      return { x: Math.cos(h) * Math.cos(A), y: Math.cos(h) * Math.sin(A), z: Math.sin(h) };
-    }
-    function vecH(v) {
-      var a = M.a;
-      return { x: v.x * a.a0 + v.y * a.a1, y: v.x * a.a3 + v.y * a.a4 + v.z * a.a5,
-        z: v.x * a.a6 + v.y * a.a7 + v.z * a.a8 };
-    }
-    function vecC(v) {
-      var b = M.b;
-      return { x: v.x * b.b0 + v.y * b.b1 + v.z * b.b2, y: v.x * b.b3 + v.y * b.b4 + v.z * b.b5,
-        z: v.x * b.b6 + v.y * b.b7 + v.z * b.b8 };
-    }
-    function projH(p) { var q = vecH(p); return { x: C.x + q.x, y: C.y + q.y, z: q.z }; }
-    function projC(p) { var q = vecC(p); return { x: C.x + q.x, y: C.y + q.y, z: q.z }; }
-    function altOf(ra, dec) {
-      var p = cart(ra, dec), m = M.m;
-      return Math.asin(Math.max(-1, Math.min(1, p.x * m.m6 + p.y * m.m7 + p.z * m.m8))) * DEG;
-    }
-    // a point on the circle `dec` degrees off the great circle tilted by TILT about the x axis
-    function tilted(g, dec) {
-      var d = dec * RAD, c = Math.cos(d);
-      var x = c * Math.cos(g), y0 = c * Math.sin(g), z0 = Math.sin(d);
-      return { x: x, y: y0 * Math.cos(TILT) - z0 * Math.sin(TILT), z: y0 * Math.sin(TILT) + z0 * Math.cos(TILT) };
-    }
+    /* ---- the CelestialSphere, set up as MoonDecDemoClass.init does ---- */
+    var CS = window.CelestialSphere, sph = new CS({ x: C.x, y: C.y });
+    sph.minViewerAltitude = 7;
+    // Symbol 204: a radial #f18d8d → #6c1e1e (both 40 %), centred (31, −34), radius 146.85
+    var BAND_ART = CS.shapeDrawer({ nz: false, layers: [[[[{ t: "r", m: [0.17926, 0, 0, 0.17926, 31, -34],
+      s: [[0, "rgba(241,141,141,0.4)"], [1, "rgba(108,30,30,0.4)"]] }, "M100 0Q100 41.4 70.7 70.7Q41.4 100 0 100Q-41.45 100 -70.75 70.7Q-100.05 41.4 -100 0Q-100.05 -41.45 -70.75 -70.7Q-41.45 -100 0 -100Q41.4 -100 70.7 -70.7Q100 -41.45 100 0Z"]], []]] });
+    sph.addShadedBand(BAND_ART, BAND_ART, "testBand", { tilt: 23.4, dec2: 5.1, dec1: -5.1 }, "inner", "full");
+    sph.testBand.setBorderStyle(1, 0xff0000, 40);      // (set, but the SWF never shows the border)
+    sph.size = 300;
+    sph.addHorizonPlaneClip(CS.directionLabels(function () {
+      return { N: I18N.t("fd.N"), S: I18N.t("fd.S"), E: I18N.t("fd.E"), W: I18N.t("fd.W") };
+    }, { size: 16, pos: { N: [-0.025, -73.85], S: [-0.025, 86.15], E: [81.975, 6.35], W: [-77.025, 6.35] } }), "directionLabels", "above");
+    // Sun Disc (shape 31) and Moon Disc (shape 29), radius 9.5
+    sph.addObject("sun", CS.shapeDrawer({ nz: false, layers: [[[[{ t: "r", m: [0.013138, 0, 0, 0.013138, 0, 0.05], s: [[0, "#ffcc00"], [1, "#edb101"]] },
+      "M6.7 -6.7L8.1 -5Q9.5 -2.8 9.5 0Q9.5 3.9 6.7 6.75Q3.9 9.5 0 9.5Q-3.9 9.5 -6.7 6.75Q-9.5 3.9 -9.5 0Q-9.5 -2.8 -8.05 -5L-6.7 -6.7Q-3.9 -9.5 0 -9.5Q3.9 -9.5 6.7 -6.7Z"]], []]] }), { dec: 0, ra: 0 });
+    sph.addObject("moon", CS.shapeDrawer({ nz: false, layers: [[[["#cccccc", "M8.1 -5Q9.5 -2.8 9.5 0Q9.5 3.9 6.7 6.75Q3.9 9.5 0 9.5Q-3.9 9.5 -6.7 6.75Q-9.5 3.9 -9.5 0Q-9.5 -2.8 -8.05 -5L-6.7 -6.7Q-3.9 -9.5 0 -9.5Q3.9 -9.5 6.7 -6.7L8.1 -5Z"]],
+      [[1, "#909090", "M8.1 -5Q9.5 -2.8 9.5 0Q9.5 3.9 6.7 6.75Q3.9 9.5 0 9.5Q-3.9 9.5 -6.7 6.75Q-9.5 3.9 -9.5 0Q-9.5 -2.8 -8.05 -5L-6.7 -6.7Q-3.9 -9.5 0 -9.5Q3.9 -9.5 6.7 -6.7L8.1 -5"]]]] }), { dec: 0, ra: 12 });
+    sph.addCircle("ecliptic", { alpha: 50, color: 0xa04040, thickness: 1 }, { tilt: 23.4, dec: 0, ra: 0 });
+    sph.addCircle("meridian", { alpha: 70, color: 0xffe375, thickness: 1 }, { tilt: 90, alt: 0, az: 0 });
+    sph.addCircle("celestialEquator", { alpha: 70, color: 0xffe375, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addLine("ncpAxis", { alpha: 100, color: 0x75a9ff, thickness: 2 }, { system: "celestial", x: 0, y: 0, z: 1 }, { system: "celestial", x: 0, y: 0, z: 1.2 });
+    sph.addLine("scpAxis", { alpha: 100, color: 0x75a9ff, thickness: 2 }, { system: "celestial", x: 0, y: 0, z: -1 }, { system: "celestial", x: 0, y: 0, z: -1.2 });
+    sph.setThetaAndPhi(200, 20);
+    sph.latitude = lat;
 
-    function upd() {
-      M = mats();
+    function upd() {                                       // MoonDecDemoClass.update
       var s = sun(doy);
+      sph.latitude = lat;
+      sph.sun.setPosition({ dec: s.dec, ra: s.ra });
+      sph.sun.setOrientationType("absolute");
+      sph.moon.setPosition({ dec: -s.dec, ra: s.ra + 12 });
+      sph.moon.setOrientationType("absolute");
+      sph.siderealTime = s.ra + 12;
       outDate(dateString(doy));
       outMoon(fmt(-s.dec));
       outSun(fmt(s.dec));
-      outAlt(altOf(s.ra + 12, -s.dec).toFixed(0) + "°");
+      outAlt(sph.moon.getPositionHorizon().alt.toFixed(0) + "°");
       S.requestDraw();
     }
     function fmt(v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "°"; }
@@ -169,22 +148,19 @@ Sim.create({
       if (onCursor) drag = { plot: true, offset: cx - p.x };           // doyCursor.onPress
       else if (p.x >= PLOT.x && p.x <= PLOT.x + PLOT.w && Math.abs(p.y - PLOT.y) <= 137.5) {
         drag = { plot: true, offset: 0 }; setDoyFromX(p.x);
-      } else if (Math.hypot(p.x - C.x, p.y - C.y) < R + 20) {
-        drag = { x: p.x, y: p.y, theta: theta, phi: phi };
-      } else return;
-      S.canvas.setPointerCapture(ev.pointerId);
+      } else if (sph.startDrag(p.x, p.y)) drag = { sphere: true };
+      else return;
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
     });
     S.canvas.addEventListener("pointermove", function (ev) {
       if (!drag) return;
       var p = at(ev);
       if (drag.plot) { setDoyFromX(p.x + drag.offset); return; }
-      var k = 57.2958 / R;
-      theta = (((drag.theta + k * (p.x - drag.x)) % 360) + 360) % 360;
-      phi = Math.max(7, Math.min(90, drag.phi - k * (p.y - drag.y)));
-      upd();
+      sph.dragTo(p.x, p.y);                                // updateSimpleDragging
+      S.requestDraw();
     });
     ["pointerup", "pointercancel"].forEach(function (e) {
-      S.canvas.addEventListener(e, function () { drag = null; });
+      S.canvas.addEventListener(e, function () { drag = null; sph.endDrag(); });
     });
     function setDoyFromX(x) {                              // setDayOfYear: arg mod 365
       var d = 365 * (x - PLOT.x) / PLOT.w;
@@ -202,7 +178,7 @@ Sim.create({
       drawPlot(ctx, t);
       ctx.save();
       ctx.beginPath(); ctx.rect(510, 38 + OY, 357, 384); ctx.clip();
-      drawSphere(ctx, t);
+      sph.draw(ctx);
       ctx.restore();
     });
 
@@ -272,145 +248,6 @@ Sim.create({
       ctx.moveTo(cx - 10, -161.5); ctx.lineTo(cx + 10, -161.5); ctx.lineTo(cx, -145.5);
       ctx.closePath(); ctx.fill();
       ctx.beginPath(); ctx.moveTo(cx, -137.5); ctx.lineTo(cx, 137.5); ctx.stroke();
-      ctx.restore();
-    }
-
-    /* ---- Moon Dec Demo: the sphere, layered as the CelestialSphere engine layers it ---- */
-    function drawSphere(ctx, t) {
-      var s = sun(doy);
-      var objs = [
-        { kind: "sun", p: cart(s.ra, s.dec) },
-        { kind: "moon", p: cart(s.ra + 12, -s.dec) }
-      ].map(function (o) { o.s = projC(o.p); return o; })
-        .sort(function (a, b) { return a.s.z - b.s.z; });
-      axis(ctx, false);
-      ctx.save(); discClip(ctx); circles(ctx, false); ctx.restore();
-      objs.forEach(function (o) { if (o.s.z < 0) glyph(ctx, o); });
-      band(ctx, false);
-      horizonPlane(ctx, t);
-      ctx.save(); discClip(ctx);
-      var bowl = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);   // the "celestialBowl"
-      bowl.addColorStop(0, "rgba(255,255,255,0)"); bowl.addColorStop(1, "rgba(0,0,0,0.2)");
-      ctx.fillStyle = bowl; ctx.fillRect(C.x - R, C.y - R, 2 * R, 2 * R);
-      ctx.restore();
-      band(ctx, true);
-      ctx.save(); discClip(ctx); circles(ctx, true); ctx.restore();
-      objs.forEach(function (o) { if (o.s.z >= 0) glyph(ctx, o); });
-      axis(ctx, true);
-    }
-    function discClip(ctx) { ctx.beginPath(); ctx.arc(C.x, C.y, R, 0, TAU); ctx.clip(); }
-    function circles(ctx, front) {
-      seg(ctx, function (u) { return projC(tilted(u * TAU, 0)); }, front, "#a04040", 1, 0.5);   // ecliptic
-      seg(ctx, function (u) { return projH(hCart(0, u * 360)); }, front, "#ffe375", 1, 0.7);    // meridian
-      seg(ctx, function (u) { return projC(cart(u * 24, 0)); }, front, "#ffe375", 1, 0.7);      // equator
-    }
-    function seg(ctx, fn, front, colour, w, alpha) {
-      ctx.strokeStyle = colour; ctx.lineWidth = w; ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      var started = false, prev = null;
-      for (var i = 0; i <= 240; i++) {
-        var p = fn(i / 240);
-        if ((p.z >= 0) !== front) { started = false; prev = p; continue; }
-        if (!started) {
-          if (prev) {                                       // start on the limb, not a step inside it
-            var k = prev.z / (prev.z - p.z);
-            ctx.moveTo(prev.x + (p.x - prev.x) * k, prev.y + (p.y - prev.y) * k);
-          } else ctx.moveTo(p.x, p.y);
-          started = true;
-        }
-        ctx.lineTo(p.x, p.y);
-        prev = p;
-      }
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-    function axis(ctx, front) {                            // ncpAxis / scpAxis, 2 px #75a9ff
-      ctx.strokeStyle = "#75a9ff"; ctx.lineWidth = 2;
-      [1, -1].forEach(function (k) {
-        var p1 = projC({ x: 0, y: 0, z: k }), p2 = projC({ x: 0, y: 0, z: 1.2 * k });
-        if ((p1.z >= 0) !== front) return;
-        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-      });
-    }
-    // 'absolute' orientation with the outward normal: the disc lies in the sphere's tangent plane
-    function glyph(ctx, o) {
-      var n = o.p, u;
-      if (n.x === 0 && n.y === 0) u = { x: 0, y: 1, z: 0 };
-      else u = { x: -n.x * n.z, y: -n.z * n.y, z: n.x * n.x + n.y * n.y };
-      var l = Math.hypot(u.x, u.y, u.z);
-      u = { x: u.x / l, y: u.y / l, z: u.z / l };
-      var w = { x: u.y * n.z - u.z * n.y, y: u.z * n.x - u.x * n.z, z: u.x * n.y - u.y * n.x };
-      var W = vecC(w), U = vecC(u);
-      ctx.save();
-      ctx.transform(W.x / R, W.y / R, -U.x / R, -U.y / R, o.s.x, o.s.y);
-      ctx.beginPath(); ctx.arc(0, 0, 9.5, 0, TAU);
-      if (o.kind === "sun") {                              // Sun Disc, shape 31
-        var g = ctx.createRadialGradient(0, 0.05, 0, 0, 0.05, 10.73);
-        g.addColorStop(0, "#ffcc00"); g.addColorStop(1, "#edb101");
-        ctx.fillStyle = g; ctx.fill();
-      } else {                                             // Moon Disc, shape 29
-        ctx.fillStyle = "#cccccc"; ctx.fill();
-        ctx.strokeStyle = "#909090"; ctx.lineWidth = 1; ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // the Moon's range, 5.1° either side of the ecliptic: Symbol 204's gradient masked to the
-    // band, its far half beneath the horizon plane and its near half above, bordered #ff0000 @ 40 %
-    var bandCache = {};
-    function band(ctx, front) {
-      var key = [theta, phi, lat, doy, front].join();
-      if (!bandCache[key]) {
-        if (Object.keys(bandCache).length > 8) bandCache = {};
-        bandCache[key] = bandLayer(front);
-      }
-      ctx.drawImage(bandCache[key], C.x - R, C.y - R, 2 * R, 2 * R);
-      ctx.save(); discClip(ctx);
-      [BAND, -BAND].forEach(function (d) {
-        seg(ctx, function (u) { return projC(tilted(u * TAU, d)); }, front, "#ff0000", 1, 0.4);
-      });
-      ctx.restore();
-    }
-    function bandLayer(front) {
-      var q = 2, N = 2 * R * q, cv = document.createElement("canvas");
-      cv.width = cv.height = N;
-      var g = cv.getContext("2d"), img = g.createImageData(N, N), px = img.data, b = M.b;
-      var c0 = [241, 141, 141], c1 = [108, 30, 30], A = 102;
-      var gx = 0.31, gy = -0.34, gr = 1.469;               // gradient centre and radius, sphere units
-      var sgn = front ? 1 : -1, lim = Math.sin(BAND * RAD), st = Math.sin(TILT), ct = Math.cos(TILT);
-      for (var j = 0; j < N; j++) {
-        var y = (j + 0.5) / (R * q) - 1;
-        for (var i = 0; i < N; i++) {
-          var x = (i + 0.5) / (R * q) - 1, s2 = 1 - x * x - y * y;
-          if (s2 < 0) continue;
-          var z = sgn * Math.sqrt(s2);
-          var py = (b.b1 * x + b.b4 * y + b.b7 * z) / R, pz = (b.b2 * x + b.b5 * y + b.b8 * z) / R;
-          if (Math.abs(ct * pz - st * py) > lim) continue;
-          var tt = Math.min(1, Math.hypot(x - gx, y - gy) / gr), o = 4 * (j * N + i);
-          px[o] = c0[0] + (c1[0] - c0[0]) * tt;
-          px[o + 1] = c0[1] + (c1[1] - c0[1]) * tt;
-          px[o + 2] = c0[2] + (c1[2] - c0[2]) * tt;
-          px[o + 3] = A;
-        }
-      }
-      g.putImageData(img, 0, 0);
-      return cv;
-    }
-
-    function horizonPlane(ctx, t) {                        // CSAboveHorizonPlane + Symbol 169
-      ctx.save();
-      var e = vecH(EAST), n = vecH(NORTH);                 // plane units: radius 100, north = −y
-      ctx.transform(e.x / 100, e.y / 100, -n.x / 100, -n.y / 100, C.x, C.y);
-      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, 101.4);
-      g.addColorStop(0, "#51c451"); g.addColorStop(1, "#3aa53a");
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, 100, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#ffffff"; ctx.font = "bold 16px " + FONT;
-      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      FlashText.fillStatic(ctx, t("fd.N"), 0, -73.85);
-      FlashText.fillStatic(ctx, t("fd.S"), 0, 86.15);
-      FlashText.fillStatic(ctx, t("fd.E"), 81.93, 6.35);
-      FlashText.fillStatic(ctx, t("fd.W"), -77.08, 6.35);
       ctx.restore();
     }
 

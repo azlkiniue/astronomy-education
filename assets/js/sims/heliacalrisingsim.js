@@ -144,8 +144,6 @@ Sim.create({
       { mode: "starRise", key: "hr.lStarRise", y: 552.7, x: { en: 362, id: 300 } },
       { mode: "starSet", key: "hr.lStarSet", y: 552.7, x: { en: 461.6, id: 414 } }
     ];
-    var NORTH = { x: 1, y: 0, z: 0 }, EAST = { x: 0, y: -1, z: 0 }, SOUTH = { x: -1, y: 0, z: 0 };
-    var ZENITH = { x: 0, y: 0, z: 1 };
 
     /* the SWF's own art (tools/swf-inspect.py canvas): Star (shape 182), Sun (209),
        Stickfigure (37), and the three red cursors (143, 221, 253) */
@@ -158,13 +156,6 @@ Sim.create({
       "L-4.6 -5.7L0.05 -2.25L4.7 -5.7Z");
     var SUN = new Path2D("M8 0Q8 3.3 5.65 5.65Q3.3 8 0 8Q-3.3 8 -5.65 5.65Q-8 3.3 -8 0Q-8 -3.3 -5.65 -5.65" +
       "Q-3.3 -8 0 -8Q3.3 -8 5.65 -5.65Q8 -3.3 8 0Z");
-    var HEAD = "M2.3 -28.3Q1.25 -27.3 -0.15 -27.25Q-1.6 -27.3 -2.65 -28.3Q-3.7 -29.35 -3.65 -30.8Q-3.7 -32.3" +
-      " -2.65 -33.3Q-1.6 -34.35 -0.15 -34.3Q1.25 -34.35 2.3 -33.3Q3.3 -32.3 3.35 -30.8Q3.3 -29.35 2.3 -28.3";
-    var FIG_HEAD = new Path2D(HEAD + "Z");
-    var FIG_LINES = new Path2D("M0.8 -23.05L6.3 -20.4" + HEAD + "M-0.15 -15.35L5.35 0M-5.5 0L-0.25 -15.6" +
-      "L-0.15 -15.35M-0.15 -23.05L-6.3 -20.4M-0.15 -25.75L-0.15 -23.05L-0.15 -15.35");
-    var SHADE_A = [[0, "rgba(133,133,133,0.024)"], [109 / 255, "rgba(114,114,114,0.122)"], [1, "rgba(101,101,101,0.322)"]];
-    var SHADE_B = [[0, "rgba(0,0,0,0.302)"], [109 / 255, "rgba(0,0,0,0.4)"], [1, "rgba(0,0,0,0.6)"]];
 
     /* ------------------------------------------------ state */
     var doy = 78;                                   // dayOfYearZB (0 = 1 January)
@@ -172,9 +163,7 @@ Sim.create({
     var dec = -16.7, ra = 6.8;                      // the star
     var lock = "noLock";
     var cursorX = TL.x + TL.w / 2, cursorShown = true;
-    var theta = 150, phi = 35;                      // setThetaAndPhi(150, 35)
     var sidereal = 0, vis = null, sun = { dec: 0, ra: 0 };
-    var M;
 
     /* ------------------------------------------------ the SWF's arithmetic */
     function mod(n, m) { return ((n % m) + m) % m; }
@@ -261,7 +250,7 @@ Sim.create({
       if (lock === "starRise" || lock === "starSet") eot = 0;
       sidereal = mod(vis.st + r1 + eot, 24);
       sun = { dec: dl.sun.dec * DEG, ra: dl.sun.ra };
-      mats();
+      syncSphere();
     }
     /* updateStarDeclinationArc: the part of the star's circle above the horizon */
     function decArc() {
@@ -313,7 +302,7 @@ Sim.create({
     }
     function reset() {                               // onReset
       doy = 78; lat = snap(40.8, 1, -90, 90); dec = -16.7; ra = 6.8;
-      theta = 150; phi = 35;
+      sph.setThetaAndPhi(150, 35);
       cursorX = TL.x + TL.w / 2; lock = "noLock";
       openCombo = null; focusCombo = null;
       FIELDS.forEach(function (f) { f.active = false; if (f.input) f.input.blur(); });
@@ -471,117 +460,53 @@ Sim.create({
     mapImg.onload = function () { S.requestDraw(); };
     mapImg.src = "../assets/img/sims/heliacal-map.png";
 
-    /* ------------------------------------------------ the CelestialSphere engine */
-    function mats() {
-      var ct = Math.cos(theta * RAD), st = Math.sin(theta * RAD);
-      var cp = Math.cos(phi * RAD), sp = Math.sin(phi * RAD);
-      var a = { a0: -R * st, a1: R * ct, a3: R * ct * sp, a4: R * st * sp, a5: -R * cp,
-        a6: R * ct * cp, a7: R * st * cp, a8: R * sp };
-      var s = sidereal * Math.PI / 12, la = latR();                  // doM
-      var m2 = Math.cos(la), m8 = Math.sin(la), m3 = Math.sin(s), m4 = -Math.cos(s);
-      var m = { m0: m4 * m8, m1: -m3 * m8, m2: m2, m3: m3, m4: m4, m6: -m2 * m4, m7: m2 * m3, m8: m8 };
-      var b = {                                                       // doB
-        b0: a.a0 * m.m0 + a.a1 * m.m3, b1: a.a0 * m.m1 + a.a1 * m.m4, b2: a.a0 * m.m2,
-        b3: a.a3 * m.m0 + a.a4 * m.m3 + a.a5 * m.m6, b4: a.a3 * m.m1 + a.a4 * m.m4 + a.a5 * m.m7,
-        b5: a.a3 * m.m2 + a.a5 * m.m8,
-        b6: a.a6 * m.m0 + a.a7 * m.m3 + a.a8 * m.m6, b7: a.a6 * m.m1 + a.a7 * m.m4 + a.a8 * m.m7,
-        b8: a.a6 * m.m2 + a.a8 * m.m8
-      };
-      M = { a: a, b: b };
-    }
-    function vecH(v) {                              // WtoSz
-      var a = M.a;
-      return { x: v.x * a.a0 + v.y * a.a1, y: v.x * a.a3 + v.y * a.a4 + v.z * a.a5,
-        z: v.x * a.a6 + v.y * a.a7 + v.z * a.a8 };
-    }
-    function vecC(v) {                              // CtoSz
-      var b = M.b;
-      return { x: v.x * b.b0 + v.y * b.b1 + v.z * b.b2, y: v.x * b.b3 + v.y * b.b4 + v.z * b.b5,
-        z: v.x * b.b6 + v.y * b.b7 + v.z * b.b8 };
-    }
-    function projH(p) { var q = vecH(p); return { x: C.x + q.x, y: C.y + q.y, z: q.z }; }
-    function projC(p) { var q = vecC(p); return { x: C.x + q.x, y: C.y + q.y, z: q.z }; }
-    function celestial(decD, raH) {
-      var d = decD * RAD, r = raH * Math.PI / 12;
-      return { x: Math.cos(d) * Math.cos(r), y: Math.cos(d) * Math.sin(r), z: Math.sin(d) };
-    }
-    /* addCircle's doW: P(γ) = A cos γ + B sin γ + C in the circle's own system */
-    function circlePoint(c, g) {
-      var l = c.l * RAD, b = c.b * RAD, tl = c.t * RAD;
-      var cl = Math.cos(l), sl = Math.sin(l), cb = Math.cos(b), sb = Math.sin(b), ct = Math.cos(tl), st = Math.sin(tl);
-      var cg = Math.cos(g), sg = Math.sin(g);
-      return {
-        x: cl * cb * cg - cl * sb * ct * sg + sl * sb * st,
-        y: cl * sb * cg + cl * cb * ct * sg - sl * cb * st,
-        z: cl * st * sg + sl * ct
-      };
-    }
-    function circleDefs() {
+    /* ------------------------------------------------ the CelestialSphere, as the main timeline sets it up */
+    var CS = window.CelestialSphere, sph = new CS({ x: C.x, y: C.y });
+    sph.setThetaAndPhi(150, 35);
+    sph.size = 300;
+    sph.minViewerAltitude = 7;
+    sph.removeClip("celestialBowl");
+    sph.addShadingClip(CS.art.shadingLayerB, "shading1", "back", "inner", "both");
+    sph.addShadingClip(CS.art.shadingLayerA, "shading2", "front", "outer", "both");
+    sph.addShadingClip(CS.art.shadingLayerA, "shading3", "back", "outer", "both");
+    sph.addHorizonPlaneClip(CS.directionLabels(function () {
+      return { N: t("hr.dN"), S: t("hr.dS"), E: t("hr.dE"), W: t("hr.dW") };
+    }, { size: 16, pos: CS.DIR_LABELS_16 }), "directionLabels", "above");
+    sph.addCircle("meridian1", { alpha: 20, color: 0xe0e0e0, thickness: 1 }, { tilt: 90, az: 0, alt: 0 });
+    sph.addCircle("meridian2", { alpha: 20, color: 0xe0e0e0, thickness: 1 }, { tilt: 90, az: 90, alt: 0 });
+    sph.addCircle("eclipticCircle", { alpha: 60, color: 0xe0e0e0, thickness: 1 }, { tilt: 23.4, dec: 0, ra: 0 });
+    sph.addCircle("zeroHoursCircle", { alpha: 100, color: 0xffe375, thickness: 1 }, { gammaEnd: 90, gammaStart: -90, tilt: 90, dec: 0, ra: 0 });
+    sph.addCircle("celestialEquator", { alpha: 100, color: 0xffe375, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addCircle("declinationCircle", { alpha: 30, color: 0xe0e0e0, thickness: 1 }, { dec: 45, ra: 0, tilt: 0 });
+    sph.addCircle("declinationArc", { alpha: 100, color: 0x3090e0, thickness: 2 }, { dec: 45, ra: 0, tilt: 0 });
+    sph.addObject("star", drawStar, { dec: 0, ra: 0 });
+    sph.addObject("sun", drawSun, { dec: 0, ra: 0 });
+    sph.addObject("stickfigure", CS.art.stickfigure, { system: "horizon", x: 0, y: 0, z: 0 }, { _xscale: 120, _yscale: 120 });
+    sph.stickfigure.setOrientationType("absolute", { system: "horizon", x: -1, y: 0, z: 0 }, { system: "horizon", x: 0, y: 0, z: 1 });
+    sph.addLine("ncpAxis", { alpha: 100, color: 0x75a9ff, thickness: 2 }, { system: "celestial", x: 0, y: 0, z: 1 }, { system: "celestial", x: 0, y: 0, z: 1.2 });
+    sph.addLine("scpAxis", { alpha: 100, color: 0x75a9ff, thickness: 2 }, { system: "celestial", x: 0, y: 0, z: -1 }, { system: "celestial", x: 0, y: 0, z: -1.2 });
+
+    /* onDayOfYearZBChanged / onLatitudeChanged / onDeclinationChanged / onRightAscensionChanged,
+       then the tail of updateSphere and updateStarDeclinationArc */
+    function syncSphere() {
+      var d = clamp(dec, -90, 90);
+      sph.latitude = lat;
+      sph.siderealTime = sidereal;
+      sph.sun.setPosition({ dec: sun.dec, ra: sun.ra });
+      sph.sun.setOrientationType("absolute");
+      sph.star.setPosition({ dec: d, ra: raTL() });
+      sph.star.setOrientationType("absolute");
+      sph.declinationCircle.dec = d;
       var arc = decArc();
-      var list = [
-        { sys: "h", l: 0, b: 0, t: 90, rgb: "224,224,224", a: 0.2, w: 1 },          // meridian1
-        { sys: "h", l: 0, b: 270, t: 90, rgb: "224,224,224", a: 0.2, w: 1 },        // meridian2
-        { sys: "c", l: 0, b: 0, t: 23.4, rgb: "224,224,224", a: 0.6, w: 1 },        // eclipticCircle
-        { sys: "c", l: 0, b: 0, t: 90, rgb: "255,227,117", a: 1, w: 1, gS: -90, gE: 90 },   // zeroHoursCircle
-        { sys: "c", l: 0, b: 0, t: 0, rgb: "255,227,117", a: 1, w: 1 },             // celestialEquator
-        { sys: "c", l: clamp(dec, -90, 90), b: 0, t: 0, rgb: "224,224,224", a: 0.3, w: 1 }     // declinationCircle
-      ];
-      if (arc) list.push({ sys: "c", l: clamp(dec, -90, 90), b: sidereal * 15, t: 0, rgb: "48,144,224", a: 1, w: 2,
-        gS: arc.full ? undefined : arc.gS, gE: arc.full ? undefined : arc.gE });     // declinationArc
-      return list;
-    }
-    function circlePts(c) {
-      var g1 = 0, g2 = TAU;
-      if (c.gS !== undefined && mod(c.gS, 360) !== mod(c.gE, 360)) {
-        g1 = mod(c.gS, 360) * RAD; g2 = mod(c.gE, 360) * RAD;
-        if (g2 < g1) g2 += TAU;
+      if (!arc) sph.declinationArc.visible = false;
+      else {
+        // a circumpolar star's whole circle (the SWF kept the previous arc's end angles here)
+        if (arc.full) sph.declinationArc.setParameters({ gammaEnd: 0, gammaStart: 0, tilt: 0, dec: d, ra: 0 });
+        else sph.declinationArc.setParameters({ gammaEnd: arc.gE, gammaStart: arc.gS, tilt: 0, dec: d, ra: sph.siderealTime });
+        sph.declinationArc.visible = true;
       }
-      var n = Math.max(8, Math.ceil((g2 - g1) / TAU * 144)), pts = [];
-      for (var i = 0; i <= n; i++) {
-        var p = circlePoint(c, g1 + (g2 - g1) * i / n);
-        pts.push(c.sys === "h" ? projH(p) : projC(p));
-      }
-      return pts;
     }
-    function strokeHalf(ctx, pts, front) {
-      ctx.beginPath();
-      var started = false, prev = null;
-      for (var i = 0; i < pts.length; i++) {
-        var p = pts[i];
-        if ((p.z >= 0) !== front) {
-          if (started && prev) { var k0 = prev.z / (prev.z - p.z); ctx.lineTo(prev.x + (p.x - prev.x) * k0, prev.y + (p.y - prev.y) * k0); }
-          started = false; prev = p; continue;
-        }
-        if (!started) {
-          if (prev) { var k = prev.z / (prev.z - p.z); ctx.moveTo(prev.x + (p.x - prev.x) * k, prev.y + (p.y - prev.y) * k); ctx.lineTo(p.x, p.y); }
-          else ctx.moveTo(p.x, p.y);
-          started = true;
-        } else ctx.lineTo(p.x, p.y);
-        prev = p;
-      }
-      ctx.stroke();
-    }
-    // 'absolute' orientation frame: n the normal, u toward a (or toward the system's pole)
-    function frame(n, a) {
-      var u;
-      if (a) {
-        var d = a.x * n.x + a.y * n.y + a.z * n.z;
-        u = { x: a.x - d * n.x, y: a.y - d * n.y, z: a.z - d * n.z };
-      } else if (n.x === 0 && n.y === 0) u = { x: 0, y: 1, z: 0 };
-      else u = { x: -n.x * n.z, y: -n.z * n.y, z: n.x * n.x + n.y * n.y };
-      var l = Math.hypot(u.x, u.y, u.z);
-      u = { x: u.x / l, y: u.y / l, z: u.z / l };
-      return { u: u, w: { x: u.y * n.z - u.z * n.y, y: u.z * n.x - u.x * n.z, z: u.x * n.y - u.y * n.x } };
-    }
-    function enter(ctx, origin, f, vec) {           // local px → screen, flat on the sphere
-      var w = vec(f.w), u = vec(f.u);
-      ctx.transform(w.x / R, w.y / R, -u.x / R, -u.y / R, origin.x, origin.y);
-    }
-    function shade(ctx, stops) {                    // Shading Layer A / B: a radial disc
-      var g = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, 101.45 * R / 100);
-      stops.forEach(function (s) { g.addColorStop(s[0], s[1]); });
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(C.x, C.y, R, 0, TAU); ctx.fill();
-    }
+    // the SWF's own art (tools/swf-inspect.py canvas): Star (shape 182), Sun (209)
     function drawStar(ctx) {
       ctx.strokeStyle = "#999999"; ctx.lineWidth = 1; ctx.lineJoin = "round"; ctx.stroke(STAR_OUT);
       var g = ctx.createRadialGradient(0.05, 0.2, 0, 0.05, 0.2, 11.65);
@@ -596,64 +521,6 @@ Sim.create({
       g.addColorStop(0, "#fbe4a4"); g.addColorStop(1, "#f2c43c");
       ctx.fillStyle = g; ctx.fill(SUN);
       ctx.strokeStyle = "#c0c0c0"; ctx.lineWidth = 1; ctx.stroke(SUN);
-    }
-    function sphereObjects() {                      // Star, then Sun; sorted by depth
-      var list = [{ p: celestial(clamp(dec, -90, 90), raTL()), draw: drawStar },
-        { p: celestial(sun.dec, sun.ra), draw: drawSun }];
-      list.forEach(function (o) { o.s = projC(o.p); });
-      return list.sort(function (a, b) { return a.s.z - b.s.z; });
-    }
-    function axes(ctx, front) {                     // ncpAxis, scpAxis: outside the sphere
-      ctx.strokeStyle = "#75a9ff"; ctx.lineWidth = 2; ctx.lineCap = "round";
-      [[1, 1.2], [-1, -1.2]].forEach(function (z) {
-        var h = projC({ x: 0, y: 0, z: z[0] }), tl = projC({ x: 0, y: 0, z: z[1] });
-        if (((h.z + tl.z) / 2 < 0) === front) return;
-        ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(tl.x, tl.y); ctx.stroke();
-      });
-    }
-    function sphere(ctx) {
-      var defs = circleDefs(), pts = defs.map(circlePts), objs = sphereObjects();
-      function circles(front) {
-        defs.forEach(function (c, i) {
-          ctx.strokeStyle = "rgba(" + c.rgb + "," + c.a + ")"; ctx.lineWidth = c.w;
-          strokeHalf(ctx, pts[i], front);
-        });
-      }
-      function objects(front) {
-        objs.forEach(function (o) {
-          if ((o.s.z >= 0) !== front) return;
-          ctx.save(); enter(ctx, o.s, frame(o.p), vecC); o.draw(ctx); ctx.restore();
-        });
-      }
-      ctx.lineJoin = "round"; ctx.lineCap = "round";   // Flash's strokes
-      axes(ctx, false);                              // _bEL
-      shade(ctx, SHADE_A);                           // _bOSF: shading3
-      circles(false);                                // _bC
-      objects(false);                                // bS objects
-      shade(ctx, SHADE_B);                           // _bISF: shading1
-      // _hP: CSAboveHorizonPlane and White Direction Labels, scaled (r, r sin φ), turned 180° + θ
-      ctx.save();
-      var e = vecH(EAST), n = vecH(NORTH);
-      ctx.transform(e.x / 100, e.y / 100, -n.x / 100, -n.y / 100, C.x, C.y);
-      var pg = ctx.createRadialGradient(0, 0, 0, 0, 0, 101.4);
-      pg.addColorStop(0, "#51c451"); pg.addColorStop(1, "#3aa53a");
-      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(0, 0, 100, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#ffffff"; font(ctx, 16, true); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(t("hr.dN"), -0.075, -73.95); ctx.fillText(t("hr.dS"), -0.075, 86.05);
-      ctx.fillText(t("hr.dE"), 81.925, 6.25); ctx.fillText(t("hr.dW"), -77.075, 6.25);
-      ctx.restore();
-      // aI: the stick figure at the centre, facing south, 120 %
-      ctx.save();
-      enter(ctx, projH({ x: 0, y: 0, z: 0 }), frame(SOUTH, ZENITH), vecH);
-      ctx.scale(1.2, 1.2);
-      ctx.fillStyle = "#ffffff"; ctx.fill(FIG_HEAD);
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.lineJoin = "round";
-      ctx.stroke(FIG_LINES);
-      ctx.restore();
-      circles(true);                                 // _fC
-      objects(true);                                 // fS objects
-      shade(ctx, SHADE_A);                           // _fOSF: shading2
-      axes(ctx, true);                               // _fEL
     }
 
     /* ------------------------------------------------ canvas interaction */
@@ -708,7 +575,7 @@ Sim.create({
         return { kind: "lcursor" };
       }
       if (inRect(p, MAP.x - 125 * MAP.k, MAP.y, 250 * MAP.k, 125 * MAP.k)) return { kind: "map" };
-      if (Math.hypot(p.x - C.x, p.y - C.y) <= R) return { kind: "sphere" };
+      if (sph.inMouseArea(p.x, p.y)) return { kind: "sphere" };
       return null;
     }
     var CURSORS = { sphere: "grab", tcursor: "ew-resize", tstrip: "ew-resize", dcursor: "ew-resize",
@@ -736,7 +603,7 @@ Sim.create({
       S.canvas.setPointerCapture(ev.pointerId);
       press = { kind: h.kind, r: h.r, c: h.c, x0: p.x, y0: p.y, inside: true };
       if (h.kind === "sphere") {                     // startSimpleDragging
-        press.theta = theta; press.phi = phi;
+        sph.startDrag(p.x, p.y);
         S.canvas.style.cursor = "grabbing";
       } else if (h.kind === "combo") {                // pressHandler: pressFocus, then open
         focusCombo = h.c; openCombo = h.c; listHi = comboSel(h.c);
@@ -759,9 +626,7 @@ Sim.create({
       var p = at(ev);
       if (!press) { setHover(hit(p)); return; }
       if (press.kind === "sphere") {                 // updateSimpleDragging
-        theta = mod(press.theta - (p.x - press.x0) / R * DEG, 360);
-        phi = clamp(press.phi + (p.y - press.y0) / R * DEG, 7, 90);
-        mats(); S.requestDraw();
+        sph.dragTo(p.x, p.y); S.requestDraw();
       } else if (press.kind === "tcursor") moveTimeCursor(p.x - press.off);
       else if (press.kind === "dcursor") setDayZB((p.x - press.off - STRIP.x) / STRIP.k - 0.5);
       else if (press.kind === "dstrip") press.mx = p.x;
@@ -779,6 +644,7 @@ Sim.create({
       if (!press) return;
       var pr = press, p = at(ev);
       press = null;
+      sph.endDrag();
       if (!cancelled) {
         if (pr.kind === "radio" && pr.inside) setLock(pr.r.mode);
         else if (pr.kind === "combo" && openCombo) {
@@ -1029,7 +895,7 @@ Sim.create({
       ctx.translate(0, OY);
       ctx.fillStyle = "#000000"; ctx.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
       PANELS.forEach(function (b) { panel(ctx, b); });
-      ctx.save(); sphere(ctx); ctx.restore();
+      ctx.save(); sph.draw(ctx); ctx.restore();
       dayPanel(ctx);
       combo(ctx, CB_MONTH);
       timeline(ctx);

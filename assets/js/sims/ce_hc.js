@@ -30,8 +30,8 @@ Sim.create({
       "rs.nostar": "none — click a star",
       "rs.hint": "Drag inside a panel to swing that view. Drag a star to move it; click it to read its coordinates. Click the map to move the observer.",
       "rs.N": "N", "rs.E": "E", "rs.S": "S", "rs.W": "W",
-      "rs.ncp": "NCP", "rs.scp": "SCP", "rs.ceq": "celestial equator", "rs.zh": "0h",
-      "rs.mer": "meridian", "rs.zen": "zenith", "rs.nad": "nadir"
+      "rs.ncp": "ncp", "rs.scp": "scp", "rs.ceq": "celestial equator", "rs.zh": "0h circle",
+      "rs.mer": "meridian", "rs.zen": "zenith", "rs.nad": "nadir", "rs.h": "h"
     },
     id: {
       "rs.loc": "Lokasi Pengamat", "rs.lat": "lintang", "rs.lon": "bujur",
@@ -53,8 +53,8 @@ Sim.create({
       "rs.nostar": "belum ada — klik bintang",
       "rs.hint": "Seret di dalam panel untuk memutar tampilan. Seret bintang untuk memindahkannya; klik untuk membaca koordinatnya. Klik peta untuk memindahkan pengamat.",
       "rs.N": "U", "rs.E": "T", "rs.S": "S", "rs.W": "B",
-      "rs.ncp": "KLU", "rs.scp": "KLS", "rs.ceq": "ekuator langit", "rs.zh": "0j",
-      "rs.mer": "meridian", "rs.zen": "zenit", "rs.nad": "nadir"
+      "rs.ncp": "klu", "rs.scp": "kls", "rs.ceq": "ekuator langit", "rs.zh": "lingkaran 0j",
+      "rs.mer": "meridian", "rs.zen": "zenit", "rs.nad": "nadir", "rs.h": "j"
     }
   },
   about: {
@@ -74,16 +74,12 @@ Sim.create({
     var MAPW = 480, MAPH = 240;                           // the map canvas, 2:1 — one
                                                           // degree of longitude and one
                                                           // of latitude are the same size
-    var EQ = "#ffe375", MER = "#e0e0e0", AX = "#75a9ff";
-    var C_RISE = "#e0e0e0", C_NEVER = "#606060", C_CIRC = "#e06060";
-    var C_RA = "#ffb130", C_DEC = "#ffff70", C_AZ = "#c0c0ff", C_ALT = "#ffffff", C_ANG = "#d0d0d0";
 
     /* ---- state, at onReset()'s values ---- */
     var time = 0, rate = 0.05;                            // days, and days per second
     var obsLat = 40.8, obsLon = -96.7;                    // setLocation({lon:-96.7, lat:40.8})
-    var v1 = { th: 100, ph: 20 }, v2 = { th: 145, ph: 30 };
     var stars = [], selected = null, starCounter = 0, STAR_LIMIT = 50;
-    var maxTrail = 0, animateTill = null, drag = null;
+    var maxTrail = 0, animateTill = null, drag = null, syncing = false;
     var show = { labels: false, zeroh: true, eq: true, under: true,
       never: false, riseset: false, circum: false, angle: false };
 
@@ -140,17 +136,15 @@ Sim.create({
      ["never", "rs.never"], ["riseset", "rs.riseset"], ["circum", "rs.circum"],
      ["angle", "rs.angle"]].forEach(function (p) {
       checks[p[0]] = S.toggle({ labelKey: p[1], value: show[p[0]],
-        on: (function (k) { return function (b) { show[k] = b; S.requestDraw(); }; })(p[0]) });
+        on: (function (k) { return function (b) { show[k] = b; upd(); }; })(p[0]) });
     });
 
     S.group("rs.stars");
-    S.button({ labelKey: "rs.add", on: function () {
-      addStar(24 * Math.random(), 180 * Math.random() - 90); S.requestDraw();
+    S.button({ labelKey: "rs.add", on: function () {      // addStarRandomly()
+      addStar({ dec: 180 * Math.random() - 90, ra: 24 * Math.random() }); upd();
     } });
     S.button({ labelKey: "rs.clear", on: function () {   // removeAllStars()
-      stars = []; selected = null;
-      Object.keys(patChecks).forEach(function (k) { patChecks[k].set(false); });
-      S.requestDraw();
+      removeAllStars(); upd();
     } });
     /* The SWF's "star patterns..." menu is a list of checkmarks, not a picker:
        onConstellationToggled flips one constellation's inUse flag and leaves the
@@ -165,46 +159,26 @@ Sim.create({
     [["orion", "rs.orion"], ["dipper", "rs.dipper"], ["cross", "rs.cross"]]
       .forEach(function (p) {
         patChecks[p[0]] = S.toggle({ labelKey: p[1], value: false,
-          on: (function (k) { return function (b) { showConstellation(k, b); }; })(p[0]) });
+          on: (function (k) { return function (b) {
+            if (syncing) return;
+            if (b) addConstellation(k); else removeConstellation(k);
+            upd();
+          }; })(p[0]) });
         patBox.appendChild(PANEL.lastElementChild);      // tuck it under the label
       });
     S.select({ labelKey: "rs.trail", value: "none", options: [
       { v: "none", labelKey: "rs.tnone" }, { v: "short", labelKey: "rs.tshort" },
       { v: "long", labelKey: "rs.tlong" }
-    ], on: function (v) {                                 // changeTrailType()
-      maxTrail = v === "none" ? 0 : (v === "short" ? 45 : 360);
-      stars.forEach(function (s) { s.trail = Math.min(s.trail, maxTrail); });
-      S.requestDraw();
-    } });
-    S.button({ labelKey: "rs.reset", on: function () {
-      stars.forEach(function (s) { s.trail = 0; }); S.requestDraw();
-    } });
+    ], on: function (v) { changeTrailType(v); } });
+    S.button({ labelKey: "rs.reset", on: function () { resetTrails(); } });
     var outTime = S.readout({ labelKey: "rs.rTime" });
     var outSid = S.readout({ labelKey: "rs.rSid" });
     var outStar = S.readout({ labelKey: "rs.rStar" });
 
     /* ------------------------------- the model ------------------------------ */
+    var CS = window.CelestialSphere;
     function siderealTime() {                             // update(): (lon + 360·frac) / 15
       return (obsLon + (time - Math.floor(time)) * 360) / 15;
-    }
-    function addStar(ra, dec, cons) {
-      if (!cons && stars.length >= STAR_LIMIT) return null;
-      var s = { id: ++starCounter, ra: ra, dec: dec, trail: 0, cons: cons || null };
-      stars.push(s);
-      return s;
-    }
-    function showConstellation(key, on) {              // add/removeConstellation()
-      if (shown[key] === on) return;
-      shown[key] = on;
-      if (on) {
-        CONSTELLATIONS[key].stars.forEach(function (p, i) {
-          var s = addStar(p[0], p[1], key); s.idx = i;
-        });
-      } else {
-        stars = stars.filter(function (s) { return s.cons !== key; });
-        if (selected && selected.cons === key) selected = null;
-      }
-      upd();
     }
     function toggleAnimation() {
       if (loop.playing) { loop.pause(); animateTill = null; }
@@ -213,33 +187,376 @@ Sim.create({
         animateTill = h === 0 ? null : time + h / 24;
         loop.play();
       }
+      paused = false;
       syncPlay();
     }
     function syncPlay() {
-      playBtn.textContent = I18N.t(loop.playing ? "rs.pause" : "rs.start");
+      playBtn.textContent = I18N.t(loop.playing || paused ? "rs.pause" : "rs.start");
     }
+    // pauseAnimation / resumeAnimation: a press on a sphere or a star holds the clock
+    var paused = false;
+    function pauseAnimation() { if (loop.playing) { loop.pause(); paused = true; } }
+    function resumeAnimation() { if (paused) { paused = false; loop.play(); } }
     var loop = S.loop(function (dt) {                     // onEnterFrameFunc
       var t0 = time;
       time += rate * dt;
       if (animateTill !== null && time > animateTill) {
         time = animateTill; loop.pause(); animateTill = null; syncPlay();
       }
-      if (maxTrail) {                                     // growStarTrails(360·Δtime)
-        var g = 360 * (time - t0);
-        stars.forEach(function (s) {
-          s.trail = Math.min(maxTrail, s.trail + g);
-        });
-      }
+      growStarTrails(360 * (time - t0));
       upd();
     });
 
+    /* ============ the two CelestialSpheres, as init() sets them up ============ */
+    var sph1 = new CS({ x: C1.x, y: C1.y }), sph2 = new CS({ x: C2.x, y: C2.y });
+    sph2.size = 350; sph1.size = 350;
+    sph1.latitude = 90; sph1.siderealTime = 0;
+    sph1.showHorizonPlane = false;
+    sph2.theta = 145;
+    sph1.setThetaAndPhi(100, 20);
+    var BAND_ART = {
+      neverRiseBand: { outerColor: 0x6060e0, outerAlpha: 30, innerColor: 0x6060e0, innerAlpha: 30 },
+      neverSetBand: { outerColor: 0xe06060, outerAlpha: 30, innerColor: 0xe06060, innerAlpha: 30 },
+      riseAndSetBand: { outerColor: 0xe0e0e0, outerAlpha: 30, innerColor: 0xe0e0e0, innerAlpha: 30 }
+    };
+    [sph2, sph1].forEach(function (sp) {
+      ["neverRiseBand", "neverSetBand", "riseAndSetBand"].forEach(function (k) {
+        sp.addShadedBand(CS.GradientDisk, CS.GradientDisk, k, null, "inner", "full", BAND_ART[k]);
+      });
+    });
+    [sph2, sph1].forEach(function (sp) {
+      ["neverRiseBand", "neverSetBand", "riseAndSetBand"].forEach(function (k) {
+        sp[k].setBorderStyle(1, 0x808080, 100); sp[k].showBorder = true;
+      });
+    });
+    [sph1, sph2].forEach(function (sp) {
+      sp.removeClip("celestialBowl");
+      sp.addShadingClip(CS.art.shadingLayerB, "shading1", "back", "inner", "both");
+      sp.addShadingClip(CS.art.shadingLayerA, "shading2", "front", "outer", "both");
+      sp.addShadingClip(CS.art.shadingLayerA, "shading3", "back", "outer", "both");
+    });
+    sph2.minViewerAltitude = 7;
+    sph2.addHorizonPlaneClip(CS.directionLabels(function () {
+      return { N: I18N.t("rs.N"), S: I18N.t("rs.S"), E: I18N.t("rs.E"), W: I18N.t("rs.W") };
+    }), "aboveLabels", "above");
+    sph1.sortObjects = false; sph2.sortObjects = false;
+    sph1.addCircle("meridian1", { alpha: 30, color: 0xe0e0e0, thickness: 1 }, { tilt: 90, az: 0, alt: 0 });
+    sph1.addCircle("meridian2", { alpha: 30, color: 0xe0e0e0, thickness: 1 }, { tilt: 90, az: 90, alt: 0 });
+    sph1.addCircle("meridian3", { alpha: 30, color: 0xe0e0e0, thickness: 1 }, { tilt: 0, az: 0, alt: 0 });
+    sph2.addCircle("meridian1", { alpha: 30, color: 0xe0e0e0, thickness: 1 }, { tilt: 90, az: 0, alt: 0 });
+    sph2.addCircle("meridian2", { alpha: 30, color: 0xe0e0e0, thickness: 1 }, { tilt: 90, az: 90, alt: 0 });
+    [sph1, sph2].forEach(function (sp) {
+      sp.addCircle("zeroHoursCircle", { alpha: 100, color: 0xffe375, thickness: 1 }, { gammaEnd: 90, gammaStart: -90, tilt: 90, dec: 0, ra: 0 });
+      sp.addCircle("celestialEquator", { alpha: 100, color: 0xffe375, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+    });
+    var raColor = 0xffb0b0, decColor = 0xffffb0, azColor = 0xc0c0ff, altColor = 0xffffff, angColor = 0xd0d0d0;
+    sph1.addObject("raLabel", csLabel, { dec: 0, ra: 0 }, { labelColor: raColor });
+    sph1.addObject("decLabel", csLabel, { dec: 0, ra: 0 }, { labelColor: decColor });
+    sph1.addCircle("raArc", { alpha: 100, color: raColor, thickness: 3 }, { tilt: 0, dec: 0, ra: 0 });
+    sph1.addCircle("decArc", { alpha: 100, color: decColor, thickness: 3 }, { tilt: 0, dec: 0, ra: 0 });
+    sph2.addObject("azLabel", csLabel, { az: 0, alt: 0 }, { labelColor: azColor });
+    sph2.addObject("altLabel", csLabel, { az: 0, alt: 0 }, { labelColor: altColor });
+    sph2.addCircle("azArc", { alpha: 100, color: azColor, thickness: 3 }, { tilt: 0, alt: 0, az: 0 });
+    sph2.addCircle("altArc", { alpha: 100, color: altColor, thickness: 3 }, { tilt: 0, alt: 0, az: 0 });
+    sph2.addObject("angle1Label", csLabel, { az: 0, alt: 0 }, { labelColor: angColor });
+    sph2.addObject("angle2Label", csLabel, { az: 0, alt: 0 }, { labelColor: angColor });
+    sph2.addCircle("angle1Circle", { alpha: 100, color: angColor, thickness: 2 }, { tilt: 0, az: 0, alt: 0 });
+    sph2.addCircle("angle2Circle", { alpha: 100, color: angColor, thickness: 2 }, { tilt: 0, az: 0, alt: 0 });
+    sph1.raLabel.visible = false; sph1.decLabel.visible = false;
+    sph2.azLabel.visible = false; sph2.altLabel.visible = false;
+    // the Earth: a size-60 sphere of its own at sphere1's centre, turned with sphere1's view
+    var OBSERVER_DOT = { nz: false, layers: [[[], [[1, "#000000", "M2.3 -2.3Q3.25 -1.35 3.25 0Q3.25 1.35 2.3 2.3Q1.35 3.25 0 3.25Q-1.35 3.25 -2.3 2.3Q-3.25 1.35 -3.25 0Q-3.25 -1.35 -2.3 -2.3Q-1.35 -3.25 0 -3.25Q1.35 -3.25 2.3 -2.3"]]],
+      [[["#ffffff", "M2.3 -2.3Q3.25 -1.35 3.25 0Q3.25 1.35 2.3 2.3Q1.35 3.25 0 3.25Q-1.35 3.25 -2.3 2.3Q-3.25 1.35 -3.25 0Q-3.25 -1.35 -2.3 -2.3Q-1.35 -3.25 0 -3.25Q1.35 -3.25 2.3 -2.3Z"]], []]] };
+    var globe = new CS({ x: 0, y: 0 });
+    globe.showHorizonPlane = false;
+    globe.size = 60;
+    globe.latitude = 90;
+    globe.siderealTime = 0;
+    globe.setThetaAndPhi(sph1.theta, sph1.phi);
+    globe.removeClip("celestialBowl");
+    globe.sortObjects = false;
+    globe.setMouseBehavior("none");
+    globe.addObject("globe", earthArt, { system: "celestial", x: 0, y: 0, z: 0 });
+    globe.addObject("observerDot", CS.shapeDrawer(OBSERVER_DOT), { dec: 0, ra: 0 });
+    globe.addCircle("latitudeCircle", { alpha: 30, color: 0x000000, thickness: 0 }, { tilt: 0, dec: 0, ra: 0 });
+    globe.addCircle("longitudeCircle", { alpha: 30, color: 0x000000, thickness: 0 }, { gammaEnd: 90, gammaStart: -90, tilt: 90, dec: 0, ra: 0 });
+    sph1.addObject("globeSphere", function (ctx) { globe.draw(ctx); }, { system: "celestial", x: 0, y: 0, z: 0 });
+    // labels
+    sph1.addObject("ncpLabel", staticLabel("rs.ncp", "#75a9ff", 0), { r: 1.13, dec: 85, ra: 0 });
+    sph1.addObject("scpLabel", staticLabel("rs.scp", "#75a9ff", 0.425), { r: 1.13, dec: -85, ra: 0 });
+    sph2.addObject("ncpLabel", staticLabel("rs.ncp", "#75a9ff", 0), { r: 1.16, dec: 85, ra: 0 });
+    sph2.ncpLabel.setOrientationType("skewed", { dec: 90, ra: 0 });
+    sph2.addObject("scpLabel", staticLabel("rs.scp", "#75a9ff", 0.425), { r: 1.16, dec: -85, ra: 0 });
+    sph2.scpLabel.setOrientationType("skewed", { dec: 90, ra: 0 });
+    [sph1, sph2].forEach(function (sp) {
+      sp.addObject("celestialEquatorLabel", staticLabel("rs.ceq", "#ffe375", -0.1), { r: 1.1, dec: 0, ra: 3 });
+      sp.celestialEquatorLabel.setOrientationType("absolute");
+      sp.addObject("zeroHoursLabel", staticLabel("rs.zh", "#ffe375", -0.1), { r: 1.1, dec: 45, ra: 0 });
+      sp.zeroHoursLabel.setOrientationType("absolute", { dec: 45, ra: 0 }, { dec: 0, ra: 18 });
+    });
+    sph2.addObject("meridianLabel", staticLabel("rs.mer", "#cccccc", -0.1), { r: 1.1, alt: 45, az: 180 });
+    sph2.meridianLabel.setOrientationType("absolute", { alt: 45, az: 180 }, { alt: 0, az: 270 });
+    sph2.addObject("zenithLabel", staticLabel("rs.zen", "#cccccc", 0.375), { r: 1.09, alt: 90, az: 0 });
+    sph2.zenithLabel.setOrientationType("skewed", { alt: 90, az: 0 });
+    sph2.addObject("nadirLabel", staticLabel("rs.nad", "#cccccc", -0.425), { r: 1.09, alt: -90, az: 0 });
+    sph2.nadirLabel.setOrientationType("skewed", { alt: 90, az: 0 });
+    sph2.addObject("zenithDot", grayDot, { alt: 90, az: 0 });
+    sph2.zenithDot.setOrientationType("absolute");
+    sph2.addObject("nadirDot", grayDot, { alt: -90, az: 0 });
+    sph2.nadirDot.setOrientationType("absolute");
+    ["ncpLabel", "scpLabel", "celestialEquatorLabel", "zeroHoursLabel"].forEach(function (k) {
+      sph1[k].visible = false; sph2[k].visible = false;
+    });
+    ["meridianLabel", "zenithLabel", "nadirLabel", "zenithDot", "nadirDot"].forEach(function (k) { sph2[k].visible = false; });
+    [sph1, sph2].forEach(function (sp) {
+      sp.addLine("ncpAxis", { alpha: 100, color: 0x75a9ff, thickness: 2 }, { system: "celestial", x: 0, y: 0, z: 1 }, { system: "celestial", x: 0, y: 0, z: 1.2 });
+      sp.addLine("scpAxis", { alpha: 100, color: 0x75a9ff, thickness: 2 }, { system: "celestial", x: 0, y: 0, z: -1 }, { system: "celestial", x: 0, y: 0, z: -1.2 });
+    });
+    sph2.addObject("stickfigure", CS.art.stickfigure, { system: "horizon", x: 0, y: 0, z: 0 }, { _yscale: 120, _xscale: 120 });
+    sph2.stickfigure.setOrientationType("absolute", { system: "horizon", x: -1, y: 0, z: 0 }, { system: "horizon", x: 0, y: 0, z: 1 });
+
+    /* ---- the art: CS Label (a Verdana bold 14 field, coloured), the bold 10 static
+       labels, Small Gray Dot, Observer Dot, and the stars (Draggable / Constellation) */
+    function csLabel(ctx, o) {
+      if (!o.labelText) return;
+      ctx.fillStyle = CS.colorCss(o.labelColor); ctx.font = "bold 14px " + FONT;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, o.labelText, -0.025, -8.55 + 1.0059 * 14);
+    }
+    function staticLabel(key, colour, cx) {
+      return function (ctx) {
+        ctx.fillStyle = colour; ctx.font = "bold 10px " + FONT;
+        ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+        FlashText.fillStatic(ctx, I18N.t(key), cx, 3.95);
+      };
+    }
+    function grayDot(ctx) {                               // Small Gray Dot: shape 85 at 83 %
+      ctx.fillStyle = "#cccccc"; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, TAU); ctx.fill();
+    }
+    function starArt(ctx, o) { CS.art.star(ctx, o.hot); }
+
+    /* ---- stars: a Draggable Star (or Constellation Star, half size) in each sphere ---- */
+    // stars: {id, cons, s1, s2 (the objects in each sphere), trail, trailCircle}
+    function addStar(cp, cons) {                          // addStar(cp, isConstellationStar)
+      if (!cons && stars.length >= STAR_LIMIT) return null;   // (starsList holds the constellations' stars too)
+      starCounter++;
+      var id = "_" + starCounter, init = cons ? { _xscale: 50, _yscale: 50 } : null;
+      var st = { id: id, cons: cons || null, trail: 0 };
+      st.s1 = sph1.addObject(id, starArt, { ra: cp.ra, dec: cp.dec }, init);
+      st.s2 = sph2.addObject(id, starArt, { ra: cp.ra, dec: cp.dec }, init);
+      st.s1.setOrientationType("absolute"); st.s2.setOrientationType("absolute");
+      // addTrail — every star, a constellation's too (both branches of the SWF's addStar end here)
+      st.trailCircle = sph2.addCircle("t" + id, { alpha: 60, color: 0xffffff, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+      st.trailCircle.visible = false;
+      stars.push(st);
+      return st;
+    }
+    function removeStar(st) {
+      if (selected === st) deselectSelectedStar();
+      st.s1.remove(); st.s2.remove();
+      if (st.trailCircle) st.trailCircle.remove();
+      stars = stars.filter(function (s) { return s !== st; });
+    }
+    function removeAllStars() {
+      deselectSelectedStar();
+      Object.keys(shown).forEach(function (k) { removeConstellation(k); });
+      stars.slice().forEach(removeStar);
+      stars = [];
+    }
+    function addConstellation(key) {
+      if (shown[key]) return;
+      shown[key] = true;
+      var C = CONSTELLATIONS[key], pts = C.stars.map(function (p) { return addStar({ ra: p[0], dec: p[1] }, key); });
+      C.arcs = [];
+      var n = 0;
+      C.paths.forEach(function (path) {
+        for (var i = 0; i + 1 < path.length; i++) {
+          var a = C.stars[path[i]], b = C.stars[path[i + 1]], name = "_" + key + (++n);
+          [sph1, sph2].forEach(function (sp) {
+            var c = sp.addCircle(name, { alpha: 80, color: 0xffffff, thickness: 1 }, { dec: 0, ra: 0 });
+            c.setArcPoints({ ra: a[0], dec: a[1] }, { ra: b[0], dec: b[1] });
+            C.arcs.push(c);
+          });
+        }
+      });
+      void pts;
+    }
+    function removeConstellation(key) {
+      if (!shown[key]) return;
+      shown[key] = false;
+      stars.filter(function (s) { return s.cons === key; }).forEach(removeStar);
+      (CONSTELLATIONS[key].arcs || []).forEach(function (c) { c.remove(); });
+      CONSTELLATIONS[key].arcs = [];
+      if (patChecks[key] && patChecks[key].value()) { syncing = true; patChecks[key].set(false); syncing = false; }
+    }
+    function moveStar(st, cp) {
+      if (cp.ra === null) return;
+      st.s1.setPosition(cp); st.s2.setPosition(cp);
+      st.s1.setOrientationType("absolute"); st.s2.setOrientationType("absolute");
+      if (st.trailCircle) updateTrail(st);
+      upd();
+    }
+    function selectStar(st) {
+      selected = st;
+      ["raArc", "decArc", "raLabel", "decLabel"].forEach(function (k) { sph1[k].visible = true; });
+      ["azArc", "altArc", "azLabel", "altLabel"].forEach(function (k) { sph2[k].visible = true; });
+      upd();
+    }
+    function deselectSelectedStar() {
+      selected = null;
+      ["raArc", "decArc", "raLabel", "decLabel"].forEach(function (k) { sph1[k].visible = false; });
+      ["azArc", "altArc", "azLabel", "altLabel"].forEach(function (k) { sph2[k].visible = false; });
+      upd();
+    }
+    /* star trails: an arc of each star's own declination circle, maxTrail degrees at most */
+    function updateTrail(st) {
+      var p = st.s2._p, d = DEG * Math.asin(p.z);
+      if (st.trail >= 360) st.trailCircle.setParameters({ gammaEnd: 0, gammaStart: 0, tilt: 0, dec: d, ra: 0 });
+      else {
+        var g = DEG * Math.atan2(p.y, p.x);
+        st.trailCircle.setParameters({ gammaEnd: g + st.trail, gammaStart: g, tilt: 0, dec: d, ra: 0 });
+      }
+    }
+    function setTrailLength(st, L) {
+      st.trail = L;
+      if (L === 0) st.trailCircle.visible = false;
+      else { updateTrail(st); st.trailCircle.visible = true; }
+    }
+    function changeTrailType(v) {
+      maxTrail = v === "none" ? 0 : v === "short" ? 45 : 360;
+      stars.forEach(function (st) {
+        if (!st.trailCircle) return;
+        if (maxTrail === 0) setTrailLength(st, 0);
+        else if (st.trail > maxTrail) setTrailLength(st, maxTrail);
+      });
+      S.requestDraw();
+    }
+    function resetTrails() { stars.forEach(function (st) { if (st.trailCircle) setTrailLength(st, 0); }); S.requestDraw(); }
+    function growStarTrails(delta) {
+      if (!maxTrail) return;
+      stars.forEach(function (st) {
+        if (!st.trailCircle || !(st.trail < maxTrail)) return;
+        setTrailLength(st, Math.min(maxTrail, st.trail + delta));
+      });
+    }
+
+    /* ---- the location, the bands, the arcs (setLocation, updateBands, update…Arcs) ---- */
+    function updateBands() {
+      var la = obsLat, b1 = { r: "riseAndSetBand", n: "neverRiseBand", s: "neverSetBand" }, P;
+      if (!(la < 90)) P = { r: null, n: { dec2: 0, dec1: -90 }, s: { dec2: 90, dec1: 0 } };
+      else if (!(la > -90)) P = { r: null, n: { dec2: 90, dec1: 0 }, s: { dec2: -90, dec1: 0 } };
+      else if (la > 0) { var u = 90 - la; P = { r: { dec2: u, dec1: -u }, n: { dec2: -u, dec1: -90 }, s: { dec2: 90, dec1: u } }; }
+      else if (la < 0) { var u2 = 90 + la; P = { r: { dec2: u2, dec1: -u2 }, n: { dec2: u2, dec1: 90 }, s: { dec2: -90, dec1: -u2 } }; }
+      else P = { r: { dec2: 90, dec1: -90 }, n: null, s: null };
+      [sph1, sph2].forEach(function (sp) {
+        sp[b1.r].setParameters(P.r); sp[b1.n].setParameters(P.n); sp[b1.s].setParameters(P.s);
+        sp.riseAndSetBand.visible = show.riseset;
+        sp.neverSetBand.visible = show.circum;
+        sp.neverRiseBand.visible = show.never;
+      });
+    }
+    function updateCelestialArcs() {
+      var c = selected.s1.getPositionCelestial();
+      if (c.dec < -0.0001) sph1.decArc.setParameters({ gammaEnd: 0, gammaStart: c.dec, tilt: 90, dec: 0, ra: c.ra });
+      else if (c.dec > 0.0001) sph1.decArc.setParameters({ gammaEnd: c.dec, gammaStart: 0, tilt: 90, dec: 0, ra: c.ra });
+      else sph1.decArc.setParameters({ gammaEnd: 0.001, gammaStart: 0, tilt: 90, dec: 0, ra: c.ra });
+      if (c.ra < 1e-6) sph1.raArc.setParameters({ gammaEnd: 0.001, gammaStart: 0, tilt: 0, dec: 0, ra: 0 });
+      else sph1.raArc.setParameters({ gammaEnd: 15 * c.ra, gammaStart: 0, tilt: 0, dec: 0, ra: 0 });
+      sph1.decLabel.labelText = c.dec.toFixed(1) + "°";
+      sph1.decLabel.setPosition({ r: 1.001, dec: c.dec / 2, ra: c.ra + 0.9 });
+      sph1.decLabel.setOrientationType("absolute");
+      sph1.raLabel.labelText = c.ra.toFixed(1) + I18N.t("rs.h");
+      sph1.raLabel.setPosition({ r: 1.001, dec: 5, ra: c.ra - 0.9 });
+      sph1.raLabel.setOrientationType("absolute");
+      return c;
+    }
+    function updateHorizonArcs() {
+      var h = selected.s2.getPositionHorizon();
+      if (h.alt < -0.0001) sph2.altArc.setParameters({ gammaEnd: 0, gammaStart: h.alt, tilt: 90, alt: 0, az: h.az });
+      else if (h.alt > 0.0001) sph2.altArc.setParameters({ gammaEnd: h.alt, gammaStart: 0, tilt: 90, alt: 0, az: h.az });
+      else sph2.altArc.setParameters({ gammaEnd: 0.001, gammaStart: 0, tilt: 90, alt: 0, az: h.az });
+      if (h.az < 0.0001) sph2.azArc.setParameters({ gammaEnd: 0.001, gammaStart: 0, tilt: 0, alt: 0, az: 0 });
+      else sph2.azArc.setParameters({ gammaEnd: 0, gammaStart: 360 - h.az, tilt: 0, alt: 0, az: 0 });
+      sph2.altLabel.labelText = h.alt.toFixed(1) + "°";
+      sph2.altLabel.setPosition({ r: 1.001, alt: h.alt / 2, az: h.az + 13 });
+      sph2.altLabel.setOrientationType("absolute");
+      sph2.azLabel.labelText = h.az.toFixed(1) + "°";
+      sph2.azLabel.setPosition({ r: 1.001, alt: 5, az: h.az - 13 });
+      sph2.azLabel.setOrientationType("absolute");
+      return h;
+    }
+    function updateAngle() {
+      var on = show.angle;
+      ["angle1Label", "angle2Label", "angle1Circle", "angle2Circle"].forEach(function (k) { sph2[k].visible = on; });
+      if (!on) return;
+      var a7 = 0.4363323129985824, r1 = 20, r3 = 90 - r1, la = obsLat, txt, r2, r4;
+      if (!(la < 90)) {
+        txt = "0°";
+        sph2.angle1Circle.setParameters({ gammaEnd: 270, gammaStart: 270 - r1, alt: 0, tilt: 0, az: 0 });
+        sph2.angle2Circle.setParameters({ gammaEnd: 90 + r1, gammaStart: 90, alt: 0, tilt: 0, az: 0 });
+        r2 = 0; r4 = 1;
+      } else if (!(la < 0)) {
+        txt = (90 - la).toFixed(1) + "°";
+        sph2.angle1Circle.setParameters({ gammaEnd: 180, gammaStart: 90 + la, alt: r3, tilt: 90, az: 0 });
+        sph2.angle2Circle.setParameters({ gammaEnd: 180, gammaStart: 90 + la, alt: -r3, tilt: 90, az: 0 });
+        r2 = (90 - la) / 2 * RAD; r4 = 1;
+      } else if (la > -90) {
+        txt = (90 + la).toFixed(1) + "°";
+        sph2.angle1Circle.setParameters({ gammaEnd: 90 + la, gammaStart: 0, alt: r3, tilt: 90, az: 0 });
+        sph2.angle2Circle.setParameters({ gammaEnd: 90 + la, gammaStart: 0, alt: -r3, tilt: 90, az: 0 });
+        r2 = (90 + la) / 2 * RAD; r4 = -1;
+      } else {
+        txt = "0°";
+        sph2.angle1Circle.setParameters({ gammaEnd: 270 + r1, gammaStart: 270, alt: 0, tilt: 0, az: 0 });
+        sph2.angle2Circle.setParameters({ gammaEnd: 90, gammaStart: 90 - r1, alt: 0, tilt: 0, az: 0 });
+        r2 = 0; r4 = -1;
+      }
+      var alt = DEG * Math.asin(Math.sin(r2) * Math.sin(a7)), d = DEG * Math.atan(Math.cos(r2) * Math.tan(a7));
+      var p1 = { az: 90 + r4 * d, alt: alt }, p2 = { az: 270 - r4 * d, alt: alt };
+      var up = r4 === -1 ? { alt: r2 * DEG, az: 0 } : { alt: r2 * DEG, az: 180 };
+      sph2.angle1Label.setPosition(p1); sph2.angle2Label.setPosition(p2);
+      sph2.angle1Label.setOrientationType("absolute", p1, up);
+      sph2.angle2Label.setOrientationType("absolute", p2, up);
+      sph2.angle1Label.labelText = txt; sph2.angle2Label.labelText = txt;
+    }
+    function changeShowLabels() {
+      var L = show.labels;
+      [sph1, sph2].forEach(function (sp) {
+        sp.celestialEquatorLabel.visible = L && show.eq;
+        sp.zeroHoursLabel.visible = L && show.zeroh;
+        sp.ncpLabel.visible = L; sp.scpLabel.visible = L;
+        sp.zeroHoursCircle.visible = show.zeroh;
+        sp.celestialEquator.visible = show.eq;
+      });
+      ["meridianLabel", "zenithLabel", "nadirLabel", "zenithDot", "nadirDot"].forEach(function (k) { sph2[k].visible = L; });
+    }
+    // update(): the clock turns sphere2's sky and the Earth inside sphere1
+    function syncSky() {
+      var rot = (time % 1) * 360, sid = (obsLon + rot) / 15;
+      globe.siderealTime = -sid;
+      sph2.latitude = obsLat;
+      sph2.siderealTime = sid;
+      globe.latitudeCircle.setParameters({ dec: obsLat, tilt: 0, ra: 0 });
+      globe.observerDot.setPosition({ dec: obsLat, ra: 0 });
+      globe.observerDot.setOrientationType("absolute");
+      globe.setThetaAndPhi(sph1.theta, sph1.phi);
+      earthRot = rot;
+      sph2.showUnder = show.under;
+      changeShowLabels();
+      updateBands();
+      updateAngle();
+      if (selected) { updateCelestialArcs(); updateHorizonArcs(); }
+    }
+    var earthRot = 0;
+
     function upd() {
       var sid = ((siderealTime() % 24) + 24) % 24;
+      syncSky();
       outTime((time * 24).toFixed(2) + " h");
       outSid(hms(sid));
       if (selected) {
-        var h = toHorizon(selected.ra, selected.dec);
-        outStar("RA " + selected.ra.toFixed(1) + "h  dec " + selected.dec.toFixed(1) + "°  |  " +
+        var c = selected.s1.getPositionCelestial(), h = selected.s2.getPositionHorizon();
+        outStar("RA " + c.ra.toFixed(1) + "h  dec " + c.dec.toFixed(1) + "°  |  " +
           "az " + h.az.toFixed(1) + "°  alt " + h.alt.toFixed(1) + "°");
       } else outStar(I18N.t("rs.nostar"));
       S.requestDraw();
@@ -249,160 +566,87 @@ Sim.create({
       return Math.floor(h) + "h " + (m < 10 ? "0" : "") + m + "m";
     }
     S.refreshers.push(function () { syncPlay(); upd(); });
-
-    /* ============ the CelestialSphere projection, one per panel ============== */
-    function makeMats(view, latDeg, sTh) {
-      var ct = Math.cos(view.th * RAD), st = Math.sin(view.th * RAD);
-      var cp = Math.cos(view.ph * RAD), sp = Math.sin(view.ph * RAD);
-      var a = { a0: -R * st, a1: R * ct, a3: R * ct * sp, a4: R * st * sp, a5: -R * cp,
-        a6: R * ct * cp, a7: R * st * cp, a8: R * sp };
-      var L = latDeg * RAD, sT = sTh / 24 * TAU;
-      var m2 = Math.cos(L), m3 = Math.sin(sT), m4 = -Math.cos(sT), m8 = Math.sin(L);
-      var m = { m0: m4 * m8, m1: -m3 * m8, m2: m2, m3: m3, m4: m4,
-        m6: -m2 * m4, m7: m2 * m3, m8: m8 };
-      var b = {
-        b0: a.a0 * m.m0 + a.a1 * m.m3, b1: a.a0 * m.m1 + a.a1 * m.m4, b2: a.a0 * m.m2,
-        b3: a.a3 * m.m0 + a.a4 * m.m3 + a.a5 * m.m6, b4: a.a3 * m.m1 + a.a4 * m.m4 + a.a5 * m.m7,
-        b5: a.a3 * m.m2 + a.a5 * m.m8,
-        b6: a.a6 * m.m0 + a.a7 * m.m3 + a.a8 * m.m6, b7: a.a6 * m.m1 + a.a7 * m.m4 + a.a8 * m.m7,
-        b8: a.a6 * m.m2 + a.a8 * m.m8 };
-      return { a: a, m: m, b: b };
-    }
-    function Sphere(centre, view, latOf, sTOf) {
-      this.c = centre; this.view = view; this.latOf = latOf; this.sTOf = sTOf;
-    }
-    Sphere.prototype.sync = function () {
-      this.M = makeMats(this.view, this.latOf(), this.sTOf());
-      return this;
-    };
-    Sphere.prototype.h = function (v, r) {                // horizon vector → screen
-      var a = this.M.a, k = (r === undefined ? R : r) / R;
-      return { x: this.c.x + (v.x * a.a0 + v.y * a.a1) * k,
-        y: this.c.y + (v.x * a.a3 + v.y * a.a4 + v.z * a.a5) * k,
-        z: (v.x * a.a6 + v.y * a.a7 + v.z * a.a8) * k };
-    };
-    Sphere.prototype.cel = function (v, r) {              // celestial vector → screen
-      var b = this.M.b, k = (r === undefined ? R : r) / R;
-      return { x: this.c.x + (v.x * b.b0 + v.y * b.b1 + v.z * b.b2) * k,
-        y: this.c.y + (v.x * b.b3 + v.y * b.b4 + v.z * b.b5) * k,
-        z: (v.x * b.b6 + v.y * b.b7 + v.z * b.b8) * k };
-    };
-    function cart(ra, dec) {
-      var d = dec * RAD, h = ra * 15 * RAD;
-      return { x: Math.cos(d) * Math.cos(h), y: Math.cos(d) * Math.sin(h), z: Math.sin(d) };
-    }
-    function hCart(az, alt) {
-      var A = -az * RAD, h = alt * RAD;
-      return { x: Math.cos(h) * Math.cos(A), y: Math.cos(h) * Math.sin(A), z: Math.sin(h) };
-    }
-    function toHorizon(ra, dec) {                         // celestial → alt/az via m
-      var p = cart(ra, dec), m = makeMats(v2, obsLat, siderealTime()).m;
-      var x = p.x * m.m0 + p.y * m.m1 + p.z * m.m2;
-      var y = p.x * m.m3 + p.y * m.m4 + p.z * m.m5;
-      var z = p.x * m.m6 + p.y * m.m7 + p.z * m.m8;
-      void y;
-      var alt = Math.asin(Math.max(-1, Math.min(1, z))) * DEG;
-      var yh = p.x * m.m3 + p.y * m.m4;
-      var az = ((-Math.atan2(yh, x) * DEG) % 360 + 360) % 360;
-      return { az: az, alt: alt };
-    }
-    var sph1 = new Sphere(C1, v1, function () { return 90; }, function () { return 0; });
-    var sph2 = new Sphere(C2, v2, function () { return obsLat; }, siderealTime);
-
-    /* addCircle's doW, gamma running gS → gE */
-    function circlePts(p, n) {
-      var st = Math.sin((p.tilt || 0) * RAD), ct = Math.cos((p.tilt || 0) * RAD);
-      var beta = p.sys ? (p.ra || 0) * 15 * RAD : -(p.az || 0) * RAD;
-      var lam = (p.sys ? (p.dec || 0) : (p.alt || 0)) * RAD;
-      var sb = Math.sin(beta), cb = Math.cos(beta), cl = Math.cos(lam), sl = Math.sin(lam);
-      var gS = mod(p.gS === undefined ? 0 : p.gS, 360) * RAD;
-      var span = p.gS === undefined ? TAU : (mod(p.gE - p.gS, 360) * RAD || TAU);
-      var out = [];
-      for (var i = 0; i <= n; i++) {
-        var g = gS + span * i / n, cg = Math.cos(g), sg = Math.sin(g);
-        out.push({ x: cl * cb * cg - cl * sb * ct * sg + sl * sb * st,
-          y: cl * sb * cg + cl * cb * ct * sg - sl * cb * st,
-          z: cl * st * sg + sl * ct });
-      }
-      return out;
-    }
-    function strokeArc(ctx, sp, p, front, colour, alpha, width) {
-      var pts = circlePts(p, p.gS === undefined ? 240 : 120);
-      ctx.strokeStyle = colour; ctx.globalAlpha = alpha; ctx.lineWidth = width;
-      ctx.beginPath();
-      var started = false, prev = null;
-      for (var i = 0; i < pts.length; i++) {
-        var q = p.sys ? sp.cel(pts[i]) : sp.h(pts[i]);
-        if (front !== null && (q.z >= 0) !== front) { started = false; prev = q; continue; }
-        if (!started) {
-          if (prev && front !== null) {
-            var k = prev.z / (prev.z - q.z);
-            ctx.moveTo(prev.x + (q.x - prev.x) * k, prev.y + (q.y - prev.y) * k);
-          } else ctx.moveTo(q.x, q.y);
-          started = true;
-        } else ctx.lineTo(q.x, q.y);
-        prev = q;
-      }
-      ctx.stroke(); ctx.globalAlpha = 1;
-    }
     function mod(n, m) { return ((n % m) + m) % m; }
 
     /* ------------------------------- interaction ---------------------------- */
-    function at(ev) {
-      var r = S.canvas.getBoundingClientRect();
-      return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height };
-    }
-    function starAt(p) {
-      var best = null, bd = 9;
-      [sph1, sph2].forEach(function (sp, i) {
-        stars.forEach(function (s) {
-          var q = sp.cel(cart(s.ra, s.dec));
-          if (q.z < 0) return;
-          var d = Math.hypot(q.x - p.x, q.y - p.y);
-          if (d < bd) { bd = d; best = { star: s, panel: i }; }
+    function at(ev) { return CS.canvasPoint(S.canvas, ev, S.W, S.H); }
+    var delKey = false;                                   // Key.isDown(46): Delete removes the star pressed
+    window.addEventListener("keydown", function (ev) { if (ev.key === "Delete") delKey = true; });
+    window.addEventListener("keyup", function (ev) { if (ev.key === "Delete") delKey = false; });
+    function starAt(p) {                                  // the top-most star under the pointer
+      var best = null;
+      [{ sp: sph1, k: "s1" }, { sp: sph2, k: "s2" }].forEach(function (S2) {
+        stars.forEach(function (st) {
+          var o = st[S2.k];
+          if (!o.shown) return;
+          var q = o.toLocal(p.x, p.y);
+          if (Math.abs(q.x) > 11 || Math.abs(q.y) > 11 || !inStar(q)) return;
+          if (!best || (best.sp === S2.sp && o._sp.z > best.o._sp.z)) best = { st: st, o: o, sp: S2.sp, k: S2.k };
         });
       });
       return best;
     }
+    function inStar(q) {                                  // within the star's outline, roughly
+      return q.x * q.x + q.y * q.y <= 10.5 * 10.5;
+    }
+    function sphereAt(p) { return sph1.inMouseArea(p.x, p.y) ? sph1 : sph2.inMouseArea(p.x, p.y) ? sph2 : null; }
+    function setHot(st) {
+      stars.forEach(function (s) { s.s1.hot = s.s2.hot = false; });
+      if (st) st.o.hot = true;
+    }
     S.canvas.addEventListener("pointerdown", function (ev) {
-      var p = at(ev);
-      var hit = starAt(p);
-      if (hit) {
-        selected = hit.star;
-        drag = hit.star.cons ? null : { star: hit.star, panel: hit.panel };
-        upd();
+      var p = at(ev), hit = starAt(p);
+      if (hit && hit.o._sp.z > 0) {                       // Draggable / Constellation Star.onPress
+        if (delKey) { if (hit.st.cons) removeConstellation(hit.st.cons); else removeStar(hit.st); upd(); return; }
+        pauseAnimation();
+        drag = { star: hit.st, sp: hit.sp, already: selected === hit.st, moved: false };
+        if (!drag.already) selectStar(hit.st);
       } else {
-        var inside1 = Math.hypot(p.x - C1.x, p.y - C1.y) <= R;
-        var inside2 = Math.hypot(p.x - C2.x, p.y - C2.y) <= R;
-        if (!inside1 && !inside2) { selected = null; upd(); return; }
-        var v = inside1 ? v1 : v2;
-        drag = { x: p.x, y: p.y, th: v.th, ph: v.ph, view: v, min: inside2 ? 7 : -90 };
+        var sp = hit ? hit.sp : sphereAt(p);              // a star round the back passes the press on
+        if (!sp) { if (!hit) { deselectSelectedStar(); } return; }   // backgroundMC.onPress
+        if (ev.shiftKey) {                                // add a star where the mouse is
+          var cp = sp.getMouseRaDec(p.x, p.y);
+          if (cp.ra !== null) { var st = addStar(cp); if (st) selectStar(st); }
+          return;
+        }
+        pauseAnimation();
+        sp.startDrag(p.x, p.y);
+        drag = { sphere: sp, moved: false };
       }
-      S.canvas.setPointerCapture(ev.pointerId);
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
     });
     S.canvas.addEventListener("pointermove", function (ev) {
-      if (!drag) return;
       var p = at(ev);
-      if (drag.star) {                                    // moveStar
-        var sp = drag.panel ? sph2 : sph1;
-        var v = unproject(sp, p);
-        if (v) {
-          var c = drag.panel ? horizonToCel(v) : v;
-          drag.star.dec = Math.asin(Math.max(-1, Math.min(1, c.z))) * DEG;
-          drag.star.ra = mod(Math.atan2(c.y, c.x) * DEG / 15, 24);
-          drag.star.trail = 0;
-          upd();
-        }
+      if (!drag) {
+        var hit = starAt(p);
+        setHot(hit && hit.o._sp.z > 0 ? hit : null);
+        S.requestDraw();
         return;
       }
-      var k = DEG / R;                                    // the engine's 57.2958 / _c.r
-      drag.view.th = mod(drag.th - k * (p.x - drag.x), 360);
-      drag.view.ph = Math.max(drag.min, Math.min(90, drag.ph + k * (p.y - drag.y)));
+      drag.moved = true;
+      if (drag.star) {                                    // onMouseMoveFunc: getMouseRaDec, moveStar
+        if (drag.star.cons) return;
+        var cp = drag.sp.getMouseRaDec(p.x, p.y);
+        if (cp.ra !== null) moveStar(drag.star, cp);
+        return;
+      }
+      drag.sphere.dragTo(p.x, p.y);
       upd();
     });
     ["pointerup", "pointercancel"].forEach(function (e) {
-      S.canvas.addEventListener(e, function () { drag = null; });
+      S.canvas.addEventListener(e, function () {
+        if (!drag) return;
+        resumeAnimation();
+        if (drag.star) { if (drag.already && !drag.moved) deselectSelectedStar(); }
+        else {
+          drag.sphere.endDrag();
+          if (!drag.moved) deselectSelectedStar();
+        }
+        drag = null;
+        upd();
+      });
     });
+    S.canvas.addEventListener("pointerleave", function () { if (!drag) { setHot(null); S.requestDraw(); } });
     /* ---- picking a location off the map ---- */
     var mapDrag = false;
     function mapAt(ev) {
@@ -426,30 +670,19 @@ Sim.create({
       latCtl.set(Math.round(Math.max(-90, Math.min(90, la)) * 10) / 10);
       lonCtl.set(Math.round(Math.max(-180, Math.min(180, lon)) * 10) / 10);
     }
-    /* screen point → the unit vector on the near face (the matrix is orthonormal
-       up to the factor R, so its transpose inverts it)                          */
-    function unproject(sp, p) {
-      var X = (p.x - sp.c.x) / R, Y = (p.y - sp.c.y) / R, s2 = 1 - X * X - Y * Y;
-      if (s2 < 0) return null;
-      var Z = Math.sqrt(s2), b = sp.M.b;
-      return { x: (b.b0 * X + b.b3 * Y + b.b6 * Z) / R,
-        y: (b.b1 * X + b.b4 * Y + b.b7 * Z) / R,
-        z: (b.b2 * X + b.b5 * Y + b.b8 * Z) / R };
-    }
-    function horizonToCel(v) { return v; }                // cel() already carries m
 
     /* ================================= drawing =============================== */
     S.onDraw(function () {
       var ctx = S.ctx, tr = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
       S.clear();
       ctx.fillStyle = "#fafafa"; ctx.fillRect(0, 0, S.W, S.H);
-      sph1.sync(); sph2.sync();
       panel(ctx, P1, tr("rs.celestial"));
       panel(ctx, P2, tr("rs.horizon"));
       ctx.save(); ctx.beginPath(); ctx.rect(P1.x, P1.y, P1.w, P1.h); ctx.clip();
-      drawCelestialView(ctx, tr); ctx.restore();
+      sph1.draw(ctx); ctx.restore();
       ctx.save(); ctx.beginPath(); ctx.rect(P2.x, P2.y, P2.w, P2.h); ctx.clip();
-      drawHorizonView(ctx, tr); ctx.restore();
+      sph2.draw(ctx); ctx.restore();
     });
     function panel(ctx, P, title) {
       ctx.fillStyle = "#000000"; ctx.fillRect(P.x, P.y, P.w, P.h);
@@ -459,340 +692,10 @@ Sim.create({
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText(title, P.x + 8, P.y + 8);
     }
-    /* Shading Layers A and B. Identical for both spheres and unchanging, so bake
-       it once: painting this gradient live costs about 4 ms a disc, which two
-       spheres cannot afford inside a 60 fps frame.                            */
-    var washTile = null;
-    function wash() {
-      if (washTile) return washTile;
-      var N = 2 * R;
-      washTile = document.createElement("canvas");
-      washTile.width = washTile.height = N;
-      var g2 = washTile.getContext("2d");
-      var g = g2.createRadialGradient(R, R, 0, R, R, R);
-      g.addColorStop(0, "rgba(38,38,38,0.86)"); g.addColorStop(1, "rgba(65,65,65,0.86)");
-      g2.fillStyle = g;
-      g2.beginPath(); g2.arc(R, R, R, 0, TAU); g2.fill();
-      return washTile;
-    }
-    function shade(ctx, sp) {
-      ctx.drawImage(wash(), sp.c.x - R, sp.c.y - R, 2 * R, 2 * R);
-    }
-    function clipDisc(ctx, sp) { ctx.beginPath(); ctx.arc(sp.c.x, sp.c.y, R, 0, TAU); ctx.clip(); }
-    function axis(ctx, sp, front) {
-      ctx.strokeStyle = AX; ctx.lineWidth = 2;
-      [1, -1].forEach(function (k) {
-        var p1 = sp.cel({ x: 0, y: 0, z: k }), p2 = sp.cel({ x: 0, y: 0, z: 1.2 * k });
-        if ((p1.z >= 0) !== front) return;
-        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-      });
-    }
-    /* the three declination bands: what never rises, what rises and sets, what
-       never sets — the limits are ±(90 − |latitude|)                           */
-    function bands() {
-      var out = [];
-      var lim = 90 - Math.abs(obsLat);
-      if (Math.abs(obsLat) >= 90) {
-        if (obsLat > 0) {
-          out.push({ d1: -90, d2: 0, c: C_NEVER, on: show.never });
-          out.push({ d1: 0, d2: 90, c: C_CIRC, on: show.circum });
-        } else {
-          out.push({ d1: 0, d2: 90, c: C_NEVER, on: show.never });
-          out.push({ d1: -90, d2: 0, c: C_CIRC, on: show.circum });
-        }
-      } else if (obsLat === 0) {
-        out.push({ d1: -90, d2: 90, c: C_RISE, on: show.riseset });
-      } else if (obsLat > 0) {
-        out.push({ d1: -lim, d2: lim, c: C_RISE, on: show.riseset });
-        out.push({ d1: -90, d2: -lim, c: C_NEVER, on: show.never });
-        out.push({ d1: lim, d2: 90, c: C_CIRC, on: show.circum });
-      } else {
-        out.push({ d1: -lim, d2: lim, c: C_RISE, on: show.riseset });
-        out.push({ d1: lim, d2: 90, c: C_NEVER, on: show.never });
-        out.push({ d1: -90, d2: -lim, c: C_CIRC, on: show.circum });
-      }
-      return out.filter(function (b) { return b.on; });
-    }
-    /* The bands are declination ranges, so they are invariant under the sky's
-       daily turn — only the viewpoint and the latitude change them. Render each
-       face per pixel (the projection matrix is orthonormal up to R, so its
-       transpose inverts it) and cache on the viewpoint.                        */
-    var bandCache = {};
-    function drawBands(ctx, sp, front) {
-      var bs = bands();
-      if (!bs.length) return;
-      if (front) {                                       // the borders ride both faces
-        ctx.save(); clipDisc(ctx, sp);
-        bs.forEach(function (b) {                        // 1 px #808080 borders
-          [b.d1, b.d2].forEach(function (d) {
-            if (Math.abs(d) >= 90) return;
-            strokeArc(ctx, sp, { sys: 1, tilt: 0, dec: d, ra: 0 }, true, "#808080", 1, 1);
-            strokeArc(ctx, sp, { sys: 1, tilt: 0, dec: d, ra: 0 }, false, "#808080", 0.45, 1);
-          });
-        });
-        ctx.restore();
-        return;
-      }
-      var key = [sp.view.th.toFixed(1), sp.view.ph.toFixed(1), sp.latOf().toFixed(2),
-        bs.map(function (b) { return b.d1 + ":" + b.d2 + b.c; }).join()].join("|");
-      if (!bandCache[key]) {
-        if (Object.keys(bandCache).length > 24) bandCache = {};
-        bandCache[key] = bandLayer(sp, bs);
-      }
-      ctx.drawImage(bandCache[key], sp.c.x - R, sp.c.y - R, 2 * R, 2 * R);
-    }
-    /* 'full' shaded bands: one 30 % layer over the union of the two faces */
-    function bandLayer(sp, bs) {
-      var q = 1, N = Math.round(2 * R * q);
-      var cv = document.createElement("canvas"); cv.width = cv.height = N;
-      var g = cv.getContext("2d"), img = g.createImageData(N, N), px = img.data;
-      var b = sp.M.b;
-      var cols = bs.map(function (x) {
-        return [parseInt(x.c.slice(1, 3), 16), parseInt(x.c.slice(3, 5), 16),
-          parseInt(x.c.slice(5, 7), 16), x.d1, x.d2];
-      });
-      for (var j = 0; j < N; j++) {
-        var Y = (j + 0.5) / (N / 2) - 1;
-        for (var i = 0; i < N; i++) {
-          var X = (i + 0.5) / (N / 2) - 1, s2 = 1 - X * X - Y * Y;
-          if (s2 < 0) continue;
-          var Zf = Math.sqrt(s2), hit = -1;
-          for (var f = 0; f < 2 && hit < 0; f++) {
-            var Z = f ? -Zf : Zf;
-            var z = (b.b2 * X + b.b5 * Y + b.b8 * Z) / R; // the celestial z = sin(dec)
-            var dec = Math.asin(Math.max(-1, Math.min(1, z))) * DEG;
-            for (var k = 0; k < cols.length; k++) {
-              if (dec >= cols[k][3] && dec <= cols[k][4]) { hit = k; break; }
-            }
-          }
-          if (hit >= 0) {
-            var o = 4 * (j * N + i);
-            px[o] = cols[hit][0]; px[o + 1] = cols[hit][1]; px[o + 2] = cols[hit][2];
-            px[o + 3] = 77;                               // alpha 30 %
-          }
-        }
-      }
-      g.putImageData(img, 0, 0);
-      return cv;
-    }
-    /* "show underside" off: black out the part of the sphere below the horizon */
-    var underCache = {};
-    function undersideCover(ctx, sp) {
-      var key = [sp.view.th.toFixed(1), sp.view.ph.toFixed(1)].join();
-      if (!underCache[key]) {
-        if (Object.keys(underCache).length > 24) underCache = {};
-        var N = Math.round(2 * R);
-        var cv = document.createElement("canvas"); cv.width = cv.height = N;
-        var g = cv.getContext("2d"), img = g.createImageData(N, N), px = img.data;
-        var a = sp.M.a;
-        for (var j = 0; j < N; j++) {
-          var Y = (j + 0.5) / (N / 2) - 1;
-          for (var i = 0; i < N; i++) {
-            var X = (i + 0.5) / (N / 2) - 1, s2 = 1 - X * X - Y * Y;
-            if (s2 < 0) continue;
-            var Z = Math.sqrt(s2);
-            var alt = (a.a5 * Y + a.a8 * Z) / R;          // the horizon z = sin(alt)
-            if (alt >= 0) continue;
-            var o = 4 * (j * N + i);
-            px[o + 3] = 255;
-          }
-        }
-        g.putImageData(img, 0, 0);
-        underCache[key] = cv;
-      }
-      ctx.drawImage(underCache[key], sp.c.x - R, sp.c.y - R, 2 * R, 2 * R);
-    }
-    function skyCircles(ctx, sp, front, withMeridian3) {
-      ctx.save(); clipDisc(ctx, sp);
-      strokeArc(ctx, sp, { sys: 0, tilt: 90, az: 0, alt: 0 }, front, MER, 0.30, 1);
-      strokeArc(ctx, sp, { sys: 0, tilt: 90, az: 90, alt: 0 }, front, MER, 0.30, 1);
-      if (withMeridian3) strokeArc(ctx, sp, { sys: 0, tilt: 0, az: 0, alt: 0 }, front, MER, 0.30, 1);
-      if (show.zeroh) {
-        strokeArc(ctx, sp, { sys: 1, tilt: 90, dec: 0, ra: 0, gS: -90, gE: 90 }, front, EQ, 1, 1);
-      }
-      if (show.eq) strokeArc(ctx, sp, { sys: 1, tilt: 0, dec: 0, ra: 0 }, front, EQ, 1, 1);
-      ctx.restore();
-    }
-    function drawStars(ctx, sp, front, withTrails) {
-      if (withTrails && maxTrail) {
-        ctx.save(); clipDisc(ctx, sp);
-        stars.forEach(function (s) {
-          if (s.trail <= 0) return;
-          var p = s.trail >= 360
-            ? { sys: 1, tilt: 0, dec: s.dec, ra: 0 }
-            : { sys: 1, tilt: 0, dec: s.dec, ra: 0, gS: s.ra * 15, gE: s.ra * 15 + s.trail };
-          strokeArc(ctx, sp, p, front, "#ffffff", 0.60, 1);
-        });
-        ctx.restore();
-      }
-      constellationArcs(ctx, sp, front);
-      stars.forEach(function (s) {
-        var q = sp.cel(cart(s.ra, s.dec));
-        if ((q.z >= 0) !== front) return;
-        starGlyph(ctx, q.x, q.y, s === selected);
-      });
-    }
-    function constellationArcs(ctx, sp, front) {       // updateConstellationArcs()
-      var keys = Object.keys(CONSTELLATIONS).filter(function (k) { return shown[k]; });
-      if (!keys.length) return;
-      ctx.save(); clipDisc(ctx, sp);
-      ctx.strokeStyle = "#ffffff"; ctx.globalAlpha = 0.80; ctx.lineWidth = 1;
-      keys.forEach(function (k) {
-        var pts = stars.filter(function (s) { return s.cons === k; });
-        if (!pts.length) return;
-        CONSTELLATIONS[k].paths.forEach(function (path) {
-          for (var i = 0; i + 1 < path.length; i++) {
-            greatArc(ctx, sp, pts[path[i]], pts[path[i + 1]], front);
-          }
-        });
-      });
-      ctx.globalAlpha = 1; ctx.restore();
-    }
-    function greatArc(ctx, sp, a, b, front) {             // setArcPoints: the short way round
-      if (!a || !b) return;
-      var u = cart(a.ra, a.dec), v = cart(b.ra, b.dec);
-      var dot = Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y + u.z * v.z));
-      var om = Math.acos(dot);
-      if (om < 1e-6) return;
-      ctx.beginPath();
-      var open = false;
-      for (var i = 0; i <= 40; i++) {
-        var t2 = i / 40;
-        var s1 = Math.sin((1 - t2) * om) / Math.sin(om), s2 = Math.sin(t2 * om) / Math.sin(om);
-        var q = sp.cel({ x: u.x * s1 + v.x * s2, y: u.y * s1 + v.y * s2, z: u.z * s1 + v.z * s2 });
-        if ((q.z >= 0) !== front) { open = false; continue; }
-        if (!open) { ctx.moveTo(q.x, q.y); open = true; } else ctx.lineTo(q.x, q.y);
-      }
-      ctx.stroke();
-    }
-    function starGlyph(ctx, x, y, sel) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      for (var i = 0; i < 8; i++) {                       // a small four-pointed star
-        var a = i * Math.PI / 4, r = i % 2 ? 1.8 : 5.5;
-        var px = Math.cos(a) * r, py = Math.sin(a) * r;
-        i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-      }
-      ctx.closePath(); ctx.fill();
-      if (sel) {
-        ctx.strokeStyle = "#ffcc33"; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(0, 0, 8.5, 0, TAU); ctx.stroke();
-      }
-      ctx.restore();
-    }
-    function label(ctx, x, y, text, colour, size) {
-      ctx.fillStyle = colour;
-      ctx.font = (size || 11) + "px " + FONT;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(text, x, y);
-    }
-    function skyLabels(ctx, sp, horizonSide) {
-      if (!show.labels) return;
-      var pts = [
-        { p: cart(0, 85), r: 1.13, t: I18N.t("rs.ncp"), c: "#bbbbbb" },
-        { p: cart(0, -85), r: 1.13, t: I18N.t("rs.scp"), c: "#bbbbbb" }
-      ];
-      if (show.eq) pts.push({ p: cart(3, 0), r: 1.1, t: I18N.t("rs.ceq"), c: EQ });
-      if (show.zeroh) pts.push({ p: cart(0, 45), r: 1.1, t: I18N.t("rs.zh"), c: EQ });
-      pts.forEach(function (o) {
-        var q = sp.cel(o.p, R * o.r);
-        label(ctx, q.x, q.y, o.t, o.c);
-      });
-      if (horizonSide) {
-        [[180, 45, I18N.t("rs.mer")], [0, 90, I18N.t("rs.zen")], [0, -90, I18N.t("rs.nad")]]
-          .forEach(function (o) {
-            var q = sp.h(hCart(o[0], o[1]), R * 1.1);
-            label(ctx, q.x, q.y, o[2], "#bbbbbb");
-          });
-      }
-    }
-    /* ---- left panel: the celestial sphere, with Earth turning at its centre -- */
-    function drawCelestialView(ctx, tr) {
-      var sp = sph1;
-      axis(ctx, sp, false);
-      ctx.save(); clipDisc(ctx, sp);
-      skyCircles(ctx, sp, false, true);
-      drawStars(ctx, sp, false, false);
-      ctx.restore();
-      shade(ctx, sp);
-      drawBands(ctx, sp, false);
-      earth(ctx, sp);
-      drawBands(ctx, sp, true);
-      skyCircles(ctx, sp, true, true);
-      drawStars(ctx, sp, true, false);
-      if (selected) celestialArcs(ctx, sp);
-      axis(ctx, sp, true);
-      skyLabels(ctx, sp, false);
-      void tr;
-    }
-    /* ---- right panel: the same sky seen from the observer's horizon --------- */
-    function drawHorizonView(ctx, tr) {
-      var sp = sph2;
-      axis(ctx, sp, false);
-      ctx.save(); clipDisc(ctx, sp);
-      skyCircles(ctx, sp, false, false);
-      drawStars(ctx, sp, false, true);
-      ctx.restore();
-      shade(ctx, sp);
-      drawBands(ctx, sp, false);
-      horizonPlane(ctx, sp, tr);
-      stickfigure(ctx, sp);
-      drawBands(ctx, sp, true);
-      skyCircles(ctx, sp, true, false);
-      drawStars(ctx, sp, true, true);
-      if (show.angle) angleMarks(ctx, sp);
-      if (selected) horizonArcs(ctx, sp);
-      axis(ctx, sp, true);
-      skyLabels(ctx, sp, true);
-    }
-    function horizonPlane(ctx, sp, tr) {
-      if (!show.under) { ctx.save(); clipDisc(ctx, sp); undersideCover(ctx, sp); ctx.restore(); }
-      var e = sp.h(hCart(90, 0)), n = sp.h(hCart(0, 0));
-      var ex = e.x - sp.c.x, ey = e.y - sp.c.y, nx = n.x - sp.c.x, ny = n.y - sp.c.y;
-      ctx.save();
-      ctx.transform(ex / 100, ey / 100, -nx / 100, -ny / 100, sp.c.x, sp.c.y);
-      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, 101.4);
-      g.addColorStop(0, "#5ac55a"); g.addColorStop(1, "#3aa53a");
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, 100, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#ffffff"; ctx.font = "bold 15px " + FONT;
-      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(tr("rs.N"), 0, -73.85);
-      ctx.fillText(tr("rs.S"), 0, 86.15);
-      ctx.fillText(tr("rs.E"), 81.93, 6.35);
-      ctx.fillText(tr("rs.W"), -77.08, 6.35);
-      ctx.restore();
-    }
-    function stickfigure(ctx, sp) {
-      var zen = sp.h(hCart(0, 90));
-      var vx = zen.x - sp.c.x, vy = zen.y - sp.c.y, vl = Math.hypot(vx, vy) || 1;
-      vx /= vl; vy /= vl;
-      ctx.save();
-      ctx.transform(vy, -vx, -vx, -vy, sp.c.x, sp.c.y);
-      ctx.scale(1.2, 1.2);                                // _xscale/_yscale = 120
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 2; ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(0, -7); ctx.lineTo(0, -21);
-      ctx.moveTo(-7, -11); ctx.lineTo(7, -15);
-      ctx.moveTo(0, -7); ctx.lineTo(-5, 0);
-      ctx.moveTo(0, -7); ctx.lineTo(5, 0);
-      ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, -24.5, 3.5, 0, TAU);
-      ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.stroke();
-      ctx.restore();
-    }
-    /* globeSphere: size 60 with the Earth art at scale 75, turning once a day  */
-    /* globeSphere: size 60 → radius 30, and GlobeComponent.setScale(75) puts its
-       art at _radius 40 × 0.75 = 30, so the art fills the sphere.
 
-       Folding the two rotations the SWF applies — the globe's own q matrix
-       (rotationAngle 360·frac(time) on top of the sphere's sidereal time) and the
-       sphere's celestial→horizon matrix at latitude 90 — leaves a single spin
-       about the polar axis: 180° + 360·frac(time) for the land, and the same plus
-       the observer's longitude for anything fixed to the observer. That is what
-       lands the observer's dot on their own meridian.                          */
+    /* GlobeComponent: the land and sea of _earth.js, spun by the clock about the pole.
+       The globe sphere sits at latitude 90 with sidereal time −(lon + rot)/15, so its
+       sky → horizon turn is 180° + lon + rot; the land carries 180° + rot.      */
     var ER = 30, waterFill = null, landFill = null, limbFill = null;
     function earthFills(ctx) {                   // built once, in globe units
       if (waterFill) return;
@@ -808,100 +711,23 @@ Sim.create({
       limbFill.addColorStop(0, "rgba(36,42,86,0)");
       limbFill.addColorStop(1, "rgba(36,42,86,0.28)");
     }
-    function earth(ctx, sp) {
+    function earthArt(ctx) {
       earthFills(ctx);
-      var rot = (time - Math.floor(time)) * 360;
-      var a = makeMats(v1, 90, 0).a;               // the globe keeps sphere1's view
-      function gp(v) {                             // globe units, about its centre
-        var k = ER / R;
-        return { x: (v.x * a.a0 + v.y * a.a1) * k,
-          y: (v.x * a.a3 + v.y * a.a4 + v.z * a.a5) * k,
-          z: v.x * a.a6 + v.y * a.a7 + v.z * a.a8 };
-      }
-      var land = EARTH.spin(180 + rot), fixed = EARTH.spin(180 + obsLon + rot);
-      ctx.save();
-      ctx.translate(sp.c.x, sp.c.y);
+      var land = EARTH.spin(180 + earthRot);
+      function gp(x, y, z) { var v = land(x, y, z); return globe.WtoSz(v, {}); }
       ctx.save();
       ctx.beginPath(); ctx.arc(0, 0, ER, 0, TAU); ctx.clip();
       ctx.fillStyle = waterFill;
       ctx.fillRect(-ER, -ER, 2 * ER, 2 * ER);
       ctx.beginPath();
-      EARTH.landPath(ctx, function (x, y, z) { return gp(land(x, y, z)); }, ER);
+      EARTH.landPath(ctx, gp, ER);
       ctx.fillStyle = landFill;
       ctx.fill("evenodd");
       ctx.fillStyle = limbFill;
       ctx.fillRect(-ER, -ER, 2 * ER, 2 * ER);
       ctx.restore();
-      ctx.strokeStyle = "rgba(0,0,0,0.45)"; ctx.lineWidth = 1;
-      ringPath(ctx, function (u) {                 // latitudeCircle, dec = latitude
-        var la = obsLat * RAD, g = u * TAU;
-        return gp(fixed(Math.cos(la) * Math.cos(g), Math.cos(la) * Math.sin(g), Math.sin(la)));
-      });
-      var dot = gp(fixed(Math.cos(obsLat * RAD), 0, Math.sin(obsLat * RAD)));
-      if (dot.z >= 0) {                            // the observer, on their meridian
-        ctx.beginPath(); ctx.arc(dot.x, dot.y, 2.2, 0, TAU);
-        ctx.fillStyle = "#ff3b30"; ctx.fill();
-      }
-      ctx.restore();
-    }
-    function ringPath(ctx, fn) {
-      ctx.beginPath();
-      var open = false;
-      for (var i = 0; i <= 120; i++) {
-        var q = fn(i / 120);
-        if (q.z < 0) { open = false; continue; }
-        if (!open) { ctx.moveTo(q.x, q.y); open = true; } else ctx.lineTo(q.x, q.y);
-      }
-      ctx.stroke();
     }
 
-    /* ---- the selected star's coordinate arcs, as updateCelestialArcs did ---- */
-    function celestialArcs(ctx, sp) {
-      var s = selected;
-      ctx.save(); clipDisc(ctx, sp);
-      strokeArc(ctx, sp, { sys: 1, tilt: 0, dec: 0, ra: 0, gS: 0, gE: 15 * s.ra || 0.001 },
-        null, C_RA, 1, 3);
-      strokeArc(ctx, sp, { sys: 1, tilt: 90, dec: 0, ra: s.ra,
-        gS: Math.min(0, s.dec), gE: Math.max(0, s.dec) || 0.001 }, null, C_DEC, 1, 3);
-      ctx.restore();
-      var q1 = sp.cel(cart(s.ra - 0.9, 5), R * 1.05);
-      var q2 = sp.cel(cart(s.ra + 0.9, s.dec / 2), R * 1.05);
-      label(ctx, q1.x, q1.y, s.ra.toFixed(1) + "h", C_RA);
-      label(ctx, q2.x, q2.y, s.dec.toFixed(1) + "°", C_DEC);
-    }
-    function horizonArcs(ctx, sp) {
-      var h = toHorizon(selected.ra, selected.dec);
-      ctx.save(); clipDisc(ctx, sp);
-      strokeArc(ctx, sp, { sys: 0, tilt: 0, alt: 0, az: 0, gS: 360 - h.az, gE: 360 },
-        null, C_AZ, 1, 3);
-      strokeArc(ctx, sp, { sys: 0, tilt: 90, alt: 0, az: h.az,
-        gS: Math.min(0, h.alt), gE: Math.max(0, h.alt) || 0.001 }, null, C_ALT, 1, 3);
-      ctx.restore();
-      var q1 = sp.h(hCart(h.az - 13, 5), R * 1.05);
-      var q2 = sp.h(hCart(h.az + 13, h.alt / 2), R * 1.05);
-      label(ctx, q1.x, q1.y, h.az.toFixed(1) + "°", C_AZ);
-      label(ctx, q2.x, q2.y, h.alt.toFixed(1) + "°", C_ALT);
-    }
-    /* two 20°-radius arcs about the east and west points, marking the angle the
-       celestial equator makes with the horizon: 90° − |latitude|               */
-    function angleMarks(ctx, sp) {
-      var lim = 90 - Math.abs(obsLat), r1 = 20, r3 = 90 - r1;
-      var p1, p2;
-      if (obsLat >= 0) {
-        p1 = { sys: 0, tilt: 90, az: 0, alt: r3, gS: 90 + obsLat, gE: 180 };
-        p2 = { sys: 0, tilt: 90, az: 0, alt: -r3, gS: 90 + obsLat, gE: 180 };
-      } else {
-        p1 = { sys: 0, tilt: 90, az: 0, alt: r3, gS: 0, gE: 90 + obsLat };
-        p2 = { sys: 0, tilt: 90, az: 0, alt: -r3, gS: 0, gE: 90 + obsLat };
-      }
-      ctx.save(); clipDisc(ctx, sp);
-      strokeArc(ctx, sp, p1, null, C_ANG, 1, 2);
-      strokeArc(ctx, sp, p2, null, C_ANG, 1, 2);
-      ctx.restore();
-      var e = sp.h(hCart(90, r1 * 0.6), R * 1.0), w = sp.h(hCart(270, r1 * 0.6), R * 1.0);
-      label(ctx, e.x, e.y, lim.toFixed(1) + "°", C_ANG);
-      label(ctx, w.x, w.y, lim.toFixed(1) + "°", C_ANG);
-    }
     /* ---- the clickable world map, as in the SWF's Observer's Location panel -
        Equirectangular and square: MAPW = 2 * MAPH, so a degree of longitude and
        a degree of latitude cover the same number of pixels.                   */
@@ -993,6 +819,7 @@ Sim.create({
       if (outs) bottom.appendChild(outs);      // readouts run under everything
     })();
 
+    deselectSelectedStar();                               // onReset: removeAllStars() hides the arcs
     drawMap();
     upd();
   }

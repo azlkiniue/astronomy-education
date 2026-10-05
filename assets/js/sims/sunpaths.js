@@ -1,311 +1,239 @@
 /* Paths of the Sun -------------------------------------------------------------
-   Faithful rebuild of the ClassAction "sunpaths.swf": a horizon diagram showing
-   how the Sun's daily path across the sky changes with the observer's latitude
-   and with the season. The original draws four curves on a grassy celestial
-   sphere and names them in a legend — celestial equator, ecliptic, the Sun's
-   path on the given day, and the north-south meridian — with a latitude slider,
-   an "animate" checkbox that walks the date through the year, and a big date
-   readout. The sphere can be spun by dragging it, exactly as in the SWF.        */
+   Faithful rebuild of the ClassAction "sunpaths.swf" (its root timeline and its
+   copy of the UNL CelestialSphere engine, decompiled), drawn with the shared
+   engine in _celestialsphere.js. The whole 550 × 280 stage is here: the horizon
+   diagram — a sky-blue dome over the green horizon plane (showUnder off), the
+   stick man and his shadow, the Sun at noon on the chosen day, the celestial
+   equator (black), the ecliptic (red), the Sun's path for the day (yellow) and the
+   north-south meridian (gray) — the latitude slider, the "animate" checkbox that
+   walks the date through the year a day a frame (12 a second), the date and the
+   legend. As in the SWF the day sets both the Sun (RA = day·24/365 h, dec =
+   23.5° sin(2π·day/365), day 0 = 21 March) and the sidereal time, so the Sun is
+   always on the meridian: the diagram shows each day's path through its noon.
+   The sky brightens with the Sun's altitude, and the shadow stretches with it.
+   Drag the sphere to spin it ("simple drag").                                   */
 Sim.create({
   id: "sunpaths",
-  width: 640, height: 540,
+  width: 550, height: 280,
   strings: {
     en: {
-      "sp.obs": "Observer", "sp.lat": "latitude", "sp.day": "day of year", "sp.time": "time of day",
-      "sp.anim": "Animation", "sp.speed": "days per second", "sp.animate": "animate through the year",
-      "sp.show": "Show", "sp.ce": "celestial equator", "sp.ecl": "ecliptic",
-      "sp.path": "Sun's path on the given day", "sp.mer": "north-south meridian", "sp.stick": "observer",
-      "sp.dec": "Sun's declination", "sp.alt": "Sun's altitude", "sp.az": "Sun's azimuth",
-      "sp.rise": "sunrise", "sp.set": "sunset", "sp.len": "hours of daylight",
-      "sp.drag": "drag the sphere to spin it around",
-      "sp.up": "up all day", "sp.down": "down all day",
-      "dir.N": "N", "dir.S": "S", "dir.E": "E", "dir.W": "W"
+      "sp.obs": "Observer", "sp.lat": "latitude", "sp.day": "date",
+      "sp.animate": "animate",
+      "sp.legend1": "black - celestial equator", "sp.legend2": "red - ecliptic",
+      "sp.legend3": "yellow - sun's path on the given day", "sp.legend4": "gray - north-south meridian",
+      "sp.dec": "Sun's declination", "sp.alt": "Sun's noon altitude",
+      "sp.len": "hours of daylight", "sp.up": "up all day", "sp.down": "down all day",
+      "sp.drag": "Drag the sphere to spin it around. The latitude slider and the animate box on the picture work as in the original.",
+      "dir.N": "N", "dir.S": "S", "dir.E": "E", "dir.W": "W",
+      "m0": "January", "m1": "February", "m2": "March", "m3": "April", "m4": "May", "m5": "June",
+      "m6": "July", "m7": "August", "m8": "September", "m9": "October", "m10": "November", "m11": "December"
     },
     id: {
-      "sp.obs": "Pengamat", "sp.lat": "lintang", "sp.day": "hari ke-", "sp.time": "waktu hari",
-      "sp.anim": "Animasi", "sp.speed": "hari per detik", "sp.animate": "animasikan sepanjang tahun",
-      "sp.show": "Tampilkan", "sp.ce": "ekuator langit", "sp.ecl": "ekliptika",
-      "sp.path": "lintasan Matahari pada hari itu", "sp.mer": "meridian utara–selatan", "sp.stick": "pengamat",
-      "sp.dec": "deklinasi Matahari", "sp.alt": "altitudo Matahari", "sp.az": "azimut Matahari",
-      "sp.rise": "matahari terbit", "sp.set": "matahari terbenam", "sp.len": "lama siang",
-      "sp.drag": "seret bola langit untuk memutarnya",
-      "sp.up": "di atas horizon sepanjang hari", "sp.down": "di bawah horizon sepanjang hari",
-      "dir.N": "U", "dir.S": "S", "dir.E": "T", "dir.W": "B"
+      "sp.obs": "Pengamat", "sp.lat": "lintang", "sp.day": "tanggal",
+      "sp.animate": "animasikan",
+      "sp.legend1": "hitam - ekuator langit", "sp.legend2": "merah - ekliptika",
+      "sp.legend3": "kuning - lintasan Matahari hari itu", "sp.legend4": "abu-abu - meridian utara-selatan",
+      "sp.dec": "deklinasi Matahari", "sp.alt": "ketinggian Matahari tengah hari",
+      "sp.len": "lama siang", "sp.up": "di atas horizon sepanjang hari", "sp.down": "di bawah horizon sepanjang hari",
+      "sp.drag": "Seret bola langit untuk memutarnya. Penggeser lintang dan kotak animasi pada gambar bekerja seperti aslinya.",
+      "dir.N": "U", "dir.S": "S", "dir.E": "T", "dir.W": "B",
+      "m0": "Januari", "m1": "Februari", "m2": "Maret", "m3": "April", "m4": "Mei", "m5": "Juni",
+      "m6": "Juli", "m7": "Agustus", "m8": "September", "m9": "Oktober", "m10": "November", "m11": "Desember"
     }
   },
   about: {
-    en: "<p>The Sun rises, arcs across the sky and sets along a circle called its <strong>diurnal path</strong>. That circle is fixed by just one number — the Sun's <strong>declination</strong> — and its tilt relative to your horizon is fixed by your <strong>latitude</strong>. Everything else about sunrise, sunset and noon height follows from those two.</p>" +
-        "<p>Because Earth's axis is tilted 23.4°, the Sun's declination swings from +23.4° at the June solstice to −23.4° in December, riding the <strong>ecliptic</strong>. So the whole daily path slides north and south through the year: high and long in summer, low and short in winter. On the equinoxes the Sun sits on the <strong>celestial equator</strong>, rises due east and sets due west everywhere on Earth.</p>" +
-        "<p>Try latitude 0° — the paths stand straight up, every day is 12 hours. Try 90° — they lie flat, and the Sun simply circles at constant altitude for six months before vanishing for six more. At 66.6° and beyond, midsummer paths never touch the horizon at all.</p>",
-    id: "<p>Matahari terbit, melengkung melintasi langit, lalu terbenam sepanjang sebuah lingkaran yang disebut <strong>lintasan hariannya</strong>. Lingkaran itu ditentukan oleh satu angka saja — <strong>deklinasi</strong> Matahari — dan kemiringannya terhadap horizon Anda ditentukan oleh <strong>lintang</strong>. Semua hal lain tentang terbit, terbenam, dan tinggi tengah hari mengikuti keduanya.</p>" +
-        "<p>Karena sumbu Bumi miring 23,4°, deklinasi Matahari berayun dari +23,4° pada solstis Juni hingga −23,4° pada Desember, menyusuri <strong>ekliptika</strong>. Maka seluruh lintasan harian bergeser ke utara dan selatan sepanjang tahun: tinggi dan panjang saat musim panas, rendah dan pendek saat musim dingin. Pada ekuinoks Matahari berada di <strong>ekuator langit</strong>, terbit tepat di timur dan terbenam tepat di barat di seluruh Bumi.</p>" +
-        "<p>Coba lintang 0° — lintasannya tegak lurus, setiap hari 12 jam. Coba 90° — lintasannya mendatar, dan Matahari hanya berputar pada ketinggian tetap selama enam bulan lalu menghilang enam bulan berikutnya. Pada 66,6° ke atas, lintasan pertengahan musim panas tak pernah menyentuh horizon.</p>"
+    en: "<p>The Sun rises, arcs across the sky and sets along a circle called its <strong>diurnal path</strong>. That circle is fixed by just one number — the Sun's <strong>declination</strong> — and its tilt relative to your horizon is fixed by your <strong>latitude</strong>.</p>" +
+        "<p>Because Earth's axis is tilted 23.5°, the Sun's declination swings from +23.5° at the June solstice to −23.5° in December, riding the <strong>ecliptic</strong>. So the whole daily path slides north and south through the year, always parallel to the <strong>celestial equator</strong>: long, high summer days and short, low winter ones. Here the Sun is always shown at noon, on the meridian.</p>" +
+        "<p>Try latitude 0° — the paths stand straight up, every day is 12 hours. Try 90° — they lie flat, and the Sun simply circles at constant altitude for six months before vanishing for six more. At 66.5° and beyond you get the midnight Sun.</p>",
+    id: "<p>Matahari terbit, melengkung melintasi langit, lalu terbenam sepanjang sebuah lingkaran yang disebut <strong>lintasan hariannya</strong>. Lingkaran itu ditentukan oleh satu angka saja — <strong>deklinasi</strong> Matahari — dan kemiringannya terhadap horizon ditentukan oleh <strong>lintang</strong> Anda.</p>" +
+        "<p>Karena sumbu Bumi miring 23,5°, deklinasi Matahari berayun dari +23,5° pada solstis Juni hingga −23,5° pada Desember, menyusuri <strong>ekliptika</strong>. Maka seluruh lintasan harian bergeser ke utara dan selatan sepanjang tahun, selalu sejajar <strong>ekuator langit</strong>: siang musim panas yang panjang dan tinggi, siang musim dingin yang pendek dan rendah. Di sini Matahari selalu ditampilkan pada tengah hari, di meridian.</p>" +
+        "<p>Coba lintang 0° — lintasannya tegak lurus, setiap hari 12 jam. Coba 90° — lintasannya mendatar, dan Matahari hanya berputar pada ketinggian tetap selama enam bulan lalu menghilang enam bulan berikutnya. Mulai 66,5° ke atas muncul Matahari tengah malam.</p>"
   },
   build: function (S) {
-    var D2R = Math.PI / 180, R2D = 180 / Math.PI, TAU = Math.PI * 2, EPS = 23.44 * D2R;
-    var C = {
-      panel: "#0e1530", border: "#2c3a66", text: "#e8ecf8", dim: "#9fabce",
-      ce: "#dbe6ff", ecl: "#ff6b6b", path: "#ffd166", mer: "#9aa7c4", sun: "#ffd166"
-    };
-    var MONTHS = { en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-                   id: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] };
-    var CUM = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    var RAD = Math.PI / 180, FONT = "Verdana, Geneva, sans-serif";
+    var MONTHS = [31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+    var SLIDER = { x: 410.95, y: 43.2, half: 100 };   // the latitude slider (−90 … 90 over ±100 px)
+    var CHECK = { x: 372.4, y: 86.5 };
+    var lat = 41, animate = false, drag = null;
 
-    /* ---- state (defaults match the SWF's opening screen: 41.0 N, March 21) ---- */
-    var lat = 41.0, day = 80, time = 9.0, speed = 20;
-    var AC = 225 * D2R;                        // camera azimuth — the sphere spins on drag
+    /* ---- the CelestialSphere, as the root timeline sets it up (sphere at (140, 140)) ---- */
+    var CS = window.CelestialSphere, sph = new CS({ x: 140, y: 140 });
+    // the constructor's own Sun ('experi sun', shape 53), day 0
+    sph.addObject("_sunObject", CS.shapeDrawer({ nz: false, layers: [[[["#ffcc00", "M5.3 -5.3Q7.5 -3.1 7.5 0Q7.5 3.1 5.3 5.3Q3.1 7.5 0 7.5Q-3.1 7.5 -5.3 5.3Q-7.5 3.1 -7.5 0Q-7.5 -3.1 -5.3 -5.3Q-3.1 -7.5 0 -7.5Q3.1 -7.5 5.3 -5.3Z"]],
+      [[1, "#000000", "M5.3 -5.3Q7.5 -3.1 7.5 0Q7.5 3.1 5.3 5.3Q3.1 7.5 0 7.5Q-3.1 7.5 -5.3 5.3Q-7.5 3.1 -7.5 0Q-7.5 -3.1 -5.3 -5.3Q-3.1 -7.5 0 -7.5Q3.1 -7.5 5.3 -5.3"]]]] }), { dec: 0, ra: 0 });
+    var day = 0;
+    sph.size = 240;
+    sph.addCircle("celestialEquator", { alpha: 100, color: 0x505050, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addCircle("sunsPath", { alpha: 100, color: 0xffffc0, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addCircle("meridian", { alpha: 100, color: 0xc0c0c0, thickness: 1 }, { tilt: 90, alt: 0, az: 0 });
+    sph.addCircle("ecliptic", { alpha: 100, color: 0xff5050, thickness: 1 }, { tilt: 23.5, dec: 0, ra: 0 });
+    sph.showUnder = false;
+    function dirs() { return { N: I18N.t("dir.N"), S: I18N.t("dir.S"), E: I18N.t("dir.E"), W: I18N.t("dir.W") }; }
+    sph.addHorizonPlaneClip(CS.directionLabels(dirs, { color: "#999999" }), "darkLabels", "below");
+    sph.addHorizonPlaneClip(CS.directionLabels(dirs), "lightLabels", "above");
+    sph.addShadingClip(CS.GradientDisk, "underSky", "front", "inner", "below",
+      { outerColor: 0x84cbff, outerAlpha: 30, innerColor: 0x84cbff, innerAlpha: 20 });
+    sph.removeClip("celestialBowl");
+    sph.addShadingClip(CS.GradientDisk, "frontSky", "front", "inner", "above", { outerColor: 0x84cbff, innerColor: 0x84cbff });
+    sph.addShadingClip(CS.GradientDisk, "backSky", "back", "outer", "above", { outerColor: 0x84cbff, innerColor: 0x84cbff });
+    sph.addObject("stickman", CS.art.stickmanSunpaths, { system: "horizon", x: 0, y: 0, z: 0.001 });
+    sph.stickman.setOrientationType("absolute", { az: 180, alt: 0 }, { az: 0, alt: 90 });
+    sph.addObject("stickmanShadow", shadowGlyph, { system: "horizon", x: 0, y: 0, z: 0 });
+    sph.stickmanShadow.setOrientationType("absolute", { az: 0, alt: 90 }, { az: 0, alt: 0 });
+    sph.minViewerAltitude = 7;
+    sph.viewerAzimuth = 200;
 
-    function decOf(d) { return EPS * Math.sin(TAU * (d - 80) / 365.2422); }
-    function monthDay(d) {
-      var i = 11; while (i > 0 && d <= CUM[i]) i--;
-      return { m: i, dd: Math.round(d - CUM[i]) };
+    /* ---- the SWF's own model: setDay / updateSun, setShadow, setSkyColor ---- */
+    function setDay(arg) {
+      day = arg % 365;
+      sph._sunObject.setPosition({ dec: 23.5 * Math.sin(day * 0.01721420632103996), ra: day * 0.06575342465753424 });
+      sph.siderealTime = 24 * ((1.0027397260273974 * day) % 1);
+      sph.sunsPath.setCircleParameters({ tilt: 0, dec: sph._sunObject.dec, ra: 0 });
+      setSkyColor(); setShadow();
     }
-    // pole-robust equatorial → horizontal (works at ±90° latitude)
-    function eq2hor(HA, dec, latR) {
-      var sd = Math.sin(dec), cd = Math.cos(dec), sl = Math.sin(latR), cl = Math.cos(latR);
-      var alt = Math.asin(sd * sl + cd * cl * Math.cos(HA));
-      var xS = cd * Math.cos(HA) * sl - sd * cl, yW = cd * Math.sin(HA);
-      return { alt: alt, az: Math.atan2(-yW, -xS) };
+    var shadow = { visible: false, alpha: 100, yscale: 100 };
+    function setShadow() {
+      var h = sph._sunObject.getPositionHorizon();
+      if (h.alt > 0) {
+        var lim = 400, r1 = 100 / Math.tan(RAD * h.alt);
+        if (r1 > lim) r1 = lim;
+        if (h.az < 90 || h.az > 270) r1 = -r1;    // a Sun in the north throws the shadow south
+        shadow = { visible: true, alpha: (lim - Math.abs(r1)) * (100 / lim), yscale: r1 };
+      } else shadow.visible = false;
     }
-
-    /* ---- camera: orthographic, 32° above the horizon, azimuth AC (draggable) ---- */
-    var SCx = 300, SCy = 262, R = 208, EC = 32 * D2R;
-    var rx = R, ry = R * Math.sin(EC);         // the horizon ellipse stays axis-aligned
-    var camv, rightv, upv;
-    function setCam() {
-      camv = { e: Math.sin(AC) * Math.cos(EC), n: Math.cos(AC) * Math.cos(EC), u: Math.sin(EC) };
-      var m = Math.hypot(camv.n, camv.e) || 1;
-      rightv = { e: -camv.n / m, n: camv.e / m, u: 0 };
-      upv = { e: -rightv.n * camv.u, n: rightv.e * camv.u, u: rightv.n * camv.e - rightv.e * camv.n };
+    function shadowGlyph(ctx) {                     // StickmanShadow, its _yscale and _alpha set above
+      if (!shadow.visible) return;
+      CS.groupAlpha(ctx, shadow.alpha, function (g) {
+        g.scale(1, shadow.yscale / 100);
+        CS.art.stickmanShadowSunpaths(g);
+      }, CS.shadowBounds({ m: [1, 0, 0, shadow.yscale / 100] }, CS.art.shapes.stickmanShadowSunpaths));
     }
-    setCam();
-    function projDir(E, N, U) {
-      return { x: SCx + R * (E * rightv.e + N * rightv.n + U * rightv.u),
-               y: SCy - R * (E * upv.e + N * upv.n + U * upv.u),
-               z: E * camv.e + N * camv.n + U * camv.u };
+    function setSkyColor() {
+      var k = sph._sunObject.alt / 10 + 0.5;
+      k = k > 1 ? 1 : k < 0 ? 0 : k;
+      sph.backSky.innerAlpha = k * 70 + 30; sph.backSky.outerAlpha = k * 60 + 20;
+      sph.frontSky.innerAlpha = k * 10; sph.frontSky.outerAlpha = k * 25 + 15;
     }
-    function project(alt, az) { var c = Math.cos(alt); return projDir(c * Math.sin(az), c * Math.cos(az), Math.sin(alt)); }
-    /* Stroke one half of a curve: `above` picks the part in the sky, otherwise the
-       part under the ground. They are drawn in separate passes so the opaque
-       horizon plane can be painted between them — in this orthographic view the
-       front of the sky dome projects inside the horizon ellipse, so anything
-       above the horizon must be drawn *over* the grass, not under it. */
-    function curve(pts, col, w, dash, above) {
-      var ctx = S.ctx;
-      ctx.beginPath(); var pen = false;
-      for (var i = 0; i < pts.length; i++) {
-        if ((pts[i].alt >= 0) !== above) { pen = false; continue; }
-        var p = project(pts[i].alt, pts[i].az);
-        pen ? ctx.lineTo(p.x, p.y) : (ctx.moveTo(p.x, p.y), pen = true);
-      }
-      ctx.setLineDash(dash || []);
-      ctx.strokeStyle = col; ctx.lineWidth = above ? w : 1;
-      ctx.globalAlpha = above ? 1 : 0.24; ctx.stroke();
-      ctx.globalAlpha = 1; ctx.setLineDash([]);
+    function changeLatitude(arg) { lat = arg; sph.latitude = arg; setShadow(); setSkyColor(); upd(); }
+    function dateString() {                          // getDateString
+      var d = (day + 79.5) % 365, i = 0;
+      while (i < 12 && !(d < MONTHS[i])) i++;
+      d = i === 0 ? d + 1 : d - MONTHS[i - 1] + 1;
+      return I18N.t("m" + i) + " " + Math.floor(d);
     }
 
-    /* ---- controls ---- */
+    /* ---- the sidebar: the date (the SWF only moves it by animating) and readouts ---- */
     S.group("sp.obs");
-    var latCtl = S.slider({
-      labelKey: "sp.lat", min: -90, max: 90, value: lat, step: 0.5,
-      format: fmtLat, on: function (v) { lat = v; upd(); }
-    });
-    var dayCtl = S.slider({
-      labelKey: "sp.day", min: 1, max: 365, value: day, step: 1,
-      format: function (v) { var md = monthDay(v); return MONTHS[I18N.getLang()][md.m] + " " + md.dd; },
-      on: function (v) { day = v; upd(); }
-    });
-    var timeCtl = S.slider({
-      labelKey: "sp.time", min: 0, max: 24, value: time, step: 0.25,
-      format: fmtClock, on: function (v) { time = v; upd(); }
-    });
     var hint = document.createElement("p");
     hint.className = "sim-note"; hint.setAttribute("data-i18n", "sp.drag");
-    timeCtl.input.parentNode.parentNode.appendChild(hint);
-
-    S.group("sp.anim");
-    S.slider({ labelKey: "sp.speed", min: 2, max: 90, value: speed, step: 1,
-      format: function (v) { return v + " d/s"; }, on: function (v) { speed = v; } });
-    var loop = S.loop(function (dt) {
-      day += speed * dt; if (day > 365) day -= 365;
-      dayCtl.input.value = day; S.refreshers.forEach(function (f) { f(); });
-    });
-    S.playPause(loop);
-
-    S.group("sp.show");
-    var optCE = S.toggle({ labelKey: "sp.ce", value: true });
-    var optEcl = S.toggle({ labelKey: "sp.ecl", value: true });
-    var optPath = S.toggle({ labelKey: "sp.path", value: true });
-    var optMer = S.toggle({ labelKey: "sp.mer", value: true });
-    var optStick = S.toggle({ labelKey: "sp.stick", value: true });
-
+    S.canvas.parentNode.parentNode.querySelector(".sim-controls").appendChild(hint);
+    var syncing = false;
+    var latCtl = S.slider({ labelKey: "sp.lat", min: -90, max: 90, value: 41, step: 0.1,
+      format: fmtLat, on: function (v) { if (!syncing) changeLatitude(v); } });
+    var dayCtl = S.slider({ labelKey: "sp.day", min: 0, max: 364, value: 0, step: 1,
+      format: function () { return dateString(); }, on: function (v) { if (!syncing) { setDay(v); upd(); } } });
+    var animCtl = S.toggle({ labelKey: "sp.animate", value: false, on: function (b) { if (!syncing) setAnimate(b); } });
     var outDec = S.readout({ labelKey: "sp.dec" });
     var outAlt = S.readout({ labelKey: "sp.alt" });
-    var outAz = S.readout({ labelKey: "sp.az" });
     var outLen = S.readout({ labelKey: "sp.len" });
-    var outRise = S.readout({ labelKey: "sp.rise" });
-    var outSet = S.readout({ labelKey: "sp.set" });
-
-    function fmtLat(v) {
-      var a = Math.abs(v).toFixed(1);
-      return v === 0 ? a + "°" : a + "° " + I18N.t(v > 0 ? "dir.N" : "dir.S");
-    }
-    function fmtClock(v) {
-      var t = ((v % 24) + 24) % 24, h = Math.floor(t), m = Math.round((t - h) * 60);
-      if (m === 60) { m = 0; h = (h + 1) % 24; }
-      if (I18N.getLang() === "id") return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
-      var ap = h < 12 ? "AM" : "PM", hh = h % 12 || 12;
-      return hh + ":" + (m < 10 ? "0" : "") + m + " " + ap;
-    }
-    // half-day arc: the hour angle at which the Sun crosses the horizon
-    function halfDay(decR, latR) {
-      var c = -Math.tan(latR) * Math.tan(decR);
-      if (c <= -1) return null;                 // circumpolar: up all day
-      if (c >= 1) return NaN;                   // never rises
-      return Math.acos(c) * R2D / 15;           // hours
-    }
+    function fmtLat(v) { return Math.abs(v).toFixed(1) + " " + I18N.t(v < 0 ? "dir.S" : "dir.N"); }
     function upd() {
-      var decR = decOf(day), latR = lat * D2R;
-      var ha = (time - 12) * 15 * D2R;
-      var h = eq2hor(ha, decR, latR);
-      outDec((decR * R2D >= 0 ? "+" : "−") + Math.abs(decR * R2D).toFixed(1) + "°");
-      outAlt((h.alt * R2D).toFixed(1) + "°");
-      outAz((((h.az * R2D) % 360 + 360) % 360).toFixed(1) + "°");
-      var H = halfDay(decR, latR);
-      if (H === null) { outLen("24.0 h"); outRise(I18N.t("sp.up")); outSet("—"); }
-      else if (isNaN(H)) { outLen("0.0 h"); outRise(I18N.t("sp.down")); outSet("—"); }
-      else { outLen((2 * H).toFixed(1) + " h"); outRise(fmtClock(12 - H)); outSet(fmtClock(12 + H)); }
+      var d = sph._sunObject.dec, h = sph._sunObject.getPositionHorizon();
+      outDec((d >= 0 ? "+" : "−") + Math.abs(d).toFixed(1) + "°");
+      outAlt(h.alt.toFixed(1) + "°");
+      var c = -Math.tan(lat * RAD) * Math.tan(d * RAD);
+      outLen(c <= -1 ? I18N.t("sp.up") : c >= 1 ? I18N.t("sp.down") : (2 * Math.acos(c) / RAD / 15).toFixed(1) + " h");
+      syncing = true; latCtl.set(lat); dayCtl.set(day); animCtl.set(animate); syncing = false;
       S.requestDraw();
     }
     S.refreshers.push(upd);
 
-    /* ---- drag to spin the sphere, as in the original ---- */
-    var spin = null;
+    /* ---- the animation: the SWF's onEnterFrame, one day a frame at 12 frames a second ---- */
+    var acc = 0;
+    var loop = S.loop(function (dt) {
+      acc += dt * 12;
+      while (acc >= 1) { acc -= 1; setDay(day + 1); }
+      upd();
+    });
+    function setAnimate(b) { animate = b; acc = 0; if (b) loop.play(); else loop.pause(); S.requestDraw(); }
+
+    /* ---- pointer: the canvas slider and checkbox, else the sphere's simple drag ---- */
+    function at(ev) { return CS.canvasPoint(S.canvas, ev, S.W, S.H); }
+    function grabX() { return SLIDER.x + lat / 90 * SLIDER.half; }
     S.canvas.addEventListener("pointerdown", function (ev) {
-      var r = S.canvas.getBoundingClientRect(), x = (ev.clientX - r.left) * S.W / r.width, y = (ev.clientY - r.top) * S.H / r.height;
-      if (Math.hypot(x - SCx, y - SCy) < R + 16) { spin = { x: x, ac: AC }; S.canvas.setPointerCapture(ev.pointerId); }
+      var p = at(ev);
+      if (p.x >= SLIDER.x - SLIDER.half - 8 && p.x <= SLIDER.x + SLIDER.half + 8 && Math.abs(p.y - SLIDER.y) <= 14) {
+        var off = Math.abs(p.x - grabX()) <= 7 ? p.x - grabX() : 0;
+        drag = { kind: "slider", off: off };
+        sliderTo(p.x);
+      } else if (p.x >= CHECK.x - 2 && p.x <= CHECK.x + 80 && p.y >= CHECK.y - 2 && p.y <= CHECK.y + 16) {
+        setAnimate(!animate); upd(); return;
+      } else if (sph.startDrag(p.x, p.y)) drag = { kind: "sphere" };
+      else return;
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      ev.preventDefault();
     });
+    function sliderTo(x) {
+      var v = (x - drag.off - SLIDER.x) / SLIDER.half * 90;
+      changeLatitude(Math.round(Math.max(-90, Math.min(90, v)) * 10) / 10);
+    }
     S.canvas.addEventListener("pointermove", function (ev) {
-      if (!spin) return;
-      var r = S.canvas.getBoundingClientRect(), x = (ev.clientX - r.left) * S.W / r.width;
-      AC = spin.ac + (x - spin.x) * 0.006; setCam(); S.requestDraw();
+      if (!drag) return;
+      var p = at(ev);
+      if (drag.kind === "slider") sliderTo(p.x);
+      else { sph.dragTo(p.x, p.y); S.requestDraw(); }
     });
-    S.canvas.addEventListener("pointerup", function () { spin = null; });
+    ["pointerup", "pointercancel"].forEach(function (e) {
+      S.canvas.addEventListener(e, function () { drag = null; sph.endDrag(); });
+    });
 
+    /* ================================= drawing ============================== */
     S.onDraw(function () {
-      var ctx = S.ctx; S.clear();
-      var t = I18N.t.bind(I18N), lang = I18N.getLang();
-      var decR = decOf(day), latR = lat * D2R;
-      var ha = (time - 12) * 15 * D2R, sun = eq2hor(ha, decR, latR);
-      var night = sun.alt < -0.105, twilight = !night && sun.alt < 0.105;
-      var i;
-
-      ctx.save(); ctx.beginPath(); ctx.arc(SCx, SCy, R + 2, 0, TAU); ctx.clip();
-
-      // sky dome above the horizon
-      var skyTop = night ? "#0b1733" : twilight ? "#3a2f63" : "#4f90d4";
-      var skyHor = night ? "#16244a" : twilight ? "#c8794a" : "#bcd8f2";
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, Math.PI, TAU, false);
-      ctx.ellipse(SCx, SCy, rx, ry, 0, TAU, Math.PI, true); ctx.closePath();
-      var sg = ctx.createLinearGradient(0, SCy - R, 0, SCy + ry);
-      sg.addColorStop(0, skyTop); sg.addColorStop(1, skyHor); ctx.fillStyle = sg; ctx.fill();
-      // dark underside
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, Math.PI, false);
-      ctx.ellipse(SCx, SCy, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
-      ctx.fillStyle = "#070c1a"; ctx.fill();
-
-      // the four named curves, gathered once and stroked in two passes
-      var lam, dc, ra;
-      var cePts = [], eclPts = [], pathPts = [], merPts = [];
-      var raSun = Math.atan2(Math.cos(EPS) * Math.sin(TAU * (day - 80) / 365.2422),
-                             Math.cos(TAU * (day - 80) / 365.2422)) * R2D / 15;
-      for (i = 0; i <= 360; i += 2) {
-        cePts.push(eq2hor(i * D2R, 0, latR));
-        pathPts.push(eq2hor(i * D2R, decR, latR));
-        lam = i * D2R;
-        dc = Math.asin(Math.sin(EPS) * Math.sin(lam));
-        ra = Math.atan2(Math.cos(EPS) * Math.sin(lam), Math.cos(lam)) * R2D / 15;
-        eclPts.push(eq2hor(((time - 12) + raSun - ra) * 15 * D2R, dc, latR));
-        var a = i * D2R;                        // the great circle through N, the zenith and S
-        merPts.push({ alt: a <= Math.PI ? Math.PI / 2 - a : a - 3 * Math.PI / 2, az: a <= Math.PI ? 0 : Math.PI });
-      }
-      function strokeAll(above) {
-        if (optCE.value()) curve(cePts, C.ce, 1.6, null, above);
-        if (optEcl.value()) curve(eclPts, C.ecl, 2, null, above);
-        if (optPath.value()) curve(pathPts, C.path, 2.4, null, above);
-        if (optMer.value()) curve(merPts, C.mer, 1.6, [5, 5], above);
-      }
-      strokeAll(false);                         // the parts under the ground, faint
-
-      // grassy horizon plane
-      ctx.beginPath(); ctx.ellipse(SCx, SCy, rx, ry, 0, 0, TAU);
-      var gg = ctx.createLinearGradient(0, SCy - ry, 0, SCy + ry);
-      gg.addColorStop(0, night ? "#16301f" : "#3f8a45"); gg.addColorStop(1, night ? "#0e2014" : "#255f2e");
-      ctx.fillStyle = gg; ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.28)"; ctx.lineWidth = 1; ctx.stroke();
-
-      // The observer stands on the grass, before the sky half and the Sun are
-      // painted: any sky point that lands on the figure on screen lies on the
-      // camera's side of it, so the lines and the Sun should pass in front.
-      if (optStick.value()) stick(ctx, SCx, SCy);
-
-      strokeAll(true);                          // and the sky half, over the grass
+      var ctx = S.ctx, t = I18N.t.bind(I18N);
+      FlashText.begin(ctx);
+      ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, S.W, S.H);
+      sph.draw(ctx);
+      // the latitude slider: title and value, the bar, the grabber, the end labels
+      ctx.fillStyle = "#ffffff"; ctx.textBaseline = "alphabetic";
+      ctx.font = "bold 12px " + FONT; ctx.textAlign = "left";
+      FlashText.fill(ctx, t("sp.lat"), 302, 22.25);
+      ctx.textAlign = "right";
+      FlashText.fill(ctx, fmtLat(lat), 519.5, 22.25);
+      ctx.font = "bold 10px " + FONT;
+      ctx.textAlign = "left"; FlashText.fill(ctx, "90 " + t("dir.S"), 299.25, 69.25);
+      ctx.textAlign = "right"; FlashText.fill(ctx, "90 " + t("dir.N"), 523, 69.25);
+      ctx.save(); ctx.translate(SLIDER.x, SLIDER.y);
+      CS.drawShape(ctx, { nz: false, layers: [[[["#efefef", "M-100 -2.75L100 -2.75L100 2.75L-100 2.75L-100 -2.75Z"]],
+        [[0.05, "#666666", "M-100 -2.75L100 -2.75L100 2.75L-100 2.75L-100 -2.75"]]]] });
+      ctx.translate(lat / 90 * SLIDER.half, -2.2);
+      CS.drawShape(ctx, GRABBER);
       ctx.restore();
-
-      ctx.strokeStyle = C.border; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, TAU); ctx.stroke();
-
-      // the Sun on its path
-      var sp = project(sun.alt, sun.az);
-      ctx.save(); if (sun.alt < 0) ctx.globalAlpha = 0.32;
-      var g = ctx.createRadialGradient(sp.x, sp.y, 1, sp.x, sp.y, 17);
-      g.addColorStop(0, "#fff8d8"); g.addColorStop(1, C.sun);
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sp.x, sp.y, 10, 0, TAU); ctx.fill();
-      ctx.strokeStyle = "rgba(120,90,0,.7)"; ctx.lineWidth = 1; ctx.stroke();
-      ctx.restore();
-
-      // cardinal points, just outside the horizon ellipse
-      ctx.fillStyle = "#eaf2ff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      [["dir.N", 0], ["dir.E", 90], ["dir.S", 180], ["dir.W", 270]].forEach(function (c) {
-        var p = project(0, c[1] * D2R), dx = p.x - SCx, dy = p.y - SCy, m = Math.hypot(dx, dy) || 1;
-        ctx.strokeStyle = "rgba(7,11,26,.8)"; ctx.lineWidth = 3;
-        ctx.strokeText(t(c[0]), p.x + dx / m * 15, p.y + dy / m * 15);
-        ctx.fillText(t(c[0]), p.x + dx / m * 15, p.y + dy / m * 15);
+      // the animate checkbox
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(CHECK.x + 1.5, CHECK.y + 1.5, 12, 12);
+      ctx.strokeStyle = "#666666"; ctx.lineWidth = 1; ctx.strokeRect(CHECK.x + 1.5, CHECK.y + 1.5, 12, 12);
+      if (animate) {
+        ctx.strokeStyle = "#000000"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.beginPath(); ctx.moveTo(CHECK.x + 4, CHECK.y + 7.5); ctx.lineTo(CHECK.x + 6.5, CHECK.y + 10.5); ctx.lineTo(CHECK.x + 11, CHECK.y + 4); ctx.stroke();
+      }
+      ctx.fillStyle = "#ffffff"; ctx.font = "bold 12px " + FONT; ctx.textAlign = "left";
+      FlashText.fill(ctx, t("sp.animate"), CHECK.x + 19, CHECK.y + 11.6);
+      // the two rules (shape 62), the date, the legend
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(292.2, 114.75); ctx.lineTo(533.2, 114.75); ctx.moveTo(292.2, 177.2); ctx.lineTo(533.2, 177.2); ctx.stroke();
+      ctx.font = "bold 14px " + FONT; ctx.textAlign = "center";
+      FlashText.fill(ctx, dateString(), 412.7, 137.45 + 1.0059 * 14);
+      ctx.font = "bold 12px " + FONT;
+      [["sp.legend1", 201.95], ["sp.legend2", 221.9], ["sp.legend3", 241.85], ["sp.legend4", 261.8]].forEach(function (l) {
+        var s = t(l[0]), i = s.indexOf(" - "), left = s.slice(0, i), right = s.slice(i);
+        ctx.textAlign = "right"; FlashText.fillStatic(ctx, left, 337, l[1]);     // the dashes line up, as in the SWF
+        ctx.textAlign = "left"; FlashText.fillStatic(ctx, right, 337, l[1]);
       });
-      ctx.textBaseline = "alphabetic";
-
-      // the big date readout, as in the original
-      var md = monthDay(day);
-      ctx.fillStyle = C.text; ctx.font = "600 22px system-ui"; ctx.textAlign = "center";
-      ctx.fillText(MONTHS[lang][md.m] + " " + md.dd, SCx, S.H - 96);
-      ctx.fillStyle = C.dim; ctx.font = "12px system-ui";
-      ctx.fillText(fmtLat(lat) + " · " + fmtClock(time), SCx, S.H - 76);
-
-      // colour legend, matching the SWF's four lines
-      var lx = 92, ly = S.H - 52, n = 0;
-      if (optCE.value()) legend(ctx, lx, ly + (n++) * 17, C.ce, t("sp.ce"));
-      if (optEcl.value()) legend(ctx, lx, ly + (n++) * 17, C.ecl, t("sp.ecl"));
-      n = 0;
-      if (optPath.value()) legend(ctx, lx + 250, ly + (n++) * 17, C.path, t("sp.path"));
-      if (optMer.value()) legend(ctx, lx + 250, ly + (n++) * 17, C.mer, t("sp.mer"));
     });
+    var GRABBER = { nz: false, layers: [[[["#cccccc", "M-3 -9.3L3 -9.3Q4.65 -9.3 5.8 -8.15Q7 -6.95 7 -5.3L7 6.7Q7 7.4 3.6 10.65L0.2 13.75Q-7 7.8 -7 6.7L-7 -5.3Q-7 -6.9 -5.85 -8.15Q-4.6 -9.3 -3 -9.3Z"]],
+      [[0.05, "#666666", "M3 -9.3L-3 -9.3Q-4.6 -9.3 -5.85 -8.15Q-7 -6.9 -7 -5.3L-7 6.7Q-7 7.8 0.2 13.75L3.6 10.65Q7 7.4 7 6.7L7 -5.3Q7 -6.95 5.8 -8.15Q4.65 -9.3 3 -9.3M-2.8 4.7L2.7 4.7M-2.8 0.1L2.7 0.1M-2.8 -4.5L2.7 -4.5"]]]] };
 
-    function legend(ctx, x, y, col, label) {
-      ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath();
-      ctx.moveTo(x, y); ctx.lineTo(x + 20, y); ctx.stroke();
-      ctx.fillStyle = C.dim; ctx.font = "11px system-ui"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(label, x + 26, y); ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
-    }
-    function stick(ctx, x, baseY) {
-      var top = baseY - 19;
-      ctx.fillStyle = "#0d1430"; ctx.beginPath(); ctx.arc(x, top, 3.4, 0, TAU); ctx.fill();
-      ctx.strokeStyle = "#0d1430"; ctx.lineWidth = 2; ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(x, top + 3); ctx.lineTo(x, baseY - 6);
-      ctx.moveTo(x - 5, top + 7); ctx.lineTo(x + 5, top + 7);
-      ctx.moveTo(x, baseY - 6); ctx.lineTo(x - 4, baseY);
-      ctx.moveTo(x, baseY - 6); ctx.lineTo(x + 4, baseY);
-      ctx.stroke(); ctx.lineCap = "butt";
-    }
+    sph.latitude = lat;
+    setDay(0);
+    upd();
   }
 });

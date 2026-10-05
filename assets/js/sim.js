@@ -33,6 +33,7 @@ window.Sim = (function () {
   function build(cfg) {
     var refreshers = [];           // run on language change (formatted values, titles)
     var drawFn = null, drawScheduled = false;
+    var playing = 0;               // running loops; each one draws every frame itself
 
     // ---- page scaffold ----
     document.body.prepend(UI.header());
@@ -110,7 +111,7 @@ window.Sim = (function () {
       clear: function () { ctx.clearRect(0, 0, W, H); },
       onDraw: function (fn) { drawFn = fn; },
       requestDraw: function () {
-        if (drawScheduled) return;
+        if (drawScheduled || playing > 0) return;    // (a running loop is about to draw anyway)
         drawScheduled = true;
         requestAnimationFrame(function () { drawScheduled = false; if (drawFn) drawFn(); });
       },
@@ -182,23 +183,28 @@ window.Sim = (function () {
         var k = el("div", "k"); k.setAttribute("data-i18n", o.labelKey);
         var v = el("div", "v"); v.textContent = "–";
         r.appendChild(k); r.appendChild(v); grid.appendChild(r);
-        return function (text) { v.textContent = text; };
+        var cur = null;                  // (only a changed text touches the page)
+        return function (text) { if (text !== cur) { cur = text; v.textContent = text; } };
       },
       loop: function (step) {
         var raf = null, last = 0;
         var api = {
           playing: false,
           play: function () {
-            if (api.playing) return; api.playing = true; last = 0;
+            if (api.playing) return; api.playing = true; playing++; last = 0;
             raf = requestAnimationFrame(function f(ts) {
               if (!api.playing) return;
               if (!last) last = ts;
               var dt = Math.min((ts - last) / 1000, 0.05); last = ts;
-              step(dt); if (drawFn) drawFn();
+              try { step(dt); if (drawFn) drawFn(); }
+              catch (e) { api.pause(); throw e; }      // (a dead loop must not keep requestDraw() off)
               raf = requestAnimationFrame(f);
             });
           },
-          pause: function () { api.playing = false; if (raf) cancelAnimationFrame(raf); },
+          pause: function () {
+            if (api.playing) playing--;
+            api.playing = false; if (raf) cancelAnimationFrame(raf);
+          },
           toggle: function () { api.playing ? api.pause() : api.play(); }
         };
         return api;

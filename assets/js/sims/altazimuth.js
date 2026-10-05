@@ -1,219 +1,225 @@
 /* Azimuth/Altitude Demonstrator -----------------------------------------------
    Faithful rebuild of the ClassAction "Azimuth/Altitude Demonstrator"
-   (altazimuth.swf): a 3-D celestial-sphere horizon diagram with a single
-   draggable star, showing how the horizon (alt-az) coordinates locate an object.
-     • Star Position — azimuth and altitude sliders (the star is also draggable),
-     • the altitude measured up from the horizon along the star's vertical circle,
-       and the azimuth measured along the horizon from due north,
-     • a Labels panel — show all / hide all, plus individual toggles for the
-       zenith, horizon plane, nadir and meridian.
-   Reuses the tilted alt-az sphere projection from the lunar-phases / sun-motions
-   horizon diagrams.                                                              */
+   (altazimuth.swf, AltAzDemoClass over the UNL CelestialSphere engine, both
+   decompiled): the SWF's "The Horizon Diagram" panel, drawn with the shared
+   engine in _celestialsphere.js exactly as AltAzDemoClass.init sets it up — a
+   320 px sphere of white glass, the observer at the centre of the green horizon
+   plane, the meridian, the star's vertical circle and its altitude circle, and
+   the two measured arcs: azimuth (blue) along the horizon from north, altitude
+   (red) up the star's vertical circle, each with its value label.
+     • Star Position — az 0–360°, alt −90–90° (the star is also draggable;
+       a star round the back of the sphere passes the press on to the sphere),
+     • Labels — show all / hide all, and the zenith, horizon plane, nadir and
+       meridian labels one by one,
+     • drag the sphere to turn it ("simple drag": a radian per sphere radius). */
 Sim.create({
   id: "altazimuth",
-  width: 620, height: 480,
+  width: 464, height: 480,
   strings: {
     en: {
-      "aa.pos": "Star Position", "aa.az": "azimuth", "aa.alt": "altitude",
-      "aa.dragHint": "you can also move the star by dragging it",
+      "aa.pos": "Star Position", "aa.az": "az", "aa.alt": "alt",
+      "aa.dragHint": "you can also change the star's position by dragging it",
       "aa.labels": "Labels", "aa.showAll": "show all", "aa.hideAll": "hide all",
-      "aa.zenith": "zenith", "aa.horizon": "horizon plane", "aa.nadir": "nadir", "aa.meridian": "meridian",
+      "aa.zenith": "Zenith", "aa.horizon": "Horizon Plane", "aa.nadir": "Nadir", "aa.meridian": "Meridian",
+      "aa.title": "The Horizon Diagram", "aa.reset": "Reset",
       "dir.N": "N", "dir.S": "S", "dir.E": "E", "dir.W": "W"
     },
     id: {
-      "aa.pos": "Posisi Bintang", "aa.az": "azimut", "aa.alt": "altitudo",
-      "aa.dragHint": "kamu juga bisa memindahkan bintang dengan menyeretnya",
+      "aa.pos": "Posisi Bintang", "aa.az": "az", "aa.alt": "alt",
+      "aa.dragHint": "posisi bintang juga bisa diubah dengan menyeretnya",
       "aa.labels": "Label", "aa.showAll": "tampilkan semua", "aa.hideAll": "sembunyikan semua",
-      "aa.zenith": "zenit", "aa.horizon": "bidang horizon", "aa.nadir": "nadir", "aa.meridian": "meridian",
+      "aa.zenith": "Zenit", "aa.horizon": "Bidang Horizon", "aa.nadir": "Nadir", "aa.meridian": "Meridian",
+      "aa.title": "Diagram Horizon", "aa.reset": "Atur ulang",
       "dir.N": "U", "dir.S": "S", "dir.E": "T", "dir.W": "B"
     }
   },
   about: {
-    en: "<p>The <strong>horizon (alt-azimuth) system</strong> pins any object in the sky with two angles measured by a local observer. <strong>Altitude</strong> is the angle up from the horizon (0° at the horizon, 90° straight overhead at the zenith). <strong>Azimuth</strong> is the compass bearing of the point directly below the object, measured clockwise from due north (N = 0°, E = 90°, S = 180°, W = 270°).</p>" +
-        "<p>Drag the star around the dome, or set its azimuth and altitude with the sliders. The yellow arc traces the altitude up the star's vertical circle; the arc along the green horizon plane traces the azimuth from north.</p>" +
+    en: "<p>The <strong>horizon (alt-azimuth) system</strong> pins any object in the sky with two angles measured by a local observer. <strong>Altitude</strong> is the angle up from the horizon (0° at the horizon, 90° straight overhead at the zenith). <strong>Azimuth</strong> is the compass bearing of the point directly below the object, measured from due north through east (N = 0°, E = 90°, S = 180°, W = 270°).</p>" +
+        "<p>Drag the star around the sphere, or set its azimuth and altitude with the sliders. The red arc traces the altitude up the star's vertical circle; the blue arc along the green horizon plane traces the azimuth from north. Drag anywhere else on the sphere to turn it.</p>" +
         "<p>This system is wonderfully intuitive — it's how you'd point at a star — but it's tied to <em>your</em> location and the <em>moment</em>: as Earth turns, every star's altitude and azimuth change. That's why catalogues instead use the fixed equatorial (RA/Dec) system.</p>",
-    id: "<p><strong>Sistem horizon (alt-azimut)</strong> menetapkan posisi benda langit dengan dua sudut yang diukur pengamat lokal. <strong>Altitudo</strong> adalah sudut naik dari horizon (0° di horizon, 90° tepat di atas kepala di zenit). <strong>Azimut</strong> adalah arah kompas titik tepat di bawah benda, diukur searah jarum jam dari utara (U = 0°, T = 90°, S = 180°, B = 270°).</p>" +
-        "<p>Seret bintang mengelilingi kubah, atau atur azimut dan altitudonya dengan penggeser. Busur kuning menelusuri altitudo pada lingkaran vertikal bintang; busur di bidang horizon hijau menelusuri azimut dari utara.</p>" +
+    id: "<p><strong>Sistem horizon (alt-azimut)</strong> menetapkan posisi benda langit dengan dua sudut yang diukur pengamat lokal. <strong>Altitudo</strong> adalah sudut naik dari horizon (0° di horizon, 90° tepat di atas kepala di zenit). <strong>Azimut</strong> adalah arah kompas titik tepat di bawah benda, diukur dari utara melalui timur (U = 0°, T = 90°, S = 180°, B = 270°).</p>" +
+        "<p>Seret bintang mengelilingi bola, atau atur azimut dan altitudonya dengan penggeser. Busur merah menelusuri altitudo pada lingkaran vertikal bintang; busur biru di bidang horizon hijau menelusuri azimut dari utara. Seret bagian lain bola untuk memutarnya.</p>" +
         "<p>Sistem ini sangat intuitif — seperti cara kamu menunjuk bintang — tetapi terikat pada <em>lokasi</em> dan <em>saat</em>-mu: seiring Bumi berputar, altitudo dan azimut tiap bintang berubah. Karena itu katalog memakai sistem ekuatorial (AR/Dek) yang tetap.</p>"
   },
   build: function (S) {
-    var C = { text: "#e8ecf8", dim: "#9fabce", border: "#2c3a66", star: "#ffd166",
-              alt: "#ff6b6b", az: "#6ea8fe", merid: "#b692ff", green: "#3f8a45" };
-    var D2R = Math.PI / 180, R2D = 180 / Math.PI, TAU = Math.PI * 2;
-    var az = 140, alt = 45;
+    var FONT = "Verdana, Geneva, sans-serif";
+    var OY = -30;                                   // the SWF's title bar is the page header here
+    var PANEL = { x: 7, y: 37 + OY, w: 450, h: 466 };   // Panel Background 300×150 at (1.5, 3.107)
+    var AZ_COLOR = 0x5645f5, ALT_COLOR = 0xa63843;  // AltAzDemoClass.azColor / altColor
+    var syncing = false, drag = null;
 
-    /* ---- controls ---- */
+    /* ---- the CelestialSphere, as AltAzDemoClass.init sets it up ---- */
+    var CS = window.CelestialSphere, sph = new CS({ x: 232, y: 278 + OY });
+    sph.size = 320;
+    sph.minViewerAltitude = 7;
+    sph.addShadingClip(CS.GradientDisk, "sphereBack", "back", "inner", "both",
+      { outerColor: 0xffffff, innerColor: 0xffffff, outerAlpha: 60, innerAlpha: 50 });
+    sph.addShadingClip(CS.GradientDisk, "sphereFront", "front", "inner", "both",
+      { outerColor: 0xffffff, innerColor: 0xffffff, outerAlpha: 20, innerAlpha: 5 });
+    sph.addObject("azLabel", CS.art.csLabel, { alt: 0, az: 0 }, { labelColor: AZ_COLOR });
+    sph.addObject("altLabel", CS.art.csLabel, { alt: 0, az: 0 }, { labelColor: ALT_COLOR });
+    sph.addObject("stickfigure", CS.art.stickfigureAltaz, { system: "horizon", x: 0, y: 0, z: 0 }, { _yscale: 120, _xscale: 120 });
+    sph.stickfigure.setOrientationType("absolute", { system: "horizon", x: -1, y: 0, z: 0 }, { system: "horizon", x: 0, y: 0, z: 1 });
+    sph.minViewerAltitude = 1;
+    sph.addHorizonPlaneClip(CS.directionLabels(function () {
+      return { N: I18N.t("dir.N"), S: I18N.t("dir.S"), E: I18N.t("dir.E"), W: I18N.t("dir.W") };
+    }), "aboveLabels", "above");
+    sph.addObject("zenithMarker", marker, { alt: 90, az: 0 }, { labelText: "" });
+    sph.zenithMarker.setOrientationType("absolute");
+    sph.addObject("nadirMarker", marker, { alt: -90, az: 0 }, { labelText: "" });
+    sph.nadirMarker.setOrientationType("absolute");
+    sph.addLine("npLine", { alpha: 100, color: 0x505050, thickness: 2 }, { r: 1, alt: 90, az: 0 }, { r: 1.2, alt: 90, az: 0 });
+    sph.addLine("spLine", { alpha: 100, color: 0x505050, thickness: 2 }, { r: 1, alt: -90, az: 0 }, { r: 1.2, alt: -90, az: 0 });
+    // the four labels: a leader line and an 11 px Verdana caption, flat on the screen
+    sph.addObject("zenithLabel", label([4.75, -4.25, 24.5, -24], "aa.zenith", 26.75, -20.25, "left"), { system: "horizon", x: 0, y: 0, z: 1 });
+    sph.addObject("nadirLabel", label([4.5, 4, 23.5, 24], "aa.nadir", 25.75, 28.4, "left"), { system: "horizon", x: 0, y: 0, z: -1 });
+    sph.addObject("horizonLabel", label([-23.15, 9.15, -5.15, 2.4], "aa.horizon", -29.25, 16.25, "right"), { system: "horizon", x: 0, y: 0, z: 0 });
+    sph.addObject("meridianLabel", label([-24.35, -6.5, -5.25, -1.65], "aa.meridian", -27.05, -3.75, "right"), { r: 1, az: 180, alt: 35 });
+    sph.addCircle("meridian2", { alpha: 10, color: 0x000000, thickness: 1 }, { tilt: 90, alt: 0, az: 90 });
+    sph.addCircle("azCircle", { alpha: 100, color: 0xa0a0a0, thickness: 1 }, { tilt: 90, alt: 0, az: 0 });
+    sph.addCircle("altCircle", { alpha: 100, color: 0xa0a0a0, thickness: 1 }, { tilt: 90, alt: 0, az: 0 });
+    sph.addCircle("meridian", { alpha: 100, color: 0x216331, thickness: 2 }, { tilt: 90, alt: 0, az: 0 });
+    sph.addCircle("azArc", { alpha: 100, color: AZ_COLOR, thickness: 3 }, { tilt: 0, alt: 0, az: 0 });
+    sph.addCircle("altArc", { alpha: 100, color: ALT_COLOR, thickness: 3 }, { tilt: 90, alt: 0, az: 0 });
+    sph.addObject("star", function (ctx, o) { CS.art.star(ctx, o.hot); }, { alt: 0, az: 0 });
+    sph.onMouseUpdate = onSphereOrientationChanged;
+
+    /* ---- the art: Marker (shape 70), and the Zenith / Nadir / Horizon Plane / Meridian labels ---- */
+    function marker(ctx) {
+      ctx.beginPath(); ctx.arc(0, 0, 5.75, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(162,162,162,0.8)"; ctx.fill();
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 1; ctx.stroke();
+    }
+    function label(line, key, x, y, align) {
+      return function (ctx) {
+        ctx.strokeStyle = "#000000"; ctx.lineWidth = 1; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(line[0], line[1]); ctx.lineTo(line[2], line[3]); ctx.stroke();
+        ctx.fillStyle = "#000000"; ctx.font = "11px " + FONT;
+        ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+        FlashText.fillStatic(ctx, I18N.t(key), x, y, align);
+      };
+    }
+
+    /* ---- AltAzDemoClass: setStarLocation, onSphereOrientationChanged, updateLabels ---- */
+    function setStarLocation(pt, skipSliderSync) {
+      if (pt.az !== 360) pt.az = ((pt.az % 360) + 360) % 360;
+      sph.azLabel.labelText = pt.az.toFixed(1) + "°";
+      sph.azLabel.setPosition({ r: 1.001, alt: 5, az: pt.az - 13 });
+      sph.azLabel.setOrientationType("absolute");
+      sph.altLabel.labelText = pt.alt.toFixed(1) + "°";
+      sph.altLabel.setPosition({ r: 1.001, alt: pt.alt / 2, az: pt.az + 13 });
+      sph.altLabel.setOrientationType("absolute");
+      sph.star.setPosition(pt);
+      sph.star.setOrientationType("absolute");
+      if (pt.az !== 0) { sph.azArc.setParameters({ gammaEnd: 0, gammaStart: 360 - pt.az, tilt: 0, alt: 0, az: 0 }); sph.azArc.visible = true; }
+      else sph.azArc.visible = false;
+      sph.azCircle.setParameters({ gammaEnd: 90, gammaStart: -90, tilt: 90, alt: 0, az: pt.az });
+      if (pt.alt < 0) { sph.altArc.setParameters({ gammaEnd: 0, gammaStart: pt.alt, tilt: 90, alt: 0, az: pt.az }); sph.altArc.visible = true; }
+      else if (pt.alt > 0) { sph.altArc.setParameters({ gammaEnd: pt.alt, gammaStart: 0, tilt: 90, alt: 0, az: pt.az }); sph.altArc.visible = true; }
+      else sph.altArc.visible = false;
+      sph.altCircle.setParameters({ tilt: 0, alt: pt.alt, az: 0 });
+      if (!skipSliderSync) { syncing = true; azCtl.set(pt.az); altCtl.set(pt.alt); syncing = false; }
+      S.requestDraw();
+    }
+    function onSphereOrientationChanged() {        // the horizon label follows the view round
+      sph.horizonLabel.setPosition({ r: 1, az: 394 - sph.theta, alt: 0 });
+    }
+    function updateLabels() {
+      sph.zenithLabel.visible = optZen.value();
+      sph.horizonLabel.visible = optHor.value();
+      sph.nadirLabel.visible = optNad.value();
+      sph.meridianLabel.visible = optMer.value();
+      S.requestDraw();
+    }
+    function setAll(b) {
+      syncing = true; [optZen, optHor, optNad, optMer].forEach(function (o) { o.set(b); }); syncing = false;
+      updateLabels();
+    }
+    function reset() {
+      setStarLocation({ alt: 45, az: 140 });
+      sph.setThetaAndPhi(190, 28);
+      onSphereOrientationChanged();
+      setAll(false);
+    }
+
+    /* ---- controls: the Star Position and Labels panels ---- */
     S.group("aa.pos");
-    var azCtl = S.slider({ labelKey: "aa.az", min: 0, max: 360, step: 0.5, value: az,
-      format: function (v) { return v.toFixed(1) + "°"; }, on: function (v) { az = v; S.requestDraw(); } });
-    var altCtl = S.slider({ labelKey: "aa.alt", min: -90, max: 90, step: 0.5, value: alt,
-      format: function (v) { return v.toFixed(1) + "°"; }, on: function (v) { alt = v; S.requestDraw(); } });
-
+    var azCtl = S.slider({ labelKey: "aa.az", min: 0, max: 360, step: 0.1, value: 140,
+      format: function (v) { return v.toFixed(1) + "°"; },
+      on: function (v) { if (!syncing) setStarLocation({ alt: altCtl.value(), az: v }, true); } });
+    var altCtl = S.slider({ labelKey: "aa.alt", min: -90, max: 90, step: 0.1, value: 45,
+      format: function (v) { return v.toFixed(1) + "°"; },
+      on: function (v) { if (!syncing) setStarLocation({ alt: v, az: azCtl.value() }, true); } });
+    var hint = document.createElement("p");
+    hint.className = "sim-note"; hint.setAttribute("data-i18n", "aa.dragHint");
+    S.canvas.parentNode.parentNode.querySelector(".sim-controls").appendChild(hint);
     S.group("aa.labels");
     S.button({ labelKey: "aa.showAll", on: function () { setAll(true); } });
     S.button({ labelKey: "aa.hideAll", on: function () { setAll(false); } });
-    var optZen = S.toggle({ labelKey: "aa.zenith", value: true });
-    var optHor = S.toggle({ labelKey: "aa.horizon", value: true });
-    var optNad = S.toggle({ labelKey: "aa.nadir", value: false });
-    var optMer = S.toggle({ labelKey: "aa.meridian", value: true });
-    function setAll(b) { [optZen, optHor, optNad, optMer].forEach(function (o) { o.set(b); }); }
+    function onToggle() { if (!syncing) updateLabels(); }
+    var optZen = S.toggle({ labelKey: "aa.zenith", value: false, on: onToggle });
+    var optHor = S.toggle({ labelKey: "aa.horizon", value: false, on: onToggle });
+    var optNad = S.toggle({ labelKey: "aa.nadir", value: false, on: onToggle });
+    var optMer = S.toggle({ labelKey: "aa.meridian", value: false, on: onToggle });
+    S.button({ labelKey: "aa.reset", on: reset });
 
-    /* ===================== projection (tilted alt-az globe) ===================== */
-    var SCx = 300, SCy = 252, R = 196, TILT = 24 * D2R;
-    var sinB = Math.sin(TILT), cosB = Math.cos(TILT), rx = R, ry = R * sinB;
-    // azimuth from north, measured to the EAST: N at the back (top), S front, E right, W left
-    function projVec(E, N, U) { return { x: SCx + R * E, y: SCy - R * (U * cosB + N * sinB) }; }
-    function project(a, z) { var c = Math.cos(a * D2R); return projVec(c * Math.sin(z * D2R), c * Math.cos(z * D2R), Math.sin(a * D2R)); }
-
-    /* draw a great/small circle given a list of {alt,az}, solid above horizon, faint below */
-    function curve(pts, col, w, dashBelow) {
-      var ctx = S.ctx;
-      for (var seg = 0; seg < 2; seg++) {
-        ctx.beginPath(); var pen = false;
-        for (var i = 0; i < pts.length; i++) {
-          if ((pts[i].alt >= 0) !== (seg === 0)) { pen = false; continue; }
-          var p = project(pts[i].alt, pts[i].az);
-          pen ? ctx.lineTo(p.x, p.y) : (ctx.moveTo(p.x, p.y), pen = true);
-        }
-        ctx.strokeStyle = col; ctx.lineWidth = seg === 0 ? w : 1;
-        ctx.globalAlpha = seg === 0 ? 1 : 0.22; if (seg === 1 && dashBelow) ctx.setLineDash([4, 4]);
-        ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-      }
+    /* ---- pointer: the AzAlt Draggable Star, else the sphere's simple drag ---- */
+    function at(ev) { return CS.canvasPoint(S.canvas, ev, S.W, S.H); }
+    function onStar(p) {
+      var o = sph.star;
+      if (!o.shown) return false;
+      var q = o.toLocal(p.x, p.y);
+      return q.x * q.x + q.y * q.y <= 10.5 * 10.5;
     }
-
-    /* drag the star: pick nearest (alt,az) on the visible dome to the pointer */
-    var dragging = false;
-    function localXY(ev) { var r = S.canvas.getBoundingClientRect();
-      return { x: (ev.clientX - r.left) * (S.W / r.width), y: (ev.clientY - r.top) * (S.H / r.height) }; }
     S.canvas.addEventListener("pointerdown", function (ev) {
-      var m = localXY(ev), p = project(alt, az);
-      if (Math.hypot(m.x - p.x, m.y - p.y) < 36) { dragging = true; S.canvas.setPointerCapture(ev.pointerId); }
+      var p = at(ev);
+      if (onStar(p) && sph.star.screen.z > 0) drag = "star";
+      else if (sph.startDrag(p.x, p.y)) drag = "sphere";
+      else return;
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      ev.preventDefault();
     });
     S.canvas.addEventListener("pointermove", function (ev) {
-      if (!dragging) return;
-      var m = localXY(ev), best = 1e9, ba = alt, bz = az;
-      for (var a = -90; a <= 90; a += 1.5) for (var z = 0; z < 360; z += 2) {
-        // prefer the near (viewer-facing) side so the star follows the cursor on the visible globe
-        var depth = Math.sin(a * D2R) * sinB - Math.cos(a * D2R) * Math.cos(z * D2R) * cosB;
-        if (depth < -0.12) continue;
-        var p = project(a, z), d = (p.x - m.x) * (p.x - m.x) + (p.y - m.y) * (p.y - m.y);
-        if (d < best) { best = d; ba = a; bz = z; }
+      var p = at(ev);
+      if (!drag) {
+        var hot = onStar(p) && sph.star.screen.z > 0;
+        if (hot !== !!sph.star.hot) { sph.star.hot = hot; S.requestDraw(); }
+        return;
       }
-      alt = ba; az = bz; azCtl.set(az); altCtl.set(alt); S.requestDraw();
+      if (drag === "star") {                        // onMouseMoveFunc: StoMH at the mouse
+        var h = sph.screenToHorizon(p.x, p.y);
+        setStarLocation({ alt: h.alt, az: h.az });
+      } else { sph.dragTo(p.x, p.y); S.requestDraw(); }
     });
-    S.canvas.addEventListener("pointerup", function () { dragging = false; });
+    ["pointerup", "pointercancel"].forEach(function (e) {
+      S.canvas.addEventListener(e, function () { drag = null; sph.endDrag(); });
+    });
+    S.canvas.addEventListener("pointerleave", function () {
+      if (!drag && sph.star.hot) { sph.star.hot = false; S.requestDraw(); }
+    });
 
+    /* ---- drawing: the panel, then the sphere ---- */
     S.onDraw(function () {
-      var ctx = S.ctx; S.clear();
-      ctx.save(); ctx.beginPath(); ctx.arc(SCx, SCy, R + 2, 0, TAU); ctx.clip();
-
-      // sky dome (upper hemisphere) + dark underside
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, Math.PI, TAU, false);
-      ctx.ellipse(SCx, SCy, rx, ry, 0, TAU, Math.PI, true); ctx.closePath();
-      var sg = ctx.createLinearGradient(0, SCy - R, 0, SCy + ry);
-      sg.addColorStop(0, "#1a2a52"); sg.addColorStop(1, "#243a63"); ctx.fillStyle = sg; ctx.fill();
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, Math.PI, false);
-      ctx.ellipse(SCx, SCy, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
-      ctx.fillStyle = "#060a16"; ctx.fill();
-
-      // meridian (vertical great circle through N–zenith–S–nadir, i.e. az 0/180)
-      if (optMer.value()) {
-        var mp = [];
-        for (var t = 0; t <= 180; t += 2) mp.push({ alt: 90 - Math.abs(90 - t), az: t <= 90 ? 0 : 180 });   // N→zenith→S
-        for (var t2 = 0; t2 <= 180; t2 += 2) mp.push({ alt: -(90 - Math.abs(90 - t2)), az: t2 <= 90 ? 180 : 0 }); // S→nadir→N
-        curve(mp, C.merid, 1.4, true);
-      }
-
-      // horizon plane (translucent green)
-      if (optHor.value()) {
-        ctx.beginPath(); ctx.ellipse(SCx, SCy, rx, ry, 0, 0, TAU);
-        var gg = ctx.createLinearGradient(0, SCy - ry, 0, SCy + ry);
-        gg.addColorStop(0, "#3f8a45"); gg.addColorStop(1, "#2c6a36");
-        ctx.fillStyle = gg; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
-        ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1; ctx.stroke();
-      } else {
-        ctx.strokeStyle = "rgba(120,200,140,0.6)"; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.ellipse(SCx, SCy, rx, ry, 0, 0, TAU); ctx.stroke();
-      }
-      ctx.restore();
-
-      // sphere outline
-      ctx.strokeStyle = C.border; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, TAU); ctx.stroke();
-
-      var below = alt < 0;
-
-      // azimuth arc along the horizon from N (az 0) to the star's foot
-      var foot = []; for (var z = 0; z <= az; z += 2) foot.push({ alt: 0, az: z });
-      strokePath(ctx, foot, C.az, 2);
-      // altitude arc along the star's vertical circle from the horizon to the star (up or down)
-      var lo = Math.min(0, alt), hi = Math.max(0, alt), vc = [];
-      for (var a2 = lo; a2 <= hi; a2 += 2) vc.push({ alt: a2, az: az });
-      if (!vc.length || vc[vc.length - 1].alt !== alt) vc.push({ alt: alt, az: az });
-      ctx.save(); if (below) ctx.globalAlpha = 0.45; strokePath(ctx, vc, C.alt, 2); ctx.restore();
-
-      // zenith / nadir markers
-      if (optZen.value()) { var ze = project(90, 0); marker(ctx, ze.x, ze.y, "#cfe0ff", I18N.t("aa.zenith"), -10); }
-      if (optNad.value()) { var na = projVec(0, 0, -1); marker(ctx, na.x, na.y, "#7d8bb0", I18N.t("aa.nadir"), 14); }
-
-      // the star + dotted drop line to its foot (dimmed when the star is below the horizon)
-      var sp = project(alt, az), fp = project(0, az);
-      ctx.save(); if (below) ctx.globalAlpha = 0.4;
-      ctx.strokeStyle = "rgba(255,209,102,0.45)"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.moveTo(fp.x, fp.y); ctx.lineTo(sp.x, sp.y); ctx.stroke(); ctx.setLineDash([]);
-      drawStar(ctx, sp.x, sp.y, 9);
-      ctx.restore();
-      dot(ctx, fp.x, fp.y, C.az, 3);
-
-      // observer stick figure at centre
-      stick(ctx, SCx, SCy);
-
-      // cardinal labels (N back/top, S front/bottom, E right, W left — matches the original)
-      ctx.fillStyle = "#eaf2ff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(I18N.t("dir.N"), SCx, SCy - ry - 11);
-      ctx.fillText(I18N.t("dir.S"), SCx, SCy + ry + 12);
-      ctx.fillText(I18N.t("dir.E"), SCx + R + 12, SCy);
-      ctx.fillText(I18N.t("dir.W"), SCx - R - 12, SCy);
-      ctx.textBaseline = "alphabetic";
-
-      // angle readouts near the star
-      ctx.font = "12px var(--mono, monospace)"; ctx.textAlign = "left";
-      ctx.fillStyle = C.alt; ctx.fillText("alt " + alt.toFixed(1) + "°", sp.x + 12, sp.y - 4);
-      ctx.fillStyle = C.az; ctx.fillText("az " + az.toFixed(1) + "°", sp.x + 12, sp.y + 12);
-
-      // drag hint
-      ctx.fillStyle = C.dim; ctx.font = "11px system-ui"; ctx.textAlign = "center";
-      ctx.fillText(I18N.t("aa.dragHint"), SCx, S.H - 12);
-    });
-
-    function strokePath(ctx, pts, col, w) {
+      var ctx = S.ctx, title = I18N.t("aa.title");
+      FlashText.begin(ctx);
+      ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
+      var b = PANEL;                                // Panel Background, a 14 px #333333 title
+      ctx.fillStyle = "#fafafa"; ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = "#666666"; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      ctx.fillStyle = "#333333"; ctx.font = "14px " + FONT;
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, title, b.x + 5, b.y + 4 + 1.0059 * 14);
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";
       ctx.beginPath();
-      for (var i = 0; i < pts.length; i++) { var p = project(pts[i].alt, pts[i].az); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
-      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
-    }
-    function marker(ctx, x, y, col, label, dy) {
-      dot(ctx, x, y, col, 3.5);
-      ctx.fillStyle = col; ctx.font = "11px system-ui"; ctx.textAlign = "center";
-      ctx.fillText(label, x, y + dy);
-    }
-    function drawStar(ctx, x, y, r) {
-      ctx.save(); ctx.translate(x, y); ctx.fillStyle = C.star;
-      ctx.beginPath();
-      for (var i = 0; i < 10; i++) { var ang = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
-        i ? ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr) : ctx.moveTo(Math.cos(ang) * rr, Math.sin(ang) * rr); }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "#7a5a00"; ctx.lineWidth = 0.8; ctx.stroke(); ctx.restore();
-    }
-    function stick(ctx, x, baseY) {
-      var top = baseY - 16;
-      ctx.fillStyle = "#d6e2ff"; ctx.beginPath(); ctx.arc(x, top, 3, 0, TAU); ctx.fill();
-      ctx.strokeStyle = "#d6e2ff"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(x, top + 3); ctx.lineTo(x, baseY - 5);
-      ctx.moveTo(x - 4, top + 7); ctx.lineTo(x + 4, top + 7);
-      ctx.moveTo(x, baseY - 5); ctx.lineTo(x - 3, baseY);
-      ctx.moveTo(x, baseY - 5); ctx.lineTo(x + 3, baseY);
+      ctx.moveTo(b.x + 10 + FlashText.textWidth(ctx, title), b.y + 14.44); ctx.lineTo(b.x + b.w - 5, b.y + 14.44);
       ctx.stroke(); ctx.lineCap = "butt";
-    }
-    function dot(ctx, x, y, col, r) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+      ctx.save();
+      ctx.beginPath(); ctx.rect(b.x + 1, b.y + 1, b.w - 2, b.h - 2); ctx.clip();
+      sph.draw(ctx);
+      ctx.restore();
+    });
+    window.addEventListener("langchange", function () { S.requestDraw(); });
+
+    reset();
   }
 });
