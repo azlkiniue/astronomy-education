@@ -1,16 +1,19 @@
 /* Telescope Simulator ----------------------------------------------------------
    Faithful rebuild of the ClassAction "telescope10.swf". Every number below was
    decoded from the SWF's own ActionScript (drawTelescope, changeAperture,
-   changeEyepiece, changeFocus, updateReadouts), so the drawing is the original
-   construction rather than a look-alike:
+   changeEyepiece, changeFocus, changeObject, updateReadouts), and the art is
+   the SWF's own: the hatched "rect" lens symbol, the focus knob, the panels,
+   the field-of-view disc and its mask (_telescope-art.js), and the three
+   photographs it shows through the eyepiece (assets/img/sims/telescope-*.jpg).
 
      • the refractor is built in a local frame — objective ('lens1') at x = 750,
        eyepiece ('lens2') at x = 50 + focus, the step down to the drawtube at
        x = 150 — then the whole telescope is rotated −25° and placed at (0, 320)
        on the 1000×750 stage;
-     • both lenses are the same hatched 'rect' symbol stretched to size, so the
-       eyepiece gets thicker as its focal length gets shorter (15 / 20 / 25 px for
-       40 / 20 / 10 mm) and its hatching is squeezed accordingly;
+     • both lenses are the same "rect" symbol stretched to size with _width /
+       _height (its 53 × 103 bounds include the stroke), so the eyepiece gets
+       thicker as its focal length gets shorter (15 / 20 / 25 px for 40 / 20 /
+       10 mm) and its hatching is squeezed accordingly;
      • rays enter parallel at ±H/3 (plus ±H/8 on the 8-inch, and a centre ray on
        the 6-inch), bend at the objective, cross, reach the eyepiece and leave
        parallel, stopping 30 px beyond it. The crossing is steered by each
@@ -18,38 +21,43 @@
        ±H/3 rays with an H/4 slope, which is why they cross a little further out;
      • the focus knob turns 30° per focus unit, and racking focus slides the
        drawtube 1 px per unit;
-     • readouts come from the SWF's tables: Fo = 1400 / 1220 / 1020 mm,
-       LGP 840 / 475 / 210, magnification ⌊Fo/Fe⌋, resolution ⌊450/D⌋/100, and a
-       3×3 field-of-view table;
+     • the target is attached at (755, 511) — a few pixels off the field's
+       centre (761, 508), as in the SWF — scaled by a 3×3 table (36 … 66 %),
+       dimmed by the aperture (100 / 80 / 60 %) and masked to the field;
      • the view is sharp at focus = −focusOffset (+3.6 / +0.6 / −3.2 for the
        40 / 20 / 10 mm eyepieces); away from it the SWF fakes defocus with eight
-       15%-alpha copies of the image pushed outwards, reproduced here.          */
+       15%-alpha copies of the image pushed outwards, reproduced here;
+     • readouts come from the SWF's tables: Fo = 1400 / 1220 / 1020 mm,
+       LGP 840 / 475 / 210, magnification ⌊Fo/Fe⌋, resolution ⌊450/D⌋/100, and a
+       3×3 field-of-view table.
+   The Observing radio buttons and the Focus Adjustments slider work on the
+   canvas as in the SWF; the sidebar mirrors them.                            */
 Sim.create({
   id: "telescope10",
-  width: 780, height: 586,
+  width: 1000, height: 750,
   strings: {
     en: {
-      "ts.obs": "Observing", "ts.ap": "aperture", "ts.eye": "eyepiece", "ts.target": "target",
+      "ts.obs": "Observing", "ts.ap": "Aperture", "ts.eye": "Eyepiece", "ts.target": "Target",
       "ts.focusG": "Focus Adjustments", "ts.focus": "focus",
+      "ts.in8": "8-inch", "ts.in6": "6-inch", "ts.in4": "4-inch",
+      "ts.mm40": "40 mm", "ts.mm20": "20 mm", "ts.mm10": "10 mm",
       "ts.moon": "Moon", "ts.saturn": "Saturn", "ts.cluster": "Cluster",
-      "ts.readouts": "Readouts", "ts.lgp": "LGP", "ts.lgpNote1": "(times that of the", "ts.lgpNote2": "human eye)",
+      "ts.readouts": "Readouts", "ts.lgp": "LGP", "ts.lgpNote1": "(times that of the ", "ts.lgpNote2": "human eye)",
       "ts.res": "Resolution", "ts.mag": "Magnification", "ts.fov": "Field of View",
       "ts.title1": "Refracting", "ts.title2": "Telescope", "ts.fovLabel": "Field of View",
       "ts.arcsec": "arc-secs",
-      "ts.rLgp": "light-gathering power", "ts.rRes": "resolution", "ts.rMag": "magnification",
-      "ts.rFo": "objective focal length", "ts.rFov": "field of view", "ts.rSize": "target's angular size",
       "ts.hint": "turn the focus until the image is sharp — each eyepiece focuses at a different setting"
     },
     id: {
-      "ts.obs": "Pengamatan", "ts.ap": "apertur", "ts.eye": "okuler", "ts.target": "sasaran",
+      "ts.obs": "Pengamatan", "ts.ap": "Apertur", "ts.eye": "Okuler", "ts.target": "Sasaran",
       "ts.focusG": "Penyetelan Fokus", "ts.focus": "fokus",
-      "ts.moon": "Bulan", "ts.saturn": "Saturnus", "ts.cluster": "Gugus Bintang",
+      "ts.in8": "8 inci", "ts.in6": "6 inci", "ts.in4": "4 inci",
+      "ts.mm40": "40 mm", "ts.mm20": "20 mm", "ts.mm10": "10 mm",
+      "ts.moon": "Bulan", "ts.saturn": "Saturnus", "ts.cluster": "Gugus",
       "ts.readouts": "Pembacaan", "ts.lgp": "DKC", "ts.lgpNote1": "(kali daya kumpul", "ts.lgpNote2": "mata manusia)",
       "ts.res": "Resolusi", "ts.mag": "Perbesaran", "ts.fov": "Medan Pandang",
       "ts.title1": "Teleskop", "ts.title2": "Refraktor", "ts.fovLabel": "Medan Pandang",
       "ts.arcsec": "detik busur",
-      "ts.rLgp": "daya kumpul cahaya", "ts.rRes": "resolusi", "ts.rMag": "perbesaran",
-      "ts.rFo": "fokus lensa objektif", "ts.rFov": "medan pandang", "ts.rSize": "ukuran sudut sasaran",
       "ts.hint": "putar fokus hingga gambar tajam — tiap okuler fokus pada setelan berbeda"
     }
   },
@@ -62,8 +70,10 @@ Sim.create({
         "<p>Perhatikan gambarnya saat mengganti okuler: okuler berfokus pendek adalah lensa yang lebih tebal dan lebih melengkung, dan masing-masing mencapai fokus pada posisi tabung geser yang berbeda. Perhatikan pula harga perbesaran — <strong>medan pandang</strong> menyempit (pada 10 mm Bulan meluber dari medan teleskop yang lebih besar) dan, melampaui batas urai apertur, gambar hanya makin besar dan redup tanpa detail baru.</p>"
   },
   build: function (S) {
-    var D2R = Math.PI / 180, TAU = Math.PI * 2;
-    var K = S.W / 1000;                                  // SWF stage px → canvas px
+    var D2R = Math.PI / 180, TAU = Math.PI * 2, ASC = 1.0059;
+    var ART = window.TELESCOPE_ART, draw = SwfShape.draw;
+    var ARIAL = "Arial, Helvetica, sans-serif", VERDANA = "Verdana, Geneva, sans-serif";
+    var DEVICE = "'Noto Sans', Arial, Helvetica, sans-serif";     // Ruffle's stand-in for device fonts
 
     /* ================ the SWF's own tables (from its ActionScript) ================ */
     // radio order in the SWF: aperture 1 = 8-inch, 2 = 6-inch, 3 = 4-inch
@@ -80,54 +90,29 @@ Sim.create({
     var LGP = [840, 475, 210];
     var FOV = [1.22, 1.42, 1.76, 0.72, 0.85, 1.02, 0.42, 0.49, 0.58];   // [(eyepiece)·3 + aperture]
     var SCALE = [[36, 32, 28], [48, 44, 40], [66, 58, 48]];             // image scale %, [eyepiece][aperture]
-    var GHOST_X = [0, 2, 1.4, 0, -1.4, -2, -1.4, 0, 1.4];               // defocus copies — including the
-    var GHOST_Y = [0, 0, 1.4, 2, 1, 0, -1.4, -2, -1.4];                 // original's odd "1" in slot 4
+    var GHOST_X = [0, 2, 1.4, 0, -1.4, -2, -1.4, 0, 1.4];               // objectXOffset / objectYOffset —
+    var GHOST_Y = [0, 0, 1.4, 2, 1, 0, -1.4, -2, -1.4];                 // including the original's odd "1"
     var LENS1_X = 750, LENS_Y = 150, ILENS2_X = 50, XTUBE = 150, LENS2_H = 40;
     var TEL_X = 0, TEL_Y = 320, TEL_ROT = -25;                          // telescope clip placement
-    var FOV_X = 755, FOV_Y = 511, FOV_R = 240;                          // eyepiece view on the stage
+    var OBJ_X = 755, OBJ_Y = 511;                                       // mainObject's position
+    var MASK = { x: 761, y: 508, r: 236 * 0.995773 };                   // viewmask: shape 26 at 99.58 %
 
-    // true angular sizes, for the readout only (degrees)
-    var TARGET_SIZE = { moon: 0.518, saturn: 0.0117, cluster: 0.40 };
+    /* the targets: each a bitmap-filled rectangle the size of its photograph,
+       centred on the clip (bitmap fill matrix 20 twips a pixel, −w/2, −h/2) */
+    var TARGETS = {
+      moon: { src: "telescope-moon.jpg", w: 980, h: 999 },
+      saturn: { src: "telescope-saturn.jpg", w: 1000, h: 1000 },
+      cluster: { src: "telescope-cluster.jpg", w: 1500, h: 1500 }
+    };
+    Object.keys(TARGETS).forEach(function (k) {
+      var t = TARGETS[k], img = new Image();
+      img.onload = function () { t.ready = true; S.requestDraw(); };
+      img.src = "../assets/img/sims/" + t.src;
+      t.img = img;
+    });
 
     /* ---- state: the SWF opens on 8-inch, 40 mm, Moon, focus 8.0 ---- */
     var apKey = "8", epKey = "40", target = "moon", focus = 8.0;
-
-    /* ================================ controls ================================ */
-    S.group("ts.obs");
-    S.select({
-      labelKey: "ts.ap", value: apKey,
-      options: [{ v: "8", label: "8-inch" }, { v: "6", label: "6-inch" }, { v: "4", label: "4-inch" }],
-      on: function (v) { apKey = v; upd(); }
-    });
-    S.select({
-      labelKey: "ts.eye", value: epKey,
-      options: [{ v: "40", label: "40 mm" }, { v: "20", label: "20 mm" }, { v: "10", label: "10 mm" }],
-      on: function (v) { epKey = v; upd(); }
-    });
-    S.select({
-      labelKey: "ts.target", value: target,
-      options: [{ v: "moon", labelKey: "ts.moon" }, { v: "saturn", labelKey: "ts.saturn" }, { v: "cluster", labelKey: "ts.cluster" }],
-      on: function (v) { target = v; upd(); }
-    });
-
-    S.group("ts.focusG");
-    var focusCtl = S.slider({
-      labelKey: "ts.focus", min: -10, max: 10, value: focus, step: 0.1,
-      format: function (v) { return v.toFixed(1); },
-      on: function (v) { focus = v; upd(); }
-    });
-    var hint = document.createElement("p");
-    hint.className = "sim-note"; hint.setAttribute("data-i18n", "ts.hint");
-    focusCtl.input.parentNode.parentNode.appendChild(hint);
-
-    var outLgp = S.readout({ labelKey: "ts.rLgp" });
-    var outRes = S.readout({ labelKey: "ts.rRes" });
-    var outMag = S.readout({ labelKey: "ts.rMag" });
-    var outFo = S.readout({ labelKey: "ts.rFo" });
-    var outFov = S.readout({ labelKey: "ts.rFov" });
-    var outSize = S.readout({ labelKey: "ts.rSize" });
-
-    /* ---- readout values, computed exactly as updateReadouts() does ---- */
     function ap() { return APERTURE[apKey]; }
     function ep() { return EYEPIECE[epKey]; }
     function lgp() { return LGP[ap().i]; }
@@ -135,44 +120,130 @@ Sim.create({
     function mag() { return Math.floor(ap().focal / ep().focal); }
     function fov() { return FOV[ep().i * 3 + ap().i]; }
 
-    function upd() {
-      outLgp(lgp() + "×");
-      outRes(resolution().toFixed(2) + "″");
-      outMag(mag() + "×");
-      outFo(ap().focal + " mm");
-      outFov(fov().toFixed(2) + "°");
-      var a = TARGET_SIZE[target];
-      outSize(a >= 0.1 ? a.toFixed(2) + "°" : Math.round(a * 3600) + "″");
+    /* ---- the Observing panel's radio groups and the focus SliderV3 ---- */
+    var RADIOS = [
+      { group: "ap", v: "8", key: "ts.in8", x: 33, y: 75 }, { group: "ap", v: "6", key: "ts.in6", x: 122, y: 75 },
+      { group: "ap", v: "4", key: "ts.in4", x: 214, y: 75 },
+      { group: "ep", v: "40", key: "ts.mm40", x: 33, y: 122 }, { group: "ep", v: "20", key: "ts.mm20", x: 122, y: 123 },
+      { group: "ep", v: "10", key: "ts.mm10", x: 214, y: 122 },
+      { group: "tg", v: "moon", key: "ts.moon", x: 33, y: 168.1 }, { group: "tg", v: "saturn", key: "ts.saturn", x: 122, y: 168.1 },
+      { group: "tg", v: "cluster", key: "ts.cluster", x: 214, y: 168 }
+    ];
+    function groupValue(g) { return g === "ap" ? apKey : g === "ep" ? epKey : target; }
+    function setGroup(g, v) {
+      if (g === "ap") apKey = v; else if (g === "ep") epKey = v; else target = v;
+      syncSidebar(); S.requestDraw();
+    }
+    var SL = { x: 457.85, y: 50.95, min: -10, max: 10, hw: 100, prec: 1 };   // offsetSlider
+    SL.scale = (SL.max - SL.min) / (2 * SL.hw);
+    function grabberX() { return (focus - SL.min) / SL.scale - SL.hw; }
+    function setFocus(v, fromSidebar) {             // SliderV3.setValue, then changeFocus()
+      if (!isFinite(v)) return;
+      v = Math.round(10 * v) / 10;
+      focus = Math.min(SL.max, Math.max(SL.min, v));
+      if (!fromSidebar) syncSidebar();
       S.requestDraw();
     }
-    S.refreshers.push(upd);
 
     /* ================================= drawing ================================= */
     S.onDraw(function () {
       var ctx = S.ctx, t = I18N.t.bind(I18N);
-      S.clear();
-      ctx.save();
-      ctx.scale(K, K);
-
-      // the SWF's grey stage
-      ctx.fillStyle = "#c0c0c0";
-      roundRect(ctx, 0, 0, 1000, 750, 12); ctx.fill();
-
+      FlashText.begin(ctx);
+      ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, 1000, 750);
+      draw(ctx, ART[70]);                          // the field of view's disc
+      draw(ctx, ART[71]);                          // the panels
+      slider(ctx, t);
+      RADIOS.forEach(function (r) { radio(ctx, r, t); });
+      labels(ctx, t);
+      readouts(ctx, t);
       drawTelescope(ctx);
-      drawField(ctx);
-      drawReadouts(ctx, t);
-
-      // titles, in the SWF's bold sans
-      ctx.fillStyle = "#000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.font = "bold 26px Arial, Helvetica, sans-serif";
-      // at the SWF's positions, nudged left only if a translated title would run off the stage
-      function title(text, x, y) { ctx.fillText(text, Math.min(x, 990 - ctx.measureText(text).width), y); }
-      title(t("ts.title1"), 822, 72);
-      title(t("ts.title2"), 822, 104);
-      title(t("ts.fovLabel"), 816, 266);
-
-      ctx.restore();
+      drawTarget(ctx);
     });
+
+    // the static text, glyph-drawn Arial Bold in the SWF (positions: placement + run)
+    function labels(ctx, t) {
+      ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      function st(size, str, x, y) {
+        ctx.font = "bold " + size + "px " + ARIAL;
+        FlashText.fillStatic(ctx, str, x, y);
+        return FlashText.widthStatic(ctx, str);
+      }
+      st(28, t("ts.obs"), 94.25, 38.05);
+      st(18, " " + t("ts.ap"), 24.96, 64.25);
+      st(18, t("ts.eye") + " ", 28, 110.25);
+      st(18, t("ts.target"), 29.5, 157.25);
+      st(28, t("ts.readouts"), 32.75, 521.65);
+      // the stage titles, nudged left only if a translation would run off the stage
+      ctx.font = "bold 28px " + ARIAL;
+      function title(str, x, y) { st(28, str, Math.min(x, 990 - FlashText.widthStatic(ctx, str)), y); }
+      title(t("ts.title1"), 822.25, 66.65);
+      title(t("ts.title2"), 823, 99.95);
+      title(t("ts.fovLabel"), 816.45, 263.95);
+      lgpEnd = st(17, t("ts.lgp") + "  =", 27.85, 559.95) + 27.85;
+      ctx.font = "bold 17px " + ARIAL;
+      FlashText.fillStatic(ctx, t("ts.lgpNote1"), 175.1 + FlashText.widthStatic(ctx, "(times that of the ") / 2, 548.95, "center");
+      FlashText.fillStatic(ctx, t("ts.lgpNote2"), 196.25 + FlashText.widthStatic(ctx, "human eye)") / 2, 569.95, "center");
+      resEnd = st(17, t("ts.res") + "  = ", 25.85, 602.65) + 25.85;
+      st(17, t("ts.mag") + "  =", 24.2, 654.95);
+      ctx.font = "bold 17px " + ARIAL;
+      FlashText.fillStatic(ctx, "=", 24.2 + FlashText.widthStatic(ctx, "Magnification  =              "), 654.95);
+      fovEnd = st(17, t("ts.fov") + "  = ", 27.15, 711.75) + 27.15;
+    }
+    var lgpEnd = 0, resEnd = 0, fovEnd = 0;
+    // the readout fields: centred EditTexts in the device font "Arial" Bold, which Ruffle
+    // draws in its own sans (Noto Sans, regular) — so a regular sans, baseline as measured
+    function field(ctx, str, x, y, w, minX, suffix) {
+      ctx.font = "17px " + DEVICE; ctx.fillStyle = "#000000";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      var left = Math.max(x - 2, (minX || -1e9) - 2), inner = w - 4, tw = ctx.measureText(str).width;
+      var tx = left + 2 + Math.max(0, (inner - tw) / 2);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(left, y - 2, w, 40); ctx.clip();
+      ctx.fillText(str, tx, y + 17.4);
+      if (suffix) ctx.fillText(suffix, tx + tw, y + 17.4);
+      ctx.restore();
+    }
+    function readouts(ctx, t) {
+      var a = ap(), e = ep();
+      field(ctx, String(lgp()), 69, 544.55, 104, lgpEnd + 6);
+      field(ctx, resolution() + " " + t("ts.arcsec"), 133.95, 588.25, 134, resEnd + 6);
+      field(ctx, "Fo", 161.05, 621.55, 55.95);
+      field(ctx, "Fe", 160.6, 655.9, 55.95);
+      field(ctx, a.focal + " mm", 230, 621.5, 77);
+      field(ctx, e.focal + " mm", 235, 655.45, 68);
+      field(ctx, "= " + mag(), 295.45, 638.45, 61);
+      // FOV + unescape('%ba'): Ruffle shows no sign at all; the degree sign is added after the number
+      field(ctx, String(fov()), 155.75, 697.35, 69.25, fovEnd + 6, "°");
+    }
+    function radio(ctx, r, t) {                    // FRadioButton: the ring, the well, the dot, its label
+      var on = groupValue(r.group) === r.v, down = press && press.kind === "radio" && press.r === r && press.inside;
+      ctx.save();
+      ctx.translate(r.x, r.y);
+      draw(ctx, ART[6]);
+      ctx.save(); ctx.translate(1, 1); draw(ctx, ART[8]); ctx.restore();
+      ctx.save(); ctx.translate(2.2, 2.2); draw(ctx, ART[10]); ctx.restore();
+      ctx.save(); ctx.translate(1.5, 1.5); draw(ctx, ART[12]); ctx.restore();
+      ctx.save(); ctx.translate(2, 2); draw(ctx, down ? ART[18] : ART[15]); ctx.restore();
+      if (on) { ctx.beginPath(); ctx.arc(5, 5, 2, 0, TAU); ctx.fillStyle = "#000000"; ctx.fill(); }
+      // the label is " 8-inch" etc. in the device font _sans: its leading space does advance
+      ctx.font = "12px " + DEVICE; ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillText(" " + t(r.key), 12, 9.5);
+      r.w = 12 + ctx.measureText(" " + t(r.key)).width;
+      ctx.restore();
+    }
+    function slider(ctx, t) {                      // SliderV3 "Focus Adjustments"
+      ctx.save();
+      ctx.translate(SL.x, SL.y);
+      draw(ctx, ART[40]);
+      ctx.save(); ctx.translate(grabberX(), -2.2); draw(ctx, ART[42]); ctx.restore();
+      ctx.fillStyle = "#000000"; ctx.font = "bold 12px " + VERDANA;
+      FlashText.fill(ctx, t("ts.focusG"), -12 - SL.hw + 2, -35 + 2 + ASC * 12, "left");
+      FlashText.fill(ctx, focus.toFixed(SL.prec), 12 + SL.hw - 2, -35 + 2 + ASC * 12, "right");
+      ctx.font = "bold 10px " + VERDANA;
+      FlashText.fill(ctx, String(SL.min), -SL.hw, 14 + 2 + ASC * 10, "center");
+      FlashText.fill(ctx, String(SL.max), SL.hw, 14 + 2 + ASC * 10, "center");
+      ctx.restore();
+    }
 
     // drawTelescope(): built in the telescope's local frame, then rotated −25°
     function drawTelescope(ctx) {
@@ -197,15 +268,18 @@ Sim.create({
       seg(ctx, XTUBE, LENS_Y - LENS2_H / 2, lens2X - W2 / 2, LENS_Y - LENS2_H / 2);
       ctx.stroke();
 
-      // the two lenses — one symbol, stretched
-      hatchRect(ctx, LENS1_X, LENS_Y, W1, H1);
-      hatchRect(ctx, lens2X, LENS_Y, W2, LENS2_H);
+      // the two lenses — the one "rect" symbol, its 53 × 103 bounds stretched to size
+      lens(ctx, LENS1_X, LENS_Y, W1, H1);
+      lens(ctx, lens2X, LENS_Y, W2, LENS2_H);
 
       // the focus knob, turned 30° per unit of focus
-      focusKnob(ctx, XTUBE + 30, LENS_Y + H1 / 4, 30 * focus);
+      ctx.save();
+      ctx.translate(XTUBE + 30, LENS_Y + H1 / 4); ctx.rotate(30 * focus * D2R);
+      draw(ctx, ART[53]);
+      ctx.restore();
 
       // rays (lineStyle 4, 0xFFFF00)
-      ctx.strokeStyle = "#ffff00"; ctx.lineWidth = 4;
+      ctx.strokeStyle = "#ffff00"; ctx.lineWidth = 4; ctx.lineCap = "round";
       ctx.beginPath();
       var rayStartX = LENS1_X + W1 / 2 + 40;
       var rayEndX = lens2X - W2 / 2 - 30;
@@ -214,6 +288,12 @@ Sim.create({
       if (apKey === "8") rayPair(ctx, H1 / 8, H1 / 8, a.beamCross, lens2X, rayStartX, rayEndX);
       ctx.stroke();
 
+      ctx.restore();
+    }
+    function lens(ctx, x, y, w, h) {
+      ctx.save();
+      ctx.translate(x, y); ctx.scale(w / 53, h / 103);
+      draw(ctx, ART[51]);
       ctx.restore();
     }
     // One symmetric pair of rays: parallel in at ±hit, refracted at the objective's
@@ -231,175 +311,101 @@ Sim.create({
     }
     function seg(ctx, x0, y0, x1, y1) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }
 
-    // The SWF's 'rect' symbol, authored here at the 8-inch objective's 75×200 size:
-    // cream fill, black border, diagonal hatching. Scaling the whole symbol to w×h
-    // (as Flash's _width/_height do) stretches the stripes' angle, spacing and
-    // stroke weight along with it — which is exactly why the eyepiece hatching looks
-    // finer and the 4-inch objective's stripes lean differently from the 8-inch's.
-    function hatchRect(ctx, cx, cy, w, h) {
+    /* -------- the target: mainObject, its eight 15% copies, masked to the field -------- */
+    function drawTarget(ctx) {
+      var T = TARGETS[target];
+      if (!T.ready) return;
+      var a = ap(), e = ep(), k = SCALE[e.i][a.i] / 100;
+      var blur = focus + e.focusOffset;             // 0 ⇒ every copy lands on the original
       ctx.save();
-      ctx.translate(cx, cy);
-      ctx.scale(w / 75, h / 200);
-      ctx.fillStyle = "#ece9d8";
-      ctx.fillRect(-37.5, -100, 75, 200);
-      ctx.save();
-      ctx.beginPath(); ctx.rect(-37.5, -100, 75, 200); ctx.clip();
-      ctx.beginPath();
-      // stripes are the lines 0.0636·x + 0.04405·y = m − 0.07 (measured from the SWF)
-      for (var m = -8; m <= 8; m++) {
-        var c = m - 0.07;
-        ctx.moveTo((c + 0.04405 * 110) / 0.0636, -110);
-        ctx.lineTo((c - 0.04405 * 110) / 0.0636, 110);
+      ctx.beginPath(); ctx.arc(MASK.x, MASK.y, MASK.r, 0, TAU); ctx.clip();
+      ctx.translate(OBJ_X, OBJ_Y); ctx.scale(k, k);
+      ctx.imageSmoothingQuality = "high";
+      for (var i = 0; i < 9; i++) {
+        ctx.globalAlpha = a.alpha * (i === 0 ? 1 : 0.15);
+        ctx.drawImage(T.img, GHOST_X[i] * blur - T.w / 2, GHOST_Y[i] * blur - T.h / 2);
       }
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 4.6; ctx.lineCap = "butt";
-      ctx.stroke();
-      ctx.restore();
-      ctx.lineWidth = 6; ctx.strokeStyle = "#000"; ctx.lineJoin = "miter";
-      ctx.strokeRect(-34.5, -97, 69, 194);
-      ctx.restore();
-    }
-    function focusKnob(ctx, x, y, deg) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(deg * D2R);
-      ctx.beginPath(); ctx.arc(0, 0, 19.4, 0, TAU);
-      ctx.fillStyle = "#fff"; ctx.fill();
-      ctx.lineWidth = 4.8; ctx.strokeStyle = "#000"; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(17, 0);
-      ctx.lineWidth = 3.2; ctx.lineCap = "round"; ctx.stroke();
       ctx.restore();
     }
 
-    /* -------- the Field of View: the target, scaled per the SWF's table -------- */
-    function drawField(ctx) {
-      var a = ap(), e = ep();
-      var scale = SCALE[e.i][a.i] / 100;
-      var blur = focus + e.focusOffset;               // 0 ⇒ every copy lands on the original
-
-      ctx.save();
-      ctx.beginPath(); ctx.arc(FOV_X, FOV_Y, FOV_R, 0, TAU);
-      ctx.fillStyle = "#000"; ctx.fill();
-      ctx.clip();
-      // the image, then the SWF's eight defocus copies at 15% of its alpha
-      for (var k = 0; k < 9; k++) {
-        ctx.globalAlpha = a.alpha * (k === 0 ? 1 : 0.15);
-        var dx = GHOST_X[k] * blur * scale, dy = GHOST_Y[k] * blur * scale;
-        if (target === "moon") drawMoon(ctx, FOV_X + dx, FOV_Y + dy, 420 * scale);
-        else if (target === "saturn") drawSaturn(ctx, FOV_X + dx, FOV_Y + dy, 150 * scale);
-        else drawCluster(ctx, FOV_X + dx, FOV_Y + dy, 400 * scale);
+    /* ============== the pointer: FRadioButton and the SliderV3 grabber / bar ============== */
+    var press = null;
+    function at(ev) {
+      var r = S.canvas.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height };
+    }
+    function hit(p) {
+      for (var i = 0; i < RADIOS.length; i++) {
+        var r = RADIOS[i];
+        if (p.x >= r.x && p.x <= r.x + (r.w || 10) && p.y >= r.y - 2 && p.y <= r.y + 12) return { kind: "radio", r: r };
       }
-      ctx.globalAlpha = 1;
-      ctx.restore();
-
-      ctx.beginPath(); ctx.arc(FOV_X, FOV_Y, FOV_R, 0, TAU);
-      ctx.strokeStyle = "#000066"; ctx.lineWidth = 3; ctx.stroke();
+      var lx = p.x - SL.x, ly = p.y - SL.y, gx = grabberX();
+      if (lx >= gx - 7 && lx <= gx + 7 && ly >= -2.2 - 9.3 && ly <= -2.2 + 13.75) return { kind: "grab" };
+      if (lx >= -SL.hw && lx <= SL.hw && ly >= -2.75 && ly <= 2.75) return { kind: "bar" };
+      return null;
     }
-
-    /* ------------------------- the Readouts panel ------------------------- */
-    function drawReadouts(ctx, t) {
-      var a = ap(), e = ep();
-      ctx.fillStyle = "#fff"; ctx.fillRect(8, 488, 362, 256);
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(8, 488, 362, 256);
-
-      ctx.fillStyle = "#000"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.font = "bold 26px Arial, Helvetica, sans-serif";
-      ctx.fillText(t("ts.readouts"), 34, 524);
-
-      var bold = "bold 17px Arial, Helvetica, sans-serif", plain = "17px Verdana, Geneva, sans-serif";
-      // "label  =" then its value, at the SWF's column or just past a longer (translated) label
-      function row(label, value, x, y, valueX) {
-        ctx.font = bold; ctx.fillText(label + "  =", x, y);
-        var end = x + ctx.measureText(label + "  =").width;
-        ctx.font = plain; ctx.fillText(value, Math.max(valueX, end + 10), y + 2);
+    function barStep(lx) { setFocus(focus + (lx < grabberX() ? -0.1 : 0.1)); }
+    S.canvas.addEventListener("pointerdown", function (ev) {
+      var p = at(ev), h = hit(p);
+      if (!h) return;
+      ev.preventDefault();
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      press = { kind: h.kind, r: h.r, inside: true };
+      if (h.kind === "grab") press.off = p.x - SL.x - grabberX();
+      else if (h.kind === "bar") {                 // a step now, then one a frame (12 fps) after 500 ms
+        press.lx = p.x - SL.x; press.start = performance.now() + 500; press.last = 0;
+        barStep(press.lx);
+        requestAnimationFrame(barRepeat);
       }
-      row(t("ts.lgp"), String(lgp()), 26, 566, 104);
-      ctx.font = "bold 15px Arial, Helvetica, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(t("ts.lgpNote1"), 243, 553);
-      ctx.fillText(t("ts.lgpNote2"), 243, 573);
-      ctx.textAlign = "left";
-
-      row(t("ts.res"), resolution().toFixed(2) + " " + t("ts.arcsec"), 25, 609, 146);
-
-      // column positions follow the SWF's panel: Fo/Fe at 186, the mm fraction at 266
-      ctx.font = bold; ctx.fillText(t("ts.mag"), 22, 662);
-      ctx.fillText("=", 142, 662);
-      fraction(ctx, 186, 655, "Fo", "Fe", 40, bold);
-      ctx.font = bold; ctx.fillText("=", 209, 662);
-      fraction(ctx, 265, 655, a.focal + " mm", e.focal + " mm", 76, "15px Verdana, Geneva, sans-serif");
-      ctx.font = plain; ctx.fillText("= " + mag(), 307, 662);
-
-      row(t("ts.fov"), fov().toFixed(2) + "°", 26, 718, 170);
-    }
-    function fraction(ctx, cx, y, top, bottom, barW, font) {
-      ctx.font = font; ctx.textAlign = "center";
-      ctx.fillText(top, cx, y - 8);
-      ctx.fillText(bottom, cx, y + 22);
-      ctx.fillRect(cx - barW / 2, y - 1, barW, 2);
-      ctx.textAlign = "left";
-    }
-
-    /* ---------------------------- target painters ---------------------------- */
-    var CRATERS = (function () {                     // fixed, seeded crater field
-      var s = 7717, out = [];
-      function rnd() { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }
-      for (var i = 0; i < 46; i++) out.push({ r: Math.sqrt(rnd()) * 0.94, th: rnd() * TAU, size: 0.015 + rnd() * 0.06 });
-      return out;
-    })();
-    function drawMoon(ctx, cx, cy, r) {
-      var g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-      g.addColorStop(0, "#f0f0f2"); g.addColorStop(0.75, "#cfd0d4"); g.addColorStop(1, "#96979c");
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fillStyle = g; ctx.fill();
-      var maria = [[-.30, -.28, .30], [.10, -.42, .20], [.30, -.10, .24], [-.12, .05, .18], [-.44, .10, .14]];
-      ctx.fillStyle = "rgba(90,92,104,.55)";
-      maria.forEach(function (m) {
-        ctx.beginPath(); ctx.ellipse(cx + m[0] * r, cy + m[1] * r, m[2] * r, m[2] * r * 0.86, 0.4, 0, TAU); ctx.fill();
-      });
-      ctx.strokeStyle = "rgba(255,255,255,.30)"; ctx.lineWidth = 1;
-      CRATERS.forEach(function (c) {
-        var cr = c.size * r; if (cr < 0.7) return;
-        ctx.beginPath(); ctx.arc(cx + c.r * r * Math.cos(c.th), cy + c.r * r * Math.sin(c.th), cr, 0, TAU);
-        ctx.fillStyle = "rgba(120,122,134,.35)"; ctx.fill(); ctx.stroke();
-      });
-    }
-    function drawSaturn(ctx, cx, cy, rRing) {
-      var rp = rRing * 0.44;
-      ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.32);
-      ctx.beginPath(); ctx.ellipse(0, 0, rRing, rRing * 0.30, 0, Math.PI, TAU);
-      ctx.strokeStyle = "rgb(226,206,158)"; ctx.lineWidth = Math.max(1, rRing * 0.13); ctx.stroke();
-      var g = ctx.createLinearGradient(0, -rp, 0, rp);
-      g.addColorStop(0, "#ececec"); g.addColorStop(0.5, "#d6d0c0"); g.addColorStop(1, "#a8a08a");
-      ctx.beginPath(); ctx.ellipse(0, 0, rp, rp * 0.90, 0, 0, TAU); ctx.fillStyle = g; ctx.fill();
-      ctx.strokeStyle = "rgba(150,128,86,.55)"; ctx.lineWidth = Math.max(0.8, rp * 0.10);
-      [-0.35, 0, 0.34].forEach(function (b) {
-        ctx.beginPath(); ctx.ellipse(0, b * rp, rp * Math.sqrt(1 - b * b) * 0.98, rp * 0.06, 0, 0, TAU); ctx.stroke();
-      });
-      ctx.beginPath(); ctx.ellipse(0, 0, rRing, rRing * 0.30, 0, 0, Math.PI);
-      ctx.strokeStyle = "rgb(240,222,176)"; ctx.lineWidth = Math.max(1, rRing * 0.13); ctx.stroke();
-      ctx.restore();
-    }
-    var CLUSTER = (function () {
-      var s = 20240624, out = [];
-      function rnd() { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }
-      for (var i = 0; i < 90; i++) {
-        var r = Math.sqrt(rnd()), th = rnd() * TAU;
-        out.push({ x: r * Math.cos(th), y: r * Math.sin(th), m: 2 + rnd() * 8 });
+      S.requestDraw();
+    });
+    S.canvas.addEventListener("pointermove", function (ev) {
+      var p = at(ev);
+      if (!press) { S.canvas.style.cursor = hit(p) ? "pointer" : "default"; return; }
+      if (press.kind === "grab") setFocus(SL.min + SL.scale * ((p.x - SL.x - press.off) + SL.hw));
+      else if (press.kind === "bar") press.lx = p.x - SL.x;
+      else {
+        var h = hit(p), inside = !!h && h.kind === "radio" && h.r === press.r;
+        if (inside !== press.inside) { press.inside = inside; S.requestDraw(); }
       }
-      return out;
-    })();
-    function drawCluster(ctx, cx, cy, spread) {
-      CLUSTER.forEach(function (st) {
-        var x = cx + st.x * spread, y = cy + st.y * spread;
-        var r = Math.max(0.8, (10.5 - st.m) * 0.9);
-        var g = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
-        g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.4, "rgba(205,222,255,.55)"); g.addColorStop(1, "rgba(160,190,255,0)");
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, TAU); ctx.fill();
-      });
+    });
+    function release(ev, cancelled) {
+      var pr = press; press = null;
+      if (pr && !cancelled && pr.kind === "radio" && pr.inside) setGroup(pr.r.group, pr.r.v);
+      S.requestDraw();
     }
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    S.canvas.addEventListener("pointerup", function (ev) { release(ev, false); });
+    S.canvas.addEventListener("pointercancel", function (ev) { release(ev, true); });
+    function barRepeat(now) {
+      if (!press || press.kind !== "bar") return;
+      if (now > press.start && now - press.last >= 1000 / 12) { press.last = now; barStep(press.lx); }
+      requestAnimationFrame(barRepeat);
     }
+
+    /* ================================ the sidebar ================================ */
+    var syncing = false;
+    S.group("ts.obs");
+    var apC = S.select({ labelKey: "ts.ap", value: apKey,
+      options: [{ v: "8", labelKey: "ts.in8" }, { v: "6", labelKey: "ts.in6" }, { v: "4", labelKey: "ts.in4" }],
+      on: function (v) { if (!syncing) setGroup("ap", v); } });
+    var epC = S.select({ labelKey: "ts.eye", value: epKey,
+      options: [{ v: "40", labelKey: "ts.mm40" }, { v: "20", labelKey: "ts.mm20" }, { v: "10", labelKey: "ts.mm10" }],
+      on: function (v) { if (!syncing) setGroup("ep", v); } });
+    var tgC = S.select({ labelKey: "ts.target", value: target,
+      options: [{ v: "moon", labelKey: "ts.moon" }, { v: "saturn", labelKey: "ts.saturn" }, { v: "cluster", labelKey: "ts.cluster" }],
+      on: function (v) { if (!syncing) setGroup("tg", v); } });
+    S.group("ts.focusG");
+    var focusCtl = S.slider({ labelKey: "ts.focus", min: -10, max: 10, value: focus, step: 0.1,
+      format: function (v) { return v.toFixed(1); },
+      on: function (v) { if (!syncing) setFocus(v, true); } });
+    var hint = document.createElement("p");
+    hint.className = "sim-note"; hint.setAttribute("data-i18n", "ts.hint");
+    focusCtl.input.parentNode.parentNode.appendChild(hint);
+    function syncSidebar() {
+      syncing = true;
+      apC.set(apKey); epC.set(epKey); tgC.set(target); focusCtl.set(focus);
+      syncing = false;
+    }
+    S.requestDraw();
   }
 });

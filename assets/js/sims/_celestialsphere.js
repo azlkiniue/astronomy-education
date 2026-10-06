@@ -10,11 +10,11 @@
    quadratic-curve circles and the same mouse behaviours, so a sim that sets it
    up the way its SWF did draws and drags the way its SWF did.
 
-   Used by altazimuth, ce_hc, fullmoondec, heliacalrisingsim, lunar-phases,
-   positionsdemonstrator, siderealtimeandhourangledemo, sun-motions, sunpaths,
-   sunmotionsoverview and transitmovie. A sim keeps only what was its own in
-   the SWF: which circles, objects and clips it adds, their art and colours, and
-   what it does when they change.
+   Used by altazimuth, ce_hc, daylighthoursexplorer, fullmoondec, heliacalrisingsim,
+   lunar-phases, positionsdemonstrator, radecdemo, siderealtimeandhourangledemo,
+   sun-motions, sunpaths, sunmotionsoverview and transitmovie. A sim keeps only
+   what was its own in the SWF: which circles, objects and clips it adds, their
+   art and colours, and what it does when they change.
 
      var sph = new CelestialSphere({ x: 213, y: 228, size: 320,
                                      viewerAzimuth: 200, viewerAltitude: 30,

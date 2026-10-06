@@ -1,220 +1,214 @@
 /* Tidal Bulge Simulation ------------------------------------------------------
-   Faithful rebuild of the ClassAction "Tidal Bulge Simulation" (tidesim.swf).
-   Shows Earth at center with an ocean layer that deforms into a tidal bulge
-   toward (and away from) the Moon. The Moon orbits Earth. Optional toggles
-   add the Sun's tidal effect and Earth's rotation.
-   Physics: the tidal bulge points along the line connecting Earth to the
-   tide-raising body. The far-side bulge arises because the body's gravity
-   is weaker there than at Earth's center (differential / tidal force). */
+   Faithful rebuild of the ClassAction "Tidal Bulge Simulation" (tidesim.swf —
+   tideAnimClass, earthClass, moonClass and tidalClass, decompiled). Seen from
+   above the North Pole: the Earth (the SWF's own art) inside its blue ocean
+   bulge, and the Moon going round once every 51 seconds.
+     • the bulge points at the Moon. With the Sun included it is the SWF's own
+       360-frame tween of four morph shapes, picked by the Moon's angle: long
+       and narrow at new and full Moon (spring tides), short and fat at the
+       quarters (neap tides); without the Sun it is the Moon's bulge alone,
+     • "Include Effects of Earth's Rotation" drags the bulge 20° ahead of the
+       Moon, as the spinning Earth carries it round (the Earth turns 28 times
+       for each trip of the Moon in the animation),
+     • with the Sun the night sides darken and a "To Sun" arrow appears.
+   The art, the morphs and the frame table come from _tidesim-art.js, generated
+   from the SWF. Beyond the SWF: the Moon moves at the display's frame rate (at
+   the SWF's angular speed) and resumes where it stopped; the animated
+   ClassAction logo in the corner is left out — the page carries the credits.  */
 Sim.create({
   id: "tidesim",
-  width: 760, height: 520,
+  width: 600, height: 550,
   strings: {
     en: {
-      "td.run": "run", "td.sun": "include Sun",
-      "td.rot": "include effects of Earth's rotation",
-      "td.reset": "reset", "td.moon": "Moon", "td.sunLabel": "Sun",
-      "td.earth": "Earth"
+      "td.run": "Run", "td.sun": "Include Sun",
+      "td.rot": "Include Effects of Earth's Rotation",
+      "td.reset": "Reset", "td.toSun": "To Sun"
     },
     id: {
-      "td.run": "jalankan", "td.sun": "sertakan Matahari",
-      "td.rot": "sertakan efek rotasi Bumi",
-      "td.reset": "atur ulang", "td.moon": "Bulan", "td.sunLabel": "Matahari",
-      "td.earth": "Bumi"
+      "td.run": "Jalankan", "td.sun": "Sertakan Matahari",
+      "td.rot": "Sertakan Efek Rotasi Bumi",
+      "td.reset": "Atur ulang", "td.toSun": "Ke Matahari"
     }
   },
   about: {
-    en: "<p>Tides are caused by the <strong>differential gravitational force</strong> (tidal force) of the Moon and Sun across Earth's diameter. The side of Earth nearest the Moon feels a stronger pull than the center, creating a bulge toward the Moon. The far side feels a weaker pull, so water there is \"left behind,\" creating a second bulge.</p>" +
-        "<p>Check <em>Include Sun</em> to see how the Sun's tidal effect (about 46% of the Moon's) reinforces the bulge at new and full Moon (spring tides) and partially cancels it at quarter phases (neap tides). <em>Include rotation</em> adds Earth's spin, which drags the bulge slightly ahead of the Moon's position.</p>",
-    id: "<p>Pasang surut disebabkan oleh <strong>gaya gravitasi diferensial</strong> (gaya pasang) Bulan dan Matahari pada diameter Bumi. Sisi Bumi terdekat Bulan merasakan tarikan lebih kuat, menciptakan tonjolan. Sisi jauh merasakan tarikan lebih lemah, sehingga air \"tertinggal\" membentuk tonjolan kedua.</p>" +
-        "<p>Centang <em>Sertakan Matahari</em> untuk melihat efek pasang Matahari (≈46% Bulan) yang memperkuat tonjolan saat bulan baru dan purnama (pasang purnama) dan sebagian membatalkannya saat kuarter (pasang perbani). <em>Sertakan rotasi</em> menambahkan putaran Bumi.</p>"
+    en: "<p>Tides are caused by the <strong>differential gravitational force</strong> (tidal force) of the Moon and Sun across Earth's diameter. The side of Earth nearest the Moon feels a stronger pull than the centre, creating a bulge toward the Moon. The far side feels a weaker pull, so water there is \"left behind\", creating a second bulge.</p>" +
+        "<p>Check <em>Include Sun</em> to see how the Sun's tidal effect (about 46% of the Moon's) lengthens the bulge at new and full Moon (spring tides) and shortens it at the quarter phases (neap tides). <em>Include Effects of Earth's Rotation</em> shows the spinning Earth dragging the bulge ahead of the Moon.</p>",
+    id: "<p>Pasang surut disebabkan oleh <strong>gaya gravitasi diferensial</strong> (gaya pasang) Bulan dan Matahari pada diameter Bumi. Sisi Bumi terdekat Bulan merasakan tarikan lebih kuat daripada pusatnya, menciptakan tonjolan ke arah Bulan. Sisi jauh merasakan tarikan lebih lemah, sehingga air di sana \"tertinggal\" dan membentuk tonjolan kedua.</p>" +
+        "<p>Centang <em>Sertakan Matahari</em> untuk melihat efek pasang Matahari (≈46% Bulan) yang memanjangkan tonjolan saat bulan baru dan purnama (pasang purnama) dan memendekkannya saat kuarter (pasang perbani). <em>Sertakan Efek Rotasi Bumi</em> memperlihatkan Bumi yang berputar menyeret tonjolan mendahului Bulan.</p>"
   },
   build: function (S) {
-    var ctx = S.ctx, W = S.W, H = S.H;
-    var CX = 300, CY = 240;
-    var EARTH_R = 80;
-    var MOON_ORBIT = 200;
-    var MOON_R = 18;
-    var SUN_DIST = 350;
+    var ART = window.TIDESIM_ART, SH = ART.SHAPES, draw = SwfShape.draw;
+    var RAD = Math.PI / 180, TAU = Math.PI * 2;
+    var SPEED = 510000 / 10;                       // moon._speed / tideAnim._speed: ms per orbit
+    var OFFSET = 20;                               // tideAnim._offset: the rotation's lead (°)
 
-    var P = {
-      moonAngle: 0,
-      earthRot: 0,
-      running: false,
-      showSun: false,
-      showRot: false
-    };
-
-    var runT = S.toggle({ labelKey: "td.run", value: false, on: function (b) {
-      P.running = b;
-      if (b) loop.play(); else loop.pause();
-    }});
-    var sunT = S.toggle({ labelKey: "td.sun", value: false, on: function (b) { P.showSun = b; } });
-    var rotT = S.toggle({ labelKey: "td.rot", value: false, on: function (b) { P.showRot = b; } });
-    S.button({ labelKey: "td.reset", on: function () {
-      P.moonAngle = 0; P.earthRot = 0;
-      runT.set(false); sunT.set(false); rotT.set(false);
-      loop.pause();
-      S.requestDraw();
-    }});
-
-    var loop = S.loop(function (dt) {
-      var moonOmega = 2 * Math.PI / 8;
-      var earthOmega = 2 * Math.PI / (8 / 27.3);
-      P.moonAngle += moonOmega * dt;
-      if (P.showRot) P.earthRot += earthOmega * dt;
+    /* ---- state: the hidden "moon" clip's angle drives everything ---- */
+    var angle = 0, tideTime = 0;                   // moon._angle (rad), earth._tideTime (°)
+    var running = false, withSun = false, earthEffects = false;
+    function frameNow() {                          // tidalClass: the bulge's frame
+      if (!withSun) return 1;
+      var f = Math.round(angle / RAD);
+      return f <= 1 ? (f === 1 ? 2 : 360) : Math.min(360, f);
+    }
+    function tideRotation() { return earthEffects ? tideTime - OFFSET : tideTime; }
+    var loop = S.loop(function (dt) {              // moonClass + tideAnimClass.onEnterFrame
+      angle += dt * 1000 * TAU / SPEED;
+      if (!(angle < TAU)) angle = 0;
+      tideTime = 360 - angle / RAD;
     });
+
+    /* ---- drawing ---- */
+    function morph(ctx, id, ratio) {               // a DefineMorphShape at ratio / 65535
+      var m = ART.MORPHS[id], t = ratio / 65535;
+      m.fills.forEach(function (f) {
+        ctx.fillStyle = mixColour(f[0].c[0], f[0].c[1], t);
+        ctx.fill(morphPath(f[1], t), "evenodd");
+      });
+    }
+    function morphPath(c, t) {
+      var p = new Path2D(), i = 0, u = 1 - t;
+      function X(k) { return c[k] * u + c[k + 2] * t; }
+      function Y(k) { return c[k + 1] * u + c[k + 3] * t; }
+      while (i < c.length) {
+        var op = c[i++];
+        if (op === 0) { p.moveTo(X(i), Y(i)); i += 4; }
+        else if (op === 1) { p.lineTo(X(i), Y(i)); i += 4; }
+        else if (op === 2) { p.quadraticCurveTo(X(i), Y(i), X(i + 4), Y(i + 4)); i += 8; }
+        else p.closePath();
+      }
+      return p;
+    }
+    function mixColour(a, b, t) {
+      if (a === b) return a;
+      var A = rgba(a), B = rgba(b);
+      return "rgba(" + [0, 1, 2].map(function (k) { return Math.round(A[k] + (B[k] - A[k]) * t); }).join(",") +
+        "," + (A[3] + (B[3] - A[3]) * t) + ")";
+    }
+    function rgba(c) {
+      if (c[0] === "#") return [parseInt(c.substr(1, 2), 16), parseInt(c.substr(3, 2), 16), parseInt(c.substr(5, 2), 16), 1];
+      return c.replace(/[^\d.,]/g, "").split(",").map(Number);
+    }
+    function bulge(ctx) {                          // tidalBulge (sprite 79) on the frame in hand
+      var f = frameNow(), e = ART.FRAMES[f - 1];
+      if (f === 1) { ctx.save(); ctx.scale(0.888885 * 1.0625, 1); draw(ctx, SH[73]); ctx.restore(); }
+      else if (e[1] < 0) draw(ctx, SH[e[0]]);
+      else morph(ctx, e[0], e[1]);
+    }
 
     S.onDraw(function () {
-      S.clear();
-
-      var mx = CX + Math.cos(P.moonAngle) * MOON_ORBIT;
-      var my = CY + Math.sin(P.moonAngle) * MOON_ORBIT;
-
-      // Moon orbit (faint)
-      ctx.strokeStyle = "rgba(150,150,150,0.2)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(CX, CY, MOON_ORBIT, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // compute tidal bulge direction
-      var bulgeAngle = P.moonAngle;
-      var bulgeAmp = 22;
-      var sunBulgeAmp = bulgeAmp * 0.70;
-
-      // Sun position (far right for visual)
-      var sunAngle = 0;
-      var sunX = CX + SUN_DIST;
-      var sunY = CY;
-
-      // rotation drag offset
-      var rotOffset = P.showRot ? 0.4 : 0;
-
-      // draw Earth with tidal bulge
+      var ctx = S.ctx;
+      FlashText.begin(ctx);
+      // the stage's vignette (shape 93 under its two square masks)
       ctx.save();
-      ctx.translate(CX, CY);
-
-      // ocean layer with tidal deformation
-      ctx.beginPath();
-      var steps = 120;
-      for (var i = 0; i <= steps; i++) {
-        var a = (i / steps) * Math.PI * 2;
-        // moon tidal bulge: cos²(a - bulgeAngle) pattern → two bulges
-        var moonTide = bulgeAmp * Math.pow(Math.cos(a - bulgeAngle - rotOffset), 2);
-        var r = EARTH_R + moonTide - bulgeAmp / 2;
-
-        if (P.showSun) {
-          var sunTide = sunBulgeAmp * Math.pow(Math.cos(a - sunAngle - rotOffset), 2);
-          r += sunTide - sunBulgeAmp / 2;
-        }
-
-        var px = Math.cos(a) * r;
-        var py = Math.sin(a) * r;
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      ctx.beginPath(); ctx.rect(0, 0, 600, 550); ctx.clip();
+      ctx.translate(300, 275); ctx.scale(1.000015, 0.916687);
+      draw(ctx, SH[93]);
+      ctx.restore();
+      // mySim (tideAnim)
+      ctx.save();
+      ctx.transform(0.460556, 0, 0, 0.460907, 276.95, 275.5);
+      ctx.save();                                  // earth
+      ctx.transform(1.011032, 0, 0, 1.004257, 0.6, -1.05);
+      ctx.save();                                  // myTide: turned with the Moon, then 131 % × 150 %
+      ctx.translate(0, -0.1); ctx.rotate(tideRotation() * RAD); ctx.scale(1.3125, 1.5);
+      bulge(ctx);
+      ctx.restore();
+      ctx.save();                                  // myEarth: turns 28 times as fast
+      ctx.rotate(tideTime * 28 * RAD); ctx.scale(1.000305, 1.000305);
+      draw(ctx, SH[80]);
+      ctx.restore();
+      if (withSun) {                               // myShadow, placed at 115/256 alpha
+        ctx.save(); ctx.globalAlpha = 115 / 256;
+        ctx.transform(0.995285, 0, 0, 0.995285, 0.5, 0.5); draw(ctx, SH[82]); ctx.restore();
       }
-      ctx.closePath();
-      ctx.fillStyle = "rgba(60,130,200,0.45)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(80,160,240,0.6)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // solid Earth
-      ctx.save();
-      if (P.showRot) ctx.rotate(P.earthRot);
-
-      ctx.beginPath();
-      ctx.arc(0, 0, EARTH_R - 2, 0, Math.PI * 2);
-
-      // gradient for 3D look
-      var eg = ctx.createRadialGradient(-20, -20, EARTH_R * 0.1, 0, 0, EARTH_R);
-      eg.addColorStop(0, "#4499cc");
-      eg.addColorStop(0.5, "#226699");
-      eg.addColorStop(1, "#113355");
-      ctx.fillStyle = eg;
-      ctx.fill();
-
-      // simple continents
-      ctx.fillStyle = "#338855";
-      ctx.beginPath(); ctx.ellipse(-25, -20, 18, 14, -0.3, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(-10, 20, 10, 18, 0.2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(25, -10, 10, 14, 0.1, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(22, 18, 9, 16, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(50, -20, 18, 12, 0.2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(55, 25, 10, 7, 0.3, 0, Math.PI * 2); ctx.fill();
-
-      // ice caps
-      ctx.fillStyle = "rgba(220,235,255,0.6)";
-      ctx.beginPath(); ctx.ellipse(0, -(EARTH_R - 8), 28, 9, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(0, EARTH_R - 6, 24, 8, 0, 0, Math.PI * 2); ctx.fill();
-
       ctx.restore();
-
-      // Earth outline
-      ctx.beginPath();
-      ctx.arc(0, 0, EARTH_R - 2, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(80,160,240,0.4)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.restore();
-
-      // Earth label
-      ctx.fillStyle = "#88bbff"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(I18N.t("td.earth"), CX, CY + EARTH_R + 30);
-
-      // Moon
-      ctx.save();
-      var mg = ctx.createRadialGradient(mx - 4, my - 4, 2, mx, my, MOON_R);
-      mg.addColorStop(0, "#ddddcc");
-      mg.addColorStop(1, "#888877");
-      ctx.beginPath();
-      ctx.arc(mx, my, MOON_R, 0, Math.PI * 2);
-      ctx.fillStyle = mg;
-      ctx.fill();
-      ctx.strokeStyle = "rgba(200,200,180,0.4)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // craters
-      ctx.fillStyle = "rgba(0,0,0,0.15)";
-      ctx.beginPath(); ctx.arc(mx - 5, my - 4, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(mx + 4, my + 3, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(mx - 2, my + 6, 2.5, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-
-      ctx.fillStyle = "#ccccaa"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(I18N.t("td.moon"), mx, my + MOON_R + 14);
-
-      // Sun (if shown)
-      if (P.showSun) {
+      if (withSun) {                               // toSunArrow: the yellow arrow and "To Sun"
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(sunX, sunY, 24, 0, Math.PI * 2);
-        var sg = ctx.createRadialGradient(sunX - 5, sunY - 5, 3, sunX, sunY, 24);
-        sg.addColorStop(0, "#ffee88");
-        sg.addColorStop(1, "#ddaa22");
-        ctx.fillStyle = sg;
-        ctx.fill();
-
-        // rays
-        ctx.strokeStyle = "rgba(255,220,100,0.4)";
-        ctx.lineWidth = 2;
-        for (var r = 0; r < 8; r++) {
-          var ra = r * Math.PI / 4;
-          ctx.beginPath();
-          ctx.moveTo(sunX + Math.cos(ra) * 28, sunY + Math.sin(ra) * 28);
-          ctx.lineTo(sunX + Math.cos(ra) * 36, sunY + Math.sin(ra) * 36);
-          ctx.stroke();
-        }
+        ctx.transform(1.396225, 0, 0, 1.396225, 625.95, 20.55);
+        ctx.save(); ctx.translate(-49.55 + 50, -16.05); draw(ctx, SH[65], { fill: "#ffcc00", stroke: "#ffcc00" }); ctx.restore();
+        ctx.fillStyle = "#000000"; ctx.font = "bold 17px 'Trebuchet MS', Verdana, sans-serif";
+        ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+        FlashText.fillStatic(ctx, I18N.t("td.toSun"), -51, -1.5 + 15.95);
         ctx.restore();
-
-        ctx.fillStyle = "#ffdd44"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
-        ctx.fillText(I18N.t("td.sunLabel"), sunX, sunY + 38);
       }
+      ctx.save();                                  // moonVectors, turned by tideTime; visMoon kept upright
+      ctx.translate(-0.2, 0); ctx.rotate(tideTime * RAD);
+      ctx.translate(507.55, -0.9); ctx.rotate(-tideTime * RAD); ctx.scale(0.964005, 0.972763);
+      ctx.save(); ctx.translate(0.5, 0.5); draw(ctx, SH[68]); ctx.restore();
+      if (withSun) {                               // its sunlit side, placed at 151/256 alpha
+        ctx.save(); ctx.globalAlpha = 151 / 256;
+        ctx.transform(-0.999664, -0.022659, 0.022659, -0.999664, 1.05, 0.55); draw(ctx, SH[70]); ctx.restore();
+      }
+      ctx.restore();
+      ctx.restore();
+      CHECKS.forEach(function (c) { checkBox(ctx, c); });
     });
 
+    /* ---- the Flash MX check boxes (their labels are a device font in the SWF) ---- */
+    var CHECK = new Path2D("M7.1 0.6Q7.1 0 6.5 0Q6.35 0 6.05 0.25L2.6 3.95L1 2.15L0.6 1.95Q0.05 1.95 0.05 2.5" +
+      "L0 4.4L0.15 4.75L2.25 6.9L2.3 6.9L2.5 6.95L2.9 6.75L6.9 2.75L7.1 2.35Z");
+    var CHECKS = [
+      { x: 390, y: 437.6, key: "td.run", get: function () { return running; }, set: function (b) { setRunning(b); } },
+      { x: 390, y: 462.6, key: "td.sun", get: function () { return withSun; }, set: function (b) { withSun = b; } },
+      { x: 390, y: 487.6, key: "td.rot", get: function () { return earthEffects; }, set: function (b) { earthEffects = b; } }
+    ];
+    var press = null;
+    function checkBox(ctx, c) {
+      var down = press && press.c === c && press.inside;
+      ctx.fillStyle = "#808080"; ctx.fillRect(c.x, c.y, 13, 13);
+      ctx.fillStyle = "#d4d0d8"; ctx.fillRect(c.x + 1, c.y + 1, 11, 11);
+      ctx.fillStyle = down ? "#cccccc" : "#ffffff"; ctx.fillRect(c.x + 2, c.y + 2, 9, 9);
+      if (c.get()) { ctx.save(); ctx.translate(c.x + 2.9, c.y + 3.15); ctx.fillStyle = "#000000"; ctx.fill(CHECK); ctx.restore(); }
+      ctx.font = "12px 'Noto Sans', Arial, Helvetica, sans-serif"; ctx.fillStyle = "#000000";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      c.w = 16 + ctx.measureText(I18N.t(c.key)).width;
+      ctx.fillText(I18N.t(c.key), c.x + 16, c.y + 11.5);
+    }
+    function at(ev) {
+      var r = S.canvas.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height };
+    }
+    function hit(p) {
+      for (var i = 0; i < CHECKS.length; i++) {
+        var c = CHECKS[i];
+        if (p.x >= c.x && p.x <= c.x + (c.w || 13) && p.y >= c.y - 1 && p.y <= c.y + 14) return c;
+      }
+      return null;
+    }
+    S.canvas.addEventListener("pointerdown", function (ev) {
+      var c = hit(at(ev));
+      if (!c) return;
+      ev.preventDefault();
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      press = { c: c, inside: true };
+      S.requestDraw();
+    });
+    S.canvas.addEventListener("pointermove", function (ev) {
+      var c = hit(at(ev));
+      S.canvas.style.cursor = c ? "pointer" : "default";
+      if (press && (c === press.c) !== press.inside) { press.inside = c === press.c; S.requestDraw(); }
+    });
+    S.canvas.addEventListener("pointerup", function () {
+      var pr = press; press = null;
+      if (pr && pr.inside) { pr.c.set(!pr.c.get()); syncSidebar(); }
+      S.requestDraw();
+    });
+    S.canvas.addEventListener("pointercancel", function () { press = null; S.requestDraw(); });
+
+    function setRunning(b) { running = b; if (b) loop.play(); else loop.pause(); S.requestDraw(); }
+
+    /* ---- the sidebar, mirroring the check boxes ---- */
+    var syncing = false;
+    var runT = S.toggle({ labelKey: "td.run", value: false, on: function (b) { if (!syncing) setRunning(b); } });
+    var sunT = S.toggle({ labelKey: "td.sun", value: false, on: function (b) { if (!syncing) { withSun = b; S.requestDraw(); } } });
+    var rotT = S.toggle({ labelKey: "td.rot", value: false, on: function (b) { if (!syncing) { earthEffects = b; S.requestDraw(); } } });
+    S.button({ labelKey: "td.reset", on: function () {
+      setRunning(false); withSun = false; earthEffects = false; angle = 0; tideTime = 0;
+      syncSidebar(); S.requestDraw();
+    } });
+    function syncSidebar() {
+      syncing = true; runT.set(running); sunT.set(withSun); rotT.set(earthEffects); syncing = false;
+    }
     S.requestDraw();
   }
 });

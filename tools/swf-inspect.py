@@ -7,8 +7,9 @@
 #
 #    text    <file.swf>          every DefineEditText: variable, colour, initial text
 #    place   <file.swf> [all]    PlaceObject records: depth, character id, instance
-#                                name, matrix (sx, r0, r1, sy, tx, ty) — root only,
-#                                or every sprite with "all"
+#                                name, matrix (sx, r0, r1, sy, tx, ty), clipDepth and
+#                                colour transform (mul/256, add) — root only, or every
+#                                sprite with "all"
 #    shapes  <file.swf> <ids>    for sprite ids: their children + child bounds;
 #                                for shape ids: bounds
 #    fills   <file.swf> <ids>    DefineShape fill/line styles, including gradient
@@ -21,6 +22,10 @@
 #    statictext <file.swf> [ids] glyph-drawn DefineText labels decoded back into
 #                                strings through each font's code table: matrix, and per
 #                                run its font (name, bold/italic), size, colour, x, y
+#    morph   <file.swf> <ids>    DefineMorphShapes as a JS object a canvas can tween: the
+#                                fills' regions and the strokes' runs as paths whose every
+#                                point carries its start AND end position, styles with
+#                                their start and end colours / gradients / widths
 #    bitmaps <file.swf> [outdir] every embedded bitmap: id, tag, size; with an outdir,
 #                                each is written out as <id>.jpg / <id>.png (JPEGTables
 #                                merged, the bogus FFD9FFD8 prefix stripped, lossless
@@ -117,16 +122,18 @@ def cmd_place(path, everything):
                 cid = None; mtx = None; name = None
                 if flags & 0x02: cid = struct.unpack('<H', body[p:p + 2])[0]; p += 2
                 if flags & 0x04: bits = Bits(body, p); mtx = matrix(bits); p = bits.byte()
-                if flags & 0x08:
+                cx = ''
+                if flags & 0x08:                         # colour transform: mul/256 and add, RGBA
                     bits = Bits(body, p); add = bits.ub(1); mul = bits.ub(1); n = bits.ub(4)
-                    if mul: [bits.sb(n) for _ in range(4)]
-                    if add: [bits.sb(n) for _ in range(4)]
+                    mv = [bits.sb(n) for _ in range(4)] if mul else None
+                    av = [bits.sb(n) for _ in range(4)] if add else None
                     p = bits.byte()
+                    cx = ' cxform mul=%s add=%s' % (mv, av)
                 if flags & 0x10: p += 2
                 if flags & 0x20: j = body.index(0, p); name = body[p:j].decode('latin1'); p = j + 1
                 clip = struct.unpack('<H', body[p:p + 2])[0] if flags & 0x40 else None
-                print('%s depth=%d id=%s name=%s mtx=%s%s' % (where, depth, cid, name, mtx,
-                      ' clipDepth=%d' % clip if clip else ''))
+                print('%s depth=%d id=%s name=%s mtx=%s%s%s' % (where, depth, cid, name, mtx,
+                      ' clipDepth=%d' % clip if clip else '', cx))
             elif code == 39 and everything:
                 walk(p0 + 4, p0 + ln, where + '/sprite%d' % struct.unpack('<H', body[:2])[0])
     walk(off, len(b), 'root')
@@ -396,6 +403,153 @@ def cmd_canvas(path, ids):
         print('  %d: {nz:%s, layers:[%s]},' % (cid, 'true' if winding else 'false', ','.join(parts)))
     print('}')
 
+def morph_shape(body):
+    """A DefineMorphShape (tag 46) as start/end pairs. Flash tweens it edge by edge:
+    the end shape holds the same edges in the same order (moveTos only, no styles),
+    a straight edge facing a curve becomes a curve with its control at the middle.
+    Returns the fill and line styles (start and end) and the edges, each point a
+    (start, end) pair of twip coordinates, with the start's fill0/fill1/line."""
+    bits = Bits(body, 2); rect(bits); rect(bits)
+    bits.u16(); bits.u16()                                  # offset to EndEdges (UI32)
+    cnt = bits.u8()
+    if cnt == 0xff: cnt = bits.u16()
+    fills = []
+    rgba = lambda: [bits.u8() for _ in range(4)]
+    for _ in range(cnt):
+        t = bits.u8()
+        if t == 0:
+            fills.append(('solid', rgba(), rgba()))
+        elif t in (0x10, 0x12):
+            m0 = matrix(bits); m1 = matrix(bits); bits.align()
+            ng = bits.u8() & 0x0f; stops = []
+            for _ in range(ng):
+                r0 = bits.u8(); c0 = rgba(); r1 = bits.u8(); c1 = rgba(); stops.append((r0, c0, r1, c1))
+            fills.append(('linear' if t == 0x10 else 'radial', m0, m1, stops))
+        else:
+            bits.u16(); matrix(bits); matrix(bits); fills.append(('bitmap',))
+    cnt = bits.u8()
+    if cnt == 0xff: cnt = bits.u16()
+    lines = [(bits.u16() / 20, bits.u16() / 20, rgba(), rgba()) for _ in range(cnt)]
+    def records():
+        bits.align(); nf, nl = bits.ub(4), bits.ub(4); out = []
+        while True:
+            if bits.ub(1) == 0:
+                fl = bits.ub(5)
+                if fl == 0: break
+                mv = None
+                if fl & 1: n = bits.ub(5); mv = (bits.sb(n), bits.sb(n))
+                f0 = bits.ub(nf) if fl & 2 else None
+                f1 = bits.ub(nf) if fl & 4 else None
+                ln_ = bits.ub(nl) if fl & 8 else None
+                out.append(('S', mv, f0, f1, ln_))
+            elif bits.ub(1):
+                n = bits.ub(4) + 2
+                if bits.ub(1): d = (bits.sb(n), bits.sb(n))
+                elif bits.ub(1): d = (0, bits.sb(n))
+                else: d = (bits.sb(n), 0)
+                out.append(('L', d))
+            else:
+                n = bits.ub(4) + 2
+                out.append(('Q', (bits.sb(n), bits.sb(n)), (bits.sb(n), bits.sb(n))))
+        return out
+    start = records(); end = records()
+    edges = []; i = j = 0
+    sx = sy = ex = ey = 0; f0 = f1 = ln_ = 0
+    def as_curve(r):                                         # (control delta, anchor delta)
+        if r[0] == 'Q': return r[1], r[2]
+        dx, dy = r[1]; return (dx / 2, dy / 2), (dx - dx / 2, dy - dy / 2)
+    while i < len(start):
+        r = start[i]
+        if r[0] == 'S':
+            e = end[j] if j < len(end) else None
+            if e is not None and e[0] == 'S':
+                if e[1] is not None: ex, ey = e[1]
+                j += 1
+            if r[1] is not None: sx, sy = r[1]
+            if r[2] is not None: f0 = r[2]
+            if r[3] is not None: f1 = r[3]
+            if r[4] is not None: ln_ = r[4]
+            i += 1; continue
+        e = end[j] if j < len(end) else None
+        if e is not None and e[0] == 'S':                    # a moveTo only the end shape has
+            if e[1] is not None: ex, ey = e[1]
+            j += 1; continue
+        if e is None: break
+        if r[0] == 'L' and e[0] == 'L':
+            a = ((sx, sy), (ex, ey)); sx += r[1][0]; sy += r[1][1]; ex += e[1][0]; ey += e[1][1]
+            edges.append((a, None, ((sx, sy), (ex, ey)), f0, f1, ln_))
+        else:
+            (scx, scy), (sax, say) = as_curve(r); (ecx, ecy), (eax, eay) = as_curve(e)
+            a = ((sx, sy), (ex, ey)); c = ((sx + scx, sy + scy), (ex + ecx, ey + ecy))
+            sx, sy = sx + scx + sax, sy + scy + say; ex, ey = ex + ecx + eax, ey + ecy + eay
+            edges.append((a, c, ((sx, sy), (ex, ey)), f0, f1, ln_))
+        i += 1; j += 1
+    return fills, lines, edges
+
+def morph_cmds(edge_list, closed):
+    """Edges chained (closed) or run (open) into a flat command list: 0 = M, 1 = L,
+    2 = Q, 3 = Z; each point as start x, y then end x, y, in pixels."""
+    P = lambda pt: [round(pt[0][0] / 20, 2), round(pt[0][1] / 20, 2), round(pt[1][0] / 20, 2), round(pt[1][1] / 20, 2)]
+    out = []
+    if closed:
+        starts = {}
+        for k, (a, _, _) in enumerate(edge_list): starts.setdefault(a, []).append(k)
+        used = [False] * len(edge_list)
+        for k in range(len(edge_list)):
+            if used[k]: continue
+            used[k] = True; a, c, b = edge_list[k]; first = a
+            out += [0] + P(a); out += ([2] + P(c) + P(b)) if c else ([1] + P(b))
+            while b != first:
+                nxt = next((m for m in starts.get(b, ()) if not used[m]), None)
+                if nxt is None: break
+                used[nxt] = True; _, c, b = edge_list[nxt]
+                out += ([2] + P(c) + P(b)) if c else ([1] + P(b))
+            out.append(3)
+    else:
+        at = None
+        for a, c, b in edge_list:
+            if a != at: out += [0] + P(a)
+            out += ([2] + P(c) + P(b)) if c else ([1] + P(b)); at = b
+    return '[' + ','.join(('%g' % v) for v in out) + ']'
+
+def cmd_morph(path, ids):
+    _, b, off = load(path)
+    want = set(ids); found = {}
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            if code == 46 and struct.unpack('<H', body[:2])[0] in want:
+                found[struct.unpack('<H', body[:2])[0]] = morph_shape(body)
+            elif code == 39: walk(p0 + 4, p0 + ln)
+    walk(off, len(b))
+    col = lambda c: js_colour('#%02x%02x%02x' % tuple(c[:3]), c[3])
+    def fill_js(f):
+        if f[0] == 'solid': return '{t:"s",c:[%s,%s]}' % (col(f[1]), col(f[2]))
+        if f[0] in ('linear', 'radial'):
+            st = ','.join('[%s,%s,%s,%s]' % (('%.4f' % (r0 / 255)).rstrip('0').rstrip('.') or '0', col(c0),
+                                              ('%.4f' % (r1 / 255)).rstrip('0').rstrip('.') or '0', col(c1))
+                          for r0, c0, r1, c1 in f[3])
+            return '{t:"%s",m:[[%s],[%s]],s:[%s]}' % (f[0][0], ','.join(str(v) for v in f[1]),
+                                                     ','.join(str(v) for v in f[2]), st)
+        return '{t:"s",c:["#808080","#808080"]}'
+    print('{')
+    for cid in ids:
+        if cid not in found: continue
+        fills, lines, edges = found[cid]
+        fs = []
+        for k in range(1, len(fills) + 1):
+            mine = [(a, c, e) for a, c, e, g0, g1, _ in edges if g1 == k and g0 != k] + \
+                   [(e, c, a) for a, c, e, g0, g1, _ in edges if g0 == k and g1 != k]
+            if mine: fs.append('[%s,%s]' % (fill_js(fills[k - 1]), morph_cmds(mine, True)))
+        ls = []
+        for k in range(1, len(lines) + 1):
+            mine = [(a, c, e) for a, c, e, _, _, g in edges if g == k]
+            if mine:
+                w0, w1, c0, c1 = lines[k - 1]
+                ls.append('[[%g,%g],[%s,%s],%s]' % (w0, w1, col(c0), col(c1), morph_cmds(mine, False)))
+        print('  %d: {fills:[%s], strokes:[%s]},' % (cid, ','.join(fs), ','.join(ls)))
+    print('}')
+
 def png_bytes(w, h, rgba):
     raw = b''.join(b'\x00' + rgba[y * w * 4:(y + 1) * w * 4] for y in range(h))
     def chunk(t, d): return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
@@ -566,7 +720,7 @@ def cmd_bitmaps(path, outdir):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges|canvas|bitmaps <file.swf> [...]'); sys.exit(1)
+        print(__doc__ or 'usage: swf-inspect.py text|place|shapes|fills|edges|canvas|morph|statictext|bitmaps <file.swf> [...]'); sys.exit(1)
     if sys.argv[1] == 'bitmaps':
         cmd_bitmaps(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None); sys.exit(0)
     if sys.argv[1] == 'statictext':
@@ -579,4 +733,5 @@ if __name__ == '__main__':
     elif cmd == 'fills': cmd_fills(path, ids)
     elif cmd == 'edges': cmd_edges(path, ids)
     elif cmd == 'canvas': cmd_canvas(path, ids)
+    elif cmd == 'morph': cmd_morph(path, ids)
     else: print('unknown command', cmd); sys.exit(1)

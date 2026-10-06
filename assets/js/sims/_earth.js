@@ -4,8 +4,8 @@
    Great Lakes and the Caspian are separate rings, so callers fill with the
    even-odd rule to punch them out.
 
-   Shared by every sim that draws a globe — celestialhorizon, ce_hc and
-   seasons_ecliptic all load this before their own script.                    */
+   Shared by every sim that draws a globe or a world map; their host pages
+   load this before the sim's own script.                                     */
 (function () {
   "use strict";
   var TAU = Math.PI * 2;
@@ -127,6 +127,20 @@
     var d = 1.5 * r, minStep = 2 * Math.acos(1.1 * r / d);
     for (var s = 0; s < SHORE.length; s++) ring(ctx, SHORE[s], project, d, minStep, cx, cy);
   }
+  /* The same land as one Path2D per ring, for globes drawn the way the SWF's
+     "Globe Component v2" builds its mask: a beginFill() per ring, so the rings
+     are UNIONED — even-odd only within a ring — and the Great Lakes and the
+     Caspian come out as land. Clip with each path in turn (even-odd); as with
+     landPath, the paths reach out to 1.5 r, so clip to the globe as well.   */
+  function ringPaths(project, r, cx, cy) {
+    cx = cx || 0; cy = cy || 0;
+    var d = 1.5 * r, minStep = 2 * Math.acos(1.1 * r / d), out = [];
+    for (var s = 0; s < SHORE.length; s++) {
+      var p = new Path2D();
+      if (ring(p, SHORE[s], project, d, minStep, cx, cy)) out.push(p);
+    }
+    return out;
+  }
   function ring(ctx, poly, project, d, minStep, cx, cy) {
     var n = poly.length / 3, i, first = -1, pts = [];
     for (i = 0; i < n; i++) {
@@ -134,7 +148,7 @@
       pts.push(q);
       if (first < 0 && q.z > 0) first = i;
     }
-    if (first < 0) return;                       // wholly on the far side
+    if (first < 0) return false;                 // wholly on the far side
     ctx.moveTo(pts[first].x, pts[first].y);
     var hidden = false, angleLast = 0;
     for (i = 1; i < n; i++) {
@@ -158,6 +172,7 @@
         d, minStep, cx, cy);
     }
     ctx.closePath();
+    return true;
   }
   function sweep(ctx, a0, a1, d, minStep, cx, cy) {   // the short way round, wide out
     var arc = mod(a1 - a0, TAU), dir = 1;
@@ -225,6 +240,6 @@
     }
   }
 
-  window.EARTH = { SHORE: SHORE, INNER: INNER, landPath: landPath, mapPath: mapPath,
-    spin: spin };
+  window.EARTH = { SHORE: SHORE, INNER: INNER, landPath: landPath, ringPaths: ringPaths,
+    mapPath: mapPath, spin: spin };
 })();

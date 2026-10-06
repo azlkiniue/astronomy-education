@@ -1,426 +1,344 @@
 /* Celestial-Equatorial (RA/Dec) Demonstrator ----------------------------------
-   Faithful rebuild of the ClassAction "radecdemo.swf": a translucent celestial
-   sphere with the Earth at its centre, the celestial equator, the 0h (vernal
-   equinox) hour circle and the ecliptic drawn on it, and a draggable star whose
-   position is given by right ascension (measured eastward along the celestial
-   equator, blue arc) and declination (measured up the star's hour circle, red
-   arc). Controls mirror the original — RA and dec sliders plus a "Labels" panel
-   with show all / hide all and individual label visibilities.
-   Camera matches the SWF: polar axis vertical on screen, viewed from 24° above
-   the equatorial plane at a longitude of ≈1.3h.                                 */
+   Faithful rebuild of the ClassAction "radecdemo.swf" (CelestialEquatorialDemo-
+   Class over the UNL CelestialSphere engine, both decompiled): the SWF's "The
+   Celestial Sphere" panel, drawn with the shared engine in _celestialsphere.js
+   exactly as CelestialEquatorialDemoClass.init sets it up — a 320 px sphere of
+   white glass seen from latitude 90 (so the celestial pole is "up"), the
+   celestial equator and the 0h circle, the star's hour circle and declination
+   circle, and the two measured arcs: RA (blue) east along the equator from the
+   0h circle, dec (red) up the star's hour circle, each with its value label.
+   At the centre sits the SWF's "Globe Component v2" — a size-60 CelestialSphere
+   of its own holding the Earth: the library's water and land art, the land
+   masked by the coastlines in _earth.js, plus the globe's equator and axis.
+     • Star Position — RA 0–24 h, dec −90–90° (the star is also draggable;
+       a star round the back of the sphere passes the press on to the sphere),
+     • Labels — show all / hide all, and the seven labels one by one (the East
+       Arrow and the Ecliptic checkboxes also show the arrow and the circle),
+     • drag the sphere to turn it ("simple drag": a radian per sphere radius). */
 Sim.create({
   id: "radecdemo",
-  width: 700, height: 560,
+  width: 464, height: 480,
   strings: {
     en: {
-      "rd.pos": "Star Position", "rd.ra": "right ascension (RA)", "rd.dec": "declination (dec)",
+      "rd.pos": "Star Position", "rd.ra": "RA", "rd.dec": "dec",
       "rd.hint": "you can also change the star's position by dragging it",
       "rd.labels": "Labels", "rd.showAll": "show all", "rd.hideAll": "hide all",
       "rd.lPoles": "North and South Poles", "rd.lEquator": "Equator",
       "rd.lCelPoles": "North and South Celestial Poles", "rd.lCelEq": "Celestial Equator",
       "rd.lZero": "0h Circle", "rd.lEast": "East Arrow", "rd.lEcliptic": "Ecliptic",
-      "rd.sphere": "The Celestial Sphere",
-      "rd.rRA": "RA", "rd.rDec": "dec", "rd.rRAdeg": "RA in degrees",
-      "rd.np": "North Pole", "rd.sp": "South Pole", "rd.ncp": "NCP", "rd.scp": "SCP",
-      "rd.eq": "Equator", "rd.ce": "Celestial Equator", "rd.zero": "0h", "rd.east": "east",
-      "rd.ecl": "Ecliptic", "rd.star": "star"
+      "rd.title": "The Celestial Sphere", "rd.reset": "Reset",
+      "rd.np": "North Pole", "rd.sp": "South Pole",
+      "rd.ncp": "North Celestial Pole", "rd.scp": "South Celestial Pole",
+      "rd.eq": "Equator", "rd.ce": "Celestial Equator", "rd.zero": "0h Circle",
+      "rd.east": "East", "rd.ecl": "Ecliptic", "rd.h": "h"
     },
     id: {
-      "rd.pos": "Posisi Bintang", "rd.ra": "asensiorekta (AR)", "rd.dec": "deklinasi (dek)",
+      "rd.pos": "Posisi Bintang", "rd.ra": "AR", "rd.dec": "dek",
       "rd.hint": "posisi bintang juga bisa diubah dengan menyeretnya",
       "rd.labels": "Label", "rd.showAll": "tampilkan semua", "rd.hideAll": "sembunyikan semua",
       "rd.lPoles": "Kutub Utara dan Selatan", "rd.lEquator": "Ekuator",
       "rd.lCelPoles": "Kutub Langit Utara dan Selatan", "rd.lCelEq": "Ekuator Langit",
       "rd.lZero": "Lingkaran 0j", "rd.lEast": "Panah Timur", "rd.lEcliptic": "Ekliptika",
-      "rd.sphere": "Bola Langit",
-      "rd.rRA": "AR", "rd.rDec": "dek", "rd.rRAdeg": "AR dalam derajat",
-      "rd.np": "Kutub Utara", "rd.sp": "Kutub Selatan", "rd.ncp": "KLU", "rd.scp": "KLS",
-      "rd.eq": "Ekuator", "rd.ce": "Ekuator Langit", "rd.zero": "0j", "rd.east": "timur",
-      "rd.ecl": "Ekliptika", "rd.star": "bintang"
+      "rd.title": "Bola Langit", "rd.reset": "Atur ulang",
+      "rd.np": "Kutub Utara", "rd.sp": "Kutub Selatan",
+      "rd.ncp": "Kutub Langit Utara", "rd.scp": "Kutub Langit Selatan",
+      "rd.eq": "Ekuator", "rd.ce": "Ekuator Langit", "rd.zero": "Lingkaran 0j",
+      "rd.east": "Timur", "rd.ecl": "Ekliptika", "rd.h": "j"
     }
   },
   about: {
     en: "<p>The <strong>celestial-equatorial</strong> system is the sky's version of latitude and longitude. Project Earth's equator outward and you get the <strong>celestial equator</strong>; project its poles and you get the <strong>north and south celestial poles</strong>. Because the grid is pinned to Earth's rotation axis rather than to your horizon, a star keeps the same coordinates no matter where or when you observe it.</p>" +
         "<p><strong>Declination (dec)</strong> is the angle north (+) or south (−) of the celestial equator, from −90° to +90° — the red arc. <strong>Right ascension (RA)</strong> is the angle measured <em>eastward</em> along the celestial equator from the <strong>0h circle</strong>, the hour circle through the vernal equinox — the blue arc. RA is quoted in hours rather than degrees because the sky turns 15° per hour: 1<sup>h</sup> = 15°, and a full circle is 24<sup>h</sup>.</p>" +
-        "<p>Drag the star, or use the sliders. Notice that the star's declination circle stays the same size as RA changes, and shrinks toward the pole as dec grows — which is why an hour of RA covers less sky at high declination.</p>",
+        "<p>Drag the star, or use the sliders; drag anywhere else on the sphere to turn it. Notice that the star's declination circle stays the same size as RA changes, and shrinks toward the pole as dec grows — which is why an hour of RA covers less sky at high declination.</p>",
     id: "<p>Sistem <strong>ekuatorial langit</strong> adalah versi lintang–bujur untuk langit. Proyeksikan ekuator Bumi ke luar dan diperoleh <strong>ekuator langit</strong>; proyeksikan kutubnya dan diperoleh <strong>kutub langit utara dan selatan</strong>. Karena kisi ini terpaku pada sumbu rotasi Bumi, bukan pada horizon Anda, koordinat sebuah bintang tetap sama di mana pun dan kapan pun diamati.</p>" +
         "<p><strong>Deklinasi (dek)</strong> adalah sudut ke utara (+) atau selatan (−) dari ekuator langit, −90° hingga +90° — busur merah. <strong>Asensiorekta (AR)</strong> adalah sudut yang diukur <em>ke timur</em> sepanjang ekuator langit dari <strong>lingkaran 0j</strong>, yaitu lingkaran jam yang melewati titik musim semi — busur biru. AR dinyatakan dalam jam karena langit berputar 15° per jam: 1<sup>j</sup> = 15°, dan satu lingkaran penuh 24<sup>j</sup>.</p>" +
-        "<p>Seret bintangnya, atau gunakan penggeser. Perhatikan bahwa lingkaran deklinasi bintang mengecil ke arah kutub saat dek membesar — itulah sebabnya satu jam AR mencakup langit yang lebih sempit pada deklinasi tinggi.</p>"
+        "<p>Seret bintangnya, atau gunakan penggeser; seret bagian lain bola untuk memutarnya. Perhatikan bahwa lingkaran deklinasi bintang mengecil ke arah kutub saat dek membesar — itulah sebabnya satu jam AR mencakup langit yang lebih sempit pada deklinasi tinggi.</p>"
   },
   build: function (S) {
-    var D2R = Math.PI / 180, R2D = 180 / Math.PI, TAU = Math.PI * 2;
-    var C = {
-      panel: "#0e1530", border: "#2c3a66", text: "#e8ecf8", dim: "#9fabce",
-      sphere: "#8ea3d6", ce: "#5fd68a", zero: "#8ef0b4", ecl: "#ffb35c",
-      raArc: "#4d9dff", decArc: "#ff5f5f", star: "#ffe066", axis: "#c8d3ef"
+    var FONT = "Verdana, Geneva, sans-serif";
+    var OY = -30;                                   // the SWF's title bar is the page header here
+    var PANEL = { x: 7, y: 37 + OY, w: 450, h: 466 };   // Panel Background 300×150 at (1.5, 3.107)
+    var RA_COLOR = 0x4b4bfe, DEC_COLOR = 0xfe4b4b;  // CelestialEquatorialDemoClass.raColor / decColor
+    var CS = window.CelestialSphere, EARTH = window.EARTH;
+    var syncing = false, drag = null;
+
+    /* ---- the art, from the SWF's library (python3 tools/swf-inspect.py canvas) ---- */
+    var CIRCLE50 = "M35.35 -35.35Q50 -20.7 50 0Q50 20.7 35.35 35.35Q20.7 50 0 50Q-20.7 50 -35.35 35.35" +
+      "Q-50 20.7 -50 0Q-50 -20.7 -35.35 -35.35Q-20.7 -50 0 -50Q20.7 -50 35.35 -35.35Z";
+    var ART = {
+      // "Globe Component v2 Water" (shape 110) and "Globe Component v2 Land" (shape 112)
+      water: { nz: false, layers: [[[[{ t: "r", m: [0.08905, 0, 0, 0.08905, 16, -15.95], s: [[0, "#e2eafc"], [1, "#8493f0"]] }, CIRCLE50]], []]] },
+      land: { nz: false, layers: [[[[{ t: "r", m: [0.089066, 0, 0, 0.08905, 16, -15.95], s: [[0, "#c8a977"], [1, "#98753d"]] },
+        "M35.35 -35.35Q43.35 -27.35 47 -17.5Q50 -9.35 50 0Q50 20.7 35.35 35.35Q20.7 50 0 50Q-20.7 50 -35.35 35.35" +
+        "Q-50 20.7 -50 0Q-50 -20.7 -35.35 -35.35Q-21.5 -49.2 -2.25 -49.95L0 -50Q20.7 -50 35.35 -35.35Z"]], []]] },
+      // "Sphere Edge Shading" (shape 86): a rim of grey on the front of the glass
+      edge: { nz: false, layers: [[[[{ t: "r", m: [0.123779, 0, 0, 0.123779, -0.05, 0], s: [[0.5804, "rgba(255,255,255,0)"], [1, "rgba(215,215,215,0.353)"]] },
+        "M-0.05 -100Q41.4 -100 70.65 -70.75Q99.95 -41.45 99.95 0Q99.95 41.4 70.65 70.7Q41.4 100 -0.05 100" +
+        "Q-41.45 100 -70.75 70.7Q-100.05 41.4 -100 0Q-100.05 -41.45 -70.75 -70.75Q-41.45 -100 -0.05 -100Z"]], []]] },
+      // "Rotation Arrow" (shape 88): the curled arrow over the pole
+      rotation: { nz: false, layers: [
+        [[["#505050", "M0 12L2 11.85L2 13L10.35 13Q5.9 16.6 0 16.6Q-6.45 16.6 -11.15 12.35L-11.75 11.75Q-16.6 6.9 -16.6 0" +
+          "Q-16.6 -6.9 -11.75 -11.75Q-6.9 -16.6 0 -16.6L4.2 -16.1L3 -11.65L0 -12Q-5 -12 -8.5 -8.5Q-10.25 -6.7 -11.15 -4.55" +
+          "Q-12 -2.45 -12 0Q-12 5 -8.5 8.5Q-5 12 0 12Z"]],
+         [[1, "#505050", "M2 11.85L0 12Q-5 12 -8.5 8.5Q-12 5 -12 0Q-12 -2.45 -11.15 -4.55Q-10.25 -6.7 -8.5 -8.5Q-5 -12 0 -12" +
+          "L3 -11.65L4.2 -16.1L0 -16.6Q-6.9 -16.6 -11.75 -11.75Q-16.6 -6.9 -16.6 0Q-16.6 6.9 -11.75 11.75L-11.15 12.35" +
+          "Q-6.45 16.6 0 16.6Q5.9 16.6 10.35 13"]]],
+        [[["#505050", "M11.15 12.35L10.35 13L2 13L2 11.85Q5.7 11.3 8.5 8.5Q11.65 5.35 11.95 1L6.45 2.15L14.2 -5.75L21.9 2.15" +
+          "L16.6 1.05Q16.25 7.25 11.75 11.75L11.15 12.35Z"]],
+         [[1, "#505050", "M10.35 13L11.15 12.35L11.75 11.75Q16.25 7.25 16.6 1.05L21.9 2.15L14.2 -5.75L6.45 2.15L11.95 1" +
+          "Q11.65 5.35 8.5 8.5Q5.7 11.3 2 11.85"]]]] },
+      // "East Arrow" (shape 148)
+      east: { nz: false, layers: [[[["#505050", "M-19.6 -2.65L11.95 -2.65L10.55 -9.35L20.6 0.55L10.55 10.4L11.95 3.75" +
+        "L-19.6 3.75Q-20.05 3.75 -20.35 2.9L-20.65 0.85L-20.65 0.3L-20.35 -1.75Q-20.05 -2.65 -19.6 -2.65Z"]],
+        [[1, "#505050", "M11.95 -2.65L-19.6 -2.65Q-20.05 -2.65 -20.35 -1.75L-20.65 0.3L-20.65 0.85L-20.35 2.9" +
+          "Q-20.05 3.75 -19.6 3.75L11.95 3.75L10.55 10.4L20.6 0.55L10.55 -9.35L11.95 -2.65"]]]] },
+      // "Marker" (shape 83): the caps at the two celestial poles
+      marker: { nz: false, layers: [[[["rgba(162,162,162,0.8)", "M4.05 -4.1Q5.75 -2.4 5.75 0Q5.75 2.4 4.05 4.05Q2.4 5.75 0 5.75" +
+        "Q-2.4 5.75 -4.1 4.05Q-5.75 2.4 -5.75 0Q-5.75 -2.4 -4.1 -4.1Q-2.4 -5.75 0 -5.75Q2.4 -5.75 4.05 -4.1Z"]],
+        [[1, "#000000", "M4.05 -4.1Q5.75 -2.4 5.75 0Q5.75 2.4 4.05 4.05Q2.4 5.75 0 5.75Q-2.4 5.75 -4.1 4.05Q-5.75 2.4 -5.75 0" +
+          "Q-5.75 -2.4 -4.1 -4.1Q-2.4 -5.75 0 -5.75Q2.4 -5.75 4.05 -4.1"]]]] }
     };
 
-    /* ---- state (defaults match the SWF's opening screen) ---- */
-    var ra = 4.0, dec = 60.0;                        // hours, degrees
-    var lbl = { poles: false, equator: false, celPoles: false, celEq: false, zero: false, east: false, ecl: false };
+    /* ---- the CelestialSphere, as CelestialEquatorialDemoClass.init sets it up ---- */
+    var sph = new CS({ x: 232, y: 278 + OY });
+    sph.size = 320;
+    sph.latitude = 90;
+    sph.showHorizonPlane = false;
+    sph.addShadingClip(CS.GradientDisk, "sphereBack", "back", "inner", "both",
+      { outerColor: 0xffffff, innerColor: 0xffffff, outerAlpha: 60, innerAlpha: 50 });
+    sph.addShadingClip(CS.GradientDisk, "sphereFront", "front", "inner", "both",
+      { outerColor: 0xffffff, innerColor: 0xffffff, outerAlpha: 20, innerAlpha: 5 });
+    sph.addShadingClip(CS.shapeDrawer(ART.edge), "sphereEdge", "front", "inner", "both");
 
-    /* ---- camera: polar axis vertical, 24° above the equatorial plane ---- */
-    var SCx = 300, SCy = 300, R = 210;
-    var EC = 24 * D2R;                               // camera elevation above the equator
-    var LC = 20 * D2R;                               // camera longitude (≈ RA 1.3h)
-    var sinE = Math.sin(EC), cosE = Math.cos(EC);
+    // the Earth: a size-60 CelestialSphere of its own at the centre, holding the globe
+    var inner = new CS({ x: 0, y: 0 });
+    inner.size = 60;
+    inner.latitude = 90;
+    inner.showHorizonPlane = false;
+    inner.removeClip("celestialBowl");
+    inner.setMouseBehavior("none");
+    // GlobeComponentV2 (not standalone): two CSLines on its sphere for the axis, styled
+    // by setAxisStyle(1, 0x000000, 100), running from the surface out to axisLength 1.4
+    inner.addLine("__PrecessingGlobeV2SouthPoleAxis", { alpha: 100, color: 0x000000, thickness: 1 },
+      { system: "horizon", x: 0, y: 0, z: -1 }, { system: "horizon", x: 0, y: 0, z: -1.4 });
+    inner.addLine("__PrecessingGlobeV2NorthPoleAxis", { alpha: 100, color: 0x000000, thickness: 1 },
+      { system: "horizon", x: 0, y: 0, z: 1 }, { system: "horizon", x: 0, y: 0, z: 1.4 });
+    inner.addObject("globe", globeArt, { system: "celestial", x: 0, y: 0, z: 0 });
+    inner.addCircle("equator", { alpha: 100, color: 0x216331, thickness: 1 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addObject("innerSphere", function (ctx) { inner.draw(ctx); }, { system: "celestial", x: 0, y: 0, z: 0 });
 
-    // p(φ,δ) on the unit sphere → screen. φ measured eastward from the 0h circle.
-    function proj(phi, delta, rad) {
-      var k = rad == null ? 1 : rad;
-      var cd = Math.cos(delta), sd = Math.sin(delta), dl = phi - LC;
-      return {
-        x: SCx + R * k * cd * Math.sin(dl),
-        y: SCy - R * k * (cosE * sd - sinE * cd * Math.cos(dl)),
-        z: cosE * cd * Math.cos(dl) + sinE * sd       // >0 ⇒ near side (toward the viewer)
+    sph.addObject("raLabel", CS.art.csLabel, { dec: 0, ra: 0 }, { labelColor: RA_COLOR });
+    sph.addObject("decLabel", CS.art.csLabel, { dec: 0, ra: 0 }, { labelColor: DEC_COLOR });
+    sph.addObject("ncpMarker", CS.shapeDrawer(ART.marker), { dec: 90, ra: 0 });
+    sph.ncpMarker.setOrientationType("absolute");
+    sph.addObject("scpMarker", CS.shapeDrawer(ART.marker), { dec: -90, ra: 0 });
+    sph.scpMarker.setOrientationType("absolute");
+    sph.addObject("rotationArrow", CS.shapeDrawer(ART.rotation), { r: 0.4, dec: 90, ra: 0 });
+    sph.rotationArrow.setOrientationType("absolute");
+    // the labels: a leader line and an 11 px Verdana caption, flat on the screen
+    var LEAD = [-23.15, 9.15, -5.15, 2.4];          // shape 76, the leader most of them share
+    function moved(l, dx, dy) { return [l[0] + dx, l[1] + dy, l[2] + dx, l[3] + dy]; }
+    sph.addObject("northPoleLabel", label(moved(LEAD, 27.9, -10.65), "rd.np", 26.75, -5.25, "left"), { system: "horizon", x: 0, y: 0, z: 0.2 });
+    sph.addObject("southPoleLabel", label([4.8, 1.5, 22.8, 8.3], "rd.sp", 26.75, 15, "left"), { system: "horizon", x: 0, y: 0, z: -0.2 });
+    sph.addObject("equatorLabel", label(LEAD, "rd.eq", -29.15, 17.25, "right"), { system: "horizon", x: 0, y: 0, z: 0 });
+    sph.addObject("ncpLabel", label(moved(LEAD, 27.9, -10.65), "rd.ncp", 26.75, -5.25, "left"), { system: "horizon", x: 0, y: 0, z: 1 });
+    sph.addObject("scpLabel", label([4.8, 1.5, 22.8, 8.3], "rd.scp", 25.75, 16, "left"), { system: "horizon", x: 0, y: 0, z: -1 });
+    sph.addObject("eclipticLabel", label(moved(LEAD, 31, -12.25), "rd.ecl", 30, -8, "left"), { system: "horizon", x: 0, y: 0, z: 0 });
+    sph.addObject("ceLabel", label(LEAD, "rd.ce", -29.25, 16.25, "right"), { system: "horizon", x: 0, y: 0, z: 0 });
+    sph.addObject("eastArrow", eastArrow, { r: 1.2, x: 0, y: 0, z: 0 });
+    sph.addObject("zeroHoursLabel", label([-13.25, -5.55, -2.5, -1.5], "rd.zero", -18.1, -4.35, "right"), { r: 1, ra: 0, dec: 35 });
+    sph.addObject("star", function (ctx, o) { CS.art.star(ctx, o.hot); }, { dec: 0, ra: 0 });
+    sph.addLine("ncpLineExtension", { alpha: 100, color: 0x505050, thickness: 2 }, { r: 1, dec: 90, ra: 0 }, { r: 1.3, dec: 90, ra: 0 });
+    sph.addLine("scpLineExtension", { alpha: 100, color: 0x505050, thickness: 2 }, { r: 1, dec: -90, ra: 0 }, { r: 1.3, dec: -90, ra: 0 });
+    sph.addCircle("celestialEquator", { alpha: 100, color: 0x216331, thickness: 2 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addCircle("meridian1", { alpha: 10, color: 0x000000, thickness: 1 }, { gammaEnd: -90, gammaStart: 90, tilt: 90, dec: 0, ra: 0 });
+    sph.addCircle("meridian2", { alpha: 10, color: 0x000000, thickness: 1 }, { tilt: 90, dec: 0, ra: 6 });
+    sph.addCircle("zeroHoursCircle", { alpha: 100, color: 0x216331, thickness: 2 }, { gammaEnd: 90, gammaStart: -90, tilt: 90, dec: 0, ra: 0 });
+    sph.addCircle("ecliptic", { alpha: 100, color: 0x9930df, thickness: 2 }, { tilt: 23.5, dec: 0, ra: 0 });
+    sph.addCircle("raCircle", { alpha: 100, color: 0xa0a0a0, thickness: 1 }, { tilt: 90, dec: 0, ra: 0 });
+    sph.addCircle("decCircle", { alpha: 100, color: 0xa0a0a0, thickness: 1 }, { tilt: 90, dec: 0, ra: 0 });
+    sph.addCircle("raArc", { alpha: 100, color: RA_COLOR, thickness: 3 }, { tilt: 0, dec: 0, ra: 0 });
+    sph.addCircle("decArc", { alpha: 100, color: DEC_COLOR, thickness: 3 }, { tilt: 90, dec: 0, ra: 0 });
+    sph.onMouseUpdate = onSphereOrientationChanged;
+
+    function label(line, key, x, y, align) {
+      return function (ctx) {
+        ctx.strokeStyle = "#000000"; ctx.lineWidth = 1; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(line[0], line[1]); ctx.lineTo(line[2], line[3]); ctx.stroke();
+        ctx.fillStyle = "#000000"; ctx.font = "11px " + FONT;
+        ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+        FlashText.fillStatic(ctx, I18N.t(key), x, y, align);
       };
     }
-    function raPhi(h) { return h * 15 * D2R; }
-
-    /* draw a circle of constant declination (or any parametric curve) with the
-       far side drawn faint, so the sphere reads as transparent glass */
-    function ring(delta, col, w, dash) {
-      var ctx = S.ctx;
-      for (var side = 0; side < 2; side++) {
-        ctx.beginPath(); var pen = false;
-        for (var a = 0; a <= 360; a += 2) {
-          var p = proj(a * D2R, delta);
-          if ((p.z >= 0) !== (side === 0)) { pen = false; continue; }
-          pen ? ctx.lineTo(p.x, p.y) : (ctx.moveTo(p.x, p.y), pen = true);
-        }
-        ctx.setLineDash(dash || []);
-        ctx.strokeStyle = col; ctx.lineWidth = side === 0 ? w : Math.max(1, w - 1);
-        ctx.globalAlpha = side === 0 ? 1 : 0.28; ctx.stroke();
-        ctx.globalAlpha = 1; ctx.setLineDash([]);
-      }
+    // "East Arrow": shape 148 and a centred 12 px Verdana field under it
+    function eastArrow(ctx) {
+      CS.drawShape(ctx, ART.east);
+      ctx.fillStyle = "#000000"; ctx.font = "12px " + FONT;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, I18N.t("rd.east"), -1, 10.95 + 1.0059 * 12, "center");
     }
-    // great circle through the poles at longitude phi (an "hour circle")
-    function hourCircle(phi, col, w, dash) {
-      var ctx = S.ctx;
-      for (var side = 0; side < 2; side++) {
-        ctx.beginPath(); var pen = false;
-        for (var a = 0; a <= 360; a += 2) {
-          var t = a * D2R, d = t, ph = phi;
-          if (t > Math.PI / 2 && t < 3 * Math.PI / 2) { d = Math.PI - t; ph = phi + Math.PI; }
-          else if (t >= 3 * Math.PI / 2) { d = t - TAU; }
-          var p = proj(ph, d);
-          if ((p.z >= 0) !== (side === 0)) { pen = false; continue; }
-          pen ? ctx.lineTo(p.x, p.y) : (ctx.moveTo(p.x, p.y), pen = true);
-        }
-        ctx.setLineDash(dash || []);
-        ctx.strokeStyle = col; ctx.lineWidth = side === 0 ? w : Math.max(1, w - 1);
-        ctx.globalAlpha = side === 0 ? 1 : 0.28; ctx.stroke();
-        ctx.globalAlpha = 1; ctx.setLineDash([]);
-      }
-    }
-    // the ecliptic: a great circle inclined 23.44° to the equator, crossing it at 0h
-    function ecliptic(col, w) {
-      var ctx = S.ctx, eps = 23.44 * D2R;
-      for (var side = 0; side < 2; side++) {
-        ctx.beginPath(); var pen = false;
-        for (var a = 0; a <= 360; a += 2) {
-          var l = a * D2R;
-          var d = Math.asin(Math.sin(eps) * Math.sin(l));
-          var ph = Math.atan2(Math.cos(eps) * Math.sin(l), Math.cos(l));
-          var p = proj(ph, d);
-          if ((p.z >= 0) !== (side === 0)) { pen = false; continue; }
-          pen ? ctx.lineTo(p.x, p.y) : (ctx.moveTo(p.x, p.y), pen = true);
-        }
-        ctx.strokeStyle = col; ctx.lineWidth = side === 0 ? w : 1;
-        ctx.globalAlpha = side === 0 ? 0.9 : 0.25; ctx.stroke(); ctx.globalAlpha = 1;
+    /* "Globe Component v2" inside the size-60 sphere: globeMC is scaled to
+       2·r·size = 60 %, so the library's 50-unit water and land discs come out
+       30 px across — the sphere's own radius — and the land is masked by the
+       coastlines, projected through the sphere exactly as the globe's update()
+       does it (the q matrix is the identity: no rotation, no precession).    */
+    var GLOBE_K = 0.6;
+    function shore(x, y, z) { return inner.CtoSz({ x: x, y: y, z: z }); }
+    function globeArt(ctx) {
+      ctx.save();
+      ctx.scale(GLOBE_K, GLOBE_K);
+      CS.drawShape(ctx, ART.water);
+      ctx.restore();
+      var rings = EARTH.ringPaths(shore, inner.r);
+      for (var i = 0; i < rings.length; i++) {
+        ctx.save();
+        ctx.clip(rings[i], "evenodd");
+        ctx.scale(GLOBE_K, GLOBE_K);
+        CS.drawShape(ctx, ART.land);
+        ctx.restore();
       }
     }
 
-    /* ---- controls ---- */
+    /* ---- CelestialEquatorialDemoClass: setStarLocation, onSphereOrientationChanged, updateLabels ---- */
+    function setStarLocation(pt, skipSliderSync) {
+      sph.raLabel.labelText = pt.ra.toFixed(1) + I18N.t("rd.h");
+      sph.raLabel.setPosition({ r: 1.001, dec: 5, ra: pt.ra - 0.9 });
+      sph.raLabel.setOrientationType("absolute");
+      sph.decLabel.labelText = pt.dec.toFixed(1) + "°";
+      sph.decLabel.setPosition({ r: 1.001, dec: pt.dec / 2, ra: pt.ra + 0.9 });
+      sph.decLabel.setOrientationType("absolute");
+      sph.star.setPosition(pt);
+      sph.star.setOrientationType("absolute");
+      if (pt.ra !== 0) { sph.raArc.setParameters({ gammaEnd: 15 * pt.ra, gammaStart: 0, tilt: 0, dec: 0, ra: 0 }); sph.raArc.visible = true; }
+      else sph.raArc.visible = false;
+      sph.raCircle.setParameters({ gammaEnd: 90, gammaStart: -90, tilt: 90, dec: 0, ra: pt.ra });
+      if (pt.dec < 0) { sph.decArc.setParameters({ gammaEnd: 0, gammaStart: pt.dec, tilt: 90, dec: 0, ra: pt.ra }); sph.decArc.visible = true; }
+      else if (pt.dec > 0) { sph.decArc.setParameters({ gammaEnd: pt.dec, gammaStart: 0, tilt: 90, dec: 0, ra: pt.ra }); sph.decArc.visible = true; }
+      else sph.decArc.visible = false;
+      sph.decCircle.setParameters({ tilt: 0, dec: pt.dec, ra: 0 });
+      star = { ra: pt.ra, dec: pt.dec };
+      if (!skipSliderSync) { syncing = true; raCtl.set(pt.ra); decCtl.set(pt.dec); syncing = false; }
+      S.requestDraw();
+    }
+    var star = { ra: 4, dec: 60 };
+    function onSphereOrientationChanged() {
+      var th = sph.theta;
+      inner.setThetaAndPhi(th, sph.phi);
+      sph.equatorLabel.setPosition({ r: 0.2, az: 394 - th, alt: 0 });
+      var az = -34 - th, alt = Math.atan(Math.sin(az * Math.PI / 180) * 0.4348123749609336) * 180 / Math.PI;
+      sph.eclipticLabel.setPosition({ r: 1.01, az: az, alt: alt });
+      sph.ceLabel.setPosition({ r: 1.01, az: 394 - th, alt: 0 });
+      sph.eastArrow.setPosition({ r: 1.15, az: 0 - th, alt: 0 });
+      sph.eastArrow.setOrientationType("absolute");
+    }
+    function updateLabels() {
+      sph.eastArrow.visible = optEast.value();
+      sph.ecliptic.visible = optEcl.value();
+      sph.eclipticLabel.visible = optEcl.value();
+      sph.northPoleLabel.visible = optPoles.value();
+      sph.southPoleLabel.visible = optPoles.value();
+      sph.equatorLabel.visible = optEq.value();
+      sph.ncpLabel.visible = optCelPoles.value();
+      sph.scpLabel.visible = optCelPoles.value();
+      sph.ceLabel.visible = optCelEq.value();
+      sph.zeroHoursLabel.visible = optZero.value();
+      S.requestDraw();
+    }
+    function setAll(b) {
+      syncing = true;
+      [optPoles, optEq, optCelPoles, optCelEq, optZero, optEast, optEcl].forEach(function (o) { o.set(b); });
+      syncing = false;
+      updateLabels();
+    }
+    function reset() {
+      setStarLocation({ dec: 60, ra: 4 });
+      sph.setThetaAndPhi(217, 32);
+      onSphereOrientationChanged();
+      setAll(false);
+    }
+
+    /* ---- controls: the Star Position and Labels panels ---- */
     S.group("rd.pos");
-    var raCtl = S.slider({
-      labelKey: "rd.ra", min: 0, max: 24, value: ra, step: 0.1,
-      format: function (v) { return v.toFixed(1) + " h"; },
-      on: function (v) { ra = v; upd(); }
-    });
-    var decCtl = S.slider({
-      labelKey: "rd.dec", min: -90, max: 90, value: dec, step: 0.5,
+    var raCtl = S.slider({ labelKey: "rd.ra", min: 0, max: 24, step: 0.1, value: 4,
+      format: function (v) { return v.toFixed(1) + " " + I18N.t("rd.h"); },
+      on: function (v) { if (!syncing) setStarLocation({ ra: v, dec: decCtl.value() }, true); } });
+    var decCtl = S.slider({ labelKey: "rd.dec", min: -90, max: 90, step: 0.1, value: 60,
       format: function (v) { return v.toFixed(1) + "°"; },
-      on: function (v) { dec = v; upd(); }
-    });
+      on: function (v) { if (!syncing) setStarLocation({ ra: raCtl.value(), dec: v }, true); } });
     var hint = document.createElement("p");
     hint.className = "sim-note"; hint.setAttribute("data-i18n", "rd.hint");
-    decCtl.input.parentNode.parentNode.appendChild(hint);
-
+    S.canvas.parentNode.parentNode.querySelector(".sim-controls").appendChild(hint);
     S.group("rd.labels");
     S.button({ labelKey: "rd.showAll", on: function () { setAll(true); } });
     S.button({ labelKey: "rd.hideAll", on: function () { setAll(false); } });
-    var toggles = {
-      poles: S.toggle({ labelKey: "rd.lPoles", value: false, on: function (b) { lbl.poles = b; } }),
-      equator: S.toggle({ labelKey: "rd.lEquator", value: false, on: function (b) { lbl.equator = b; } }),
-      celPoles: S.toggle({ labelKey: "rd.lCelPoles", value: false, on: function (b) { lbl.celPoles = b; } }),
-      celEq: S.toggle({ labelKey: "rd.lCelEq", value: false, on: function (b) { lbl.celEq = b; } }),
-      zero: S.toggle({ labelKey: "rd.lZero", value: false, on: function (b) { lbl.zero = b; } }),
-      east: S.toggle({ labelKey: "rd.lEast", value: false, on: function (b) { lbl.east = b; } }),
-      ecl: S.toggle({ labelKey: "rd.lEcliptic", value: false, on: function (b) { lbl.ecl = b; } })
-    };
-    function setAll(b) { Object.keys(toggles).forEach(function (k) { toggles[k].set(b); }); S.requestDraw(); }
+    function onToggle() { if (!syncing) updateLabels(); }
+    var optPoles = S.toggle({ labelKey: "rd.lPoles", value: false, on: onToggle });
+    var optEq = S.toggle({ labelKey: "rd.lEquator", value: false, on: onToggle });
+    var optCelPoles = S.toggle({ labelKey: "rd.lCelPoles", value: false, on: onToggle });
+    var optCelEq = S.toggle({ labelKey: "rd.lCelEq", value: false, on: onToggle });
+    var optZero = S.toggle({ labelKey: "rd.lZero", value: false, on: onToggle });
+    var optEast = S.toggle({ labelKey: "rd.lEast", value: false, on: onToggle });
+    var optEcl = S.toggle({ labelKey: "rd.lEcliptic", value: false, on: onToggle });
+    S.button({ labelKey: "rd.reset", on: reset });
 
-    var outRA = S.readout({ labelKey: "rd.rRA" });
-    var outDec = S.readout({ labelKey: "rd.rDec" });
-    var outDeg = S.readout({ labelKey: "rd.rRAdeg" });
-
-    function hms(h) {
-      var t = ((h % 24) + 24) % 24, hh = Math.floor(t), m = (t - hh) * 60, mm = Math.floor(m);
-      return hh + "h " + (mm < 10 ? "0" : "") + mm + "m " + (Math.round((m - mm) * 60) < 10 ? "0" : "") + Math.round((m - mm) * 60) + "s";
-    }
-    function dms(d) {
-      var s = d < 0 ? "−" : "+", a = Math.abs(d), dd = Math.floor(a), m = (a - dd) * 60, mm = Math.floor(m);
-      return s + dd + "° " + (mm < 10 ? "0" : "") + mm + "′ " + (Math.round((m - mm) * 60) < 10 ? "0" : "") + Math.round((m - mm) * 60) + "″";
-    }
-    function upd() {
-      outRA(hms(ra)); outDec(dms(dec)); outDeg((ra * 15).toFixed(1) + "°");
-      S.requestDraw();
-    }
-    S.refreshers.push(upd);
-
-    /* ---- drag the star ---- */
-    var dragging = false;
-    function localXY(ev) {
-      var r = S.canvas.getBoundingClientRect();
-      return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height };
+    /* ---- pointer: the Draggable Star, else the sphere's simple drag ---- */
+    function at(ev) { return CS.canvasPoint(S.canvas, ev, S.W, S.H); }
+    function onStar(p) {
+      var o = sph.star;
+      if (!o.shown) return false;
+      var q = o.toLocal(p.x, p.y);
+      return q.x * q.x + q.y * q.y <= 10.5 * 10.5;
     }
     S.canvas.addEventListener("pointerdown", function (ev) {
-      var m = localXY(ev), p = proj(raPhi(ra), dec * D2R);
-      if (Math.hypot(m.x - p.x, m.y - p.y) < 34) { dragging = true; S.canvas.setPointerCapture(ev.pointerId); }
+      var p = at(ev);
+      if (onStar(p) && sph.star.screen.z > 0) drag = "star";
+      else if (sph.startDrag(p.x, p.y)) drag = "sphere";
+      else return;
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      ev.preventDefault();
     });
     S.canvas.addEventListener("pointermove", function (ev) {
-      if (!dragging) return;
-      var m = localXY(ev), best = 1e9, bra = ra, bdec = dec;
-      for (var h = 0; h < 24; h += 0.1) for (var d = -90; d <= 90; d += 1.5) {
-        var p = proj(raPhi(h), d * D2R);
-        if (p.z < -0.1) continue;                  // keep the star on the visible face
-        var q = (p.x - m.x) * (p.x - m.x) + (p.y - m.y) * (p.y - m.y);
-        if (q < best) { best = q; bra = h; bdec = d; }
+      var p = at(ev);
+      if (!drag) {
+        var hot = onStar(p) && sph.star.screen.z > 0;
+        if (hot !== !!sph.star.hot) { sph.star.hot = hot; S.requestDraw(); }
+        return;
       }
-      ra = Math.round(bra * 10) / 10; dec = Math.round(bdec * 2) / 2;
-      raCtl.input.value = ra; decCtl.input.value = dec;
-      S.refreshers.forEach(function (f) { f(); });
+      if (drag === "star") {                        // onMouseMoveFunc: getMouseRaDec at the mouse
+        var c = sph.getMouseRaDec(p.x, p.y);
+        if (c.ra !== null) setStarLocation({ ra: c.ra, dec: c.dec });
+      } else { sph.dragTo(p.x, p.y); S.requestDraw(); }
     });
-    S.canvas.addEventListener("pointerup", function () { dragging = false; });
+    ["pointerup", "pointercancel"].forEach(function (e) {
+      S.canvas.addEventListener(e, function () { drag = null; sph.endDrag(); });
+    });
+    S.canvas.addEventListener("pointerleave", function () {
+      if (!drag && sph.star.hot) { sph.star.hot = false; S.requestDraw(); }
+    });
 
-    /* ---- Earth, drawn as a small globe at the centre of the sphere ---- */
-    var LAND = [   // crude continent blobs in (lon°, lat°) — enough to read as Earth
-      [[-10, 35], [30, 35], [50, 12], [42, -5], [25, -34], [12, -6], [-16, 12]],
-      [[-8, 44], [30, 45], [60, 40], [100, 55], [140, 50], [120, 25], [75, 8], [40, 38], [0, 52]],
-      [[-100, 55], [-60, 50], [-70, 25], [-100, 20], [-125, 40]],
-      [[-70, 5], [-38, -8], [-52, -35], [-72, -20], [-78, -2]],
-      [[113, -22], [150, -22], [145, -38], [118, -34]]
-    ];
-    function drawEarth(ctx, cx, cy, er) {
-      ctx.save();
-      ctx.beginPath(); ctx.arc(cx, cy, er, 0, TAU); ctx.clip();
-      var g = ctx.createRadialGradient(cx - er * 0.35, cy - er * 0.4, er * 0.15, cx, cy, er);
-      g.addColorStop(0, "#4a86d8"); g.addColorStop(1, "#153a70");
-      ctx.fillStyle = g; ctx.fillRect(cx - er, cy - er, er * 2, er * 2);
-      // continents, projected with the same camera at the globe's scale
-      ctx.fillStyle = "#3f7a4a";
-      LAND.forEach(function (poly) {
-        ctx.beginPath(); var pen = false;
-        poly.forEach(function (v) {
-          var p = proj(v[0] * D2R, v[1] * D2R);
-          var sx = cx + (p.x - SCx) * er / R, sy = cy + (p.y - SCy) * er / R;
-          if (p.z < 0) { return; }
-          pen ? ctx.lineTo(sx, sy) : (ctx.moveTo(sx, sy), pen = true);
-        });
-        if (pen) { ctx.closePath(); ctx.fill(); }
-      });
-      // Earth's equator on the globe
-      ctx.beginPath(); var pen2 = false;
-      for (var a = 0; a <= 360; a += 3) {
-        var p = proj(a * D2R, 0);
-        if (p.z < 0) { pen2 = false; continue; }
-        var sx = cx + (p.x - SCx) * er / R, sy = cy + (p.y - SCy) * er / R;
-        pen2 ? ctx.lineTo(sx, sy) : (ctx.moveTo(sx, sy), pen2 = true);
-      }
-      ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 1.4; ctx.stroke();
-      ctx.restore();
-      ctx.beginPath(); ctx.arc(cx, cy, er, 0, TAU);
-      ctx.strokeStyle = "rgba(200,215,255,.5)"; ctx.lineWidth = 1; ctx.stroke();
-    }
-
-    function tag(ctx, x, y, text, col, align, dy) {
-      ctx.font = "600 11px system-ui"; ctx.textAlign = align || "center";
-      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(7,11,26,.85)";
-      ctx.strokeText(text, x, y + (dy || 0)); ctx.fillStyle = col; ctx.fillText(text, x, y + (dy || 0));
-      ctx.textAlign = "left";
-    }
-
+    /* ---- drawing: the panel, then the sphere ---- */
     S.onDraw(function () {
-      var ctx = S.ctx; S.clear();
-      var t = I18N.t.bind(I18N);
-      var phi = raPhi(ra), dR = dec * D2R;
-
-      // ---- panel frame ----
-      ctx.fillStyle = C.panel; ctx.strokeStyle = C.border; ctx.lineWidth = 1;
-      roundRect(ctx, 8, 8, 584, S.H - 16, 10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = C.dim; ctx.font = "12px system-ui"; ctx.textAlign = "left";
-      ctx.fillText(t("rd.sphere"), 20, 28);
-
-      // ---- glass sphere ----
-      var sg = ctx.createRadialGradient(SCx - R * 0.4, SCy - R * 0.45, R * 0.1, SCx, SCy, R);
-      sg.addColorStop(0, "rgba(150,175,235,.13)"); sg.addColorStop(0.75, "rgba(110,135,200,.07)");
-      sg.addColorStop(1, "rgba(90,115,180,.16)");
-      ctx.beginPath(); ctx.arc(SCx, SCy, R, 0, TAU); ctx.fillStyle = sg; ctx.fill();
-      ctx.strokeStyle = "rgba(160,180,230,.4)"; ctx.lineWidth = 1.2; ctx.stroke();
-
-      // faint wireframe: declination parallels + hour circles
-      [-60, -30, 30, 60].forEach(function (d) { ring(d * D2R, "rgba(150,170,220,.20)", 1); });
-      for (var hh = 0; hh < 12; hh++) if (hh !== 0) hourCircle(hh * 30 * D2R, "rgba(150,170,220,.16)", 1);
-
-      // ---- polar axis, poking out of the sphere ----
-      var pn = proj(0, Math.PI / 2, 1.16), ps = proj(0, -Math.PI / 2, 1.16);
-      ctx.beginPath(); ctx.moveTo(pn.x, pn.y); ctx.lineTo(ps.x, ps.y);
-      ctx.strokeStyle = C.axis; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.75; ctx.stroke(); ctx.globalAlpha = 1;
-
-      // ---- the reference circles ----
-      ecliptic(C.ecl, 1.6);
-      ring(0, C.ce, 2.2);                       // celestial equator
-      hourCircle(0, C.zero, 2);                 // 0h circle (through the vernal equinox)
-
-      // ---- the star's declination circle ----
-      ring(dR, "rgba(255,224,102,.35)", 1.2, [4, 4]);
-
-      // ---- RA arc: eastward along the celestial equator, 0h → the star's hour circle ----
-      ctx.lineCap = "round";
-      arc(function (u) { return proj(u * ra * 15 * D2R, 0, 1.012); }, C.raArc);
-      // ---- dec arc: up the star's hour circle from the equator to the star ----
-      arc(function (u) { return proj(phi, u * dR, 1.012); }, C.decArc);
-      ctx.lineCap = "butt";
-
-      // arc value labels, pushed a little outside the sphere (faint when behind it)
-      var mRA = proj(raPhi(ra / 2), 0, 1.14);
-      ctx.globalAlpha = mRA.z >= 0 ? 1 : 0.42;
-      tag(ctx, mRA.x, mRA.y, ra.toFixed(1) + "h", C.raArc);
-      var mDec = proj(phi, dR / 2, 1.15);
-      ctx.globalAlpha = mDec.z >= 0 ? 1 : 0.42;
-      tag(ctx, mDec.x, mDec.y, dec.toFixed(1) + "°", C.decArc);
-      ctx.globalAlpha = 1;
-
-      // ---- Earth at the centre ----
-      drawEarth(ctx, SCx, SCy, 42);
-
-      // ---- east arrow: the direction RA is measured in, just outside the equator ----
-      var e0 = raPhi(5.2), e1 = raPhi(7.0);
-      ctx.beginPath(); pen = false;
-      for (var ea = e0; ea <= e1; ea += 0.02) {
-        var pe = proj(ea, 0, 1.09);
-        if (pe.z < 0) { pen = false; continue; }
-        pen ? ctx.lineTo(pe.x, pe.y) : (ctx.moveTo(pe.x, pe.y), pen = true);
-      }
-      ctx.strokeStyle = "rgba(232,236,248,.75)"; ctx.lineWidth = 1.8; ctx.stroke();
-      var tip = proj(e1, 0, 1.09), pre = proj(e1 - 0.05, 0, 1.09);
-      if (tip.z > 0) arrowHead(ctx, pre.x, pre.y, tip.x, tip.y, "rgba(232,236,248,.85)");
-
-      // ---- the star ----
-      var sp = proj(phi, dR);
-      ctx.globalAlpha = sp.z < 0 ? 0.4 : 1;
-      ctx.beginPath(); ctx.arc(sp.x, sp.y, 9, 0, TAU);
-      ctx.fillStyle = "rgba(255,224,102,.22)"; ctx.fill();
-      starPath(ctx, sp.x, sp.y, 7.5, 3.2);
-      ctx.fillStyle = C.star; ctx.fill();
-      ctx.strokeStyle = "#8a6d00"; ctx.lineWidth = 0.8; ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      // ---- labels (individually toggled, as in the original) ----
-      if (lbl.celPoles) {
-        tag(ctx, pn.x, pn.y - 8, t("rd.ncp"), C.text);
-        tag(ctx, ps.x, ps.y + 16, t("rd.scp"), C.text);
-      }
-      if (lbl.poles) {                                 // Earth's own poles, on the globe
-        var eNP = SCy - 42 * cosE, eSP = SCy + 42 * cosE;
-        leader(ctx, SCx - 56, SCy - 66, SCx - 3, eNP + 3, t("rd.np"), "#cfe0ff");
-        leader(ctx, SCx - 56, SCy + 82, SCx - 3, eSP - 3, t("rd.sp"), "#cfe0ff");
-      }
-      if (lbl.equator) {                               // Earth's equator, on the globe
-        leader(ctx, SCx - 74, SCy + 28, SCx - 32, SCy + 7, t("rd.eq"), "#dce6ff");
-      }
-      if (lbl.celEq) {
-        var pce = proj(raPhi(19.5), 0, 1.1);
-        tag(ctx, pce.x, pce.y, t("rd.ce"), C.ce);
-      }
-      if (lbl.zero) {
-        var pz = proj(0, 55 * D2R, 1.1);
-        tag(ctx, pz.x, pz.y, t("rd.zero"), C.zero);
-      }
-      if (lbl.east) {
-        var pea = proj(raPhi(6.1), 0, 1.22);
-        tag(ctx, pea.x, pea.y, t("rd.east"), "#e8ecf8");
-      }
-      if (lbl.ecl) {
-        var pel = proj(raPhi(7.2), 23.44 * D2R, 1.12);
-        tag(ctx, pel.x, pel.y, t("rd.ecl"), C.ecl);
-      }
-
-      // ---- readout strip inside the panel ----
-      ctx.fillStyle = C.dim; ctx.font = "12px system-ui"; ctx.textAlign = "left";
-      ctx.fillText(t("rd.rRA") + ":", 20, S.H - 44);
-      ctx.fillText(t("rd.rDec") + ":", 20, S.H - 24);
-      ctx.fillStyle = C.raArc; ctx.font = "600 13px ui-monospace, monospace";
-      ctx.fillText(hms(ra), 70, S.H - 44);
-      ctx.fillStyle = C.decArc; ctx.fillText(dms(dec), 70, S.H - 24);
-
-      // legend
-      var lx = 330, ly = S.H - 48;
-      legend(ctx, lx, ly, C.ce, t("rd.ce"));
-      legend(ctx, lx, ly + 18, C.zero, t("rd.lZero"));
-      legend(ctx, lx + 150, ly, C.ecl, t("rd.ecl"));
-      legend(ctx, lx + 150, ly + 18, C.star, t("rd.star"));
+      var ctx = S.ctx, title = I18N.t("rd.title");
+      FlashText.begin(ctx);
+      ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
+      var b = PANEL;                                // Panel Background, a 14 px #333333 title
+      ctx.fillStyle = "#fafafa"; ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = "#666666"; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      ctx.fillStyle = "#333333"; ctx.font = "14px " + FONT;
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      FlashText.fill(ctx, title, b.x + 5, b.y + 4 + 1.0059 * 14);
+      ctx.strokeStyle = "#cccccc"; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(b.x + 10 + FlashText.textWidth(ctx, title), b.y + 14.44); ctx.lineTo(b.x + b.w - 5, b.y + 14.44);
+      ctx.stroke(); ctx.lineCap = "butt";
+      ctx.save();
+      ctx.beginPath(); ctx.rect(b.x + 1, b.y + 1, b.w - 2, b.h - 2); ctx.clip();
+      sph.draw(ctx);
+      ctx.restore();
     });
+    // the RA label's unit follows the language
+    window.addEventListener("langchange", function () { setStarLocation(star, true); });
 
-    /* stroke a parametric arc p(u), u ∈ [0,1] — solid on the near face of the
-       sphere, faint where it passes round the back */
-    function arc(p, col) {
-      var ctx = S.ctx;
-      for (var side = 0; side < 2; side++) {
-        ctx.beginPath(); var pen = false;
-        for (var i = 0; i <= 180; i++) {
-          var q = p(i / 180);
-          if ((q.z >= 0) !== (side === 0)) { pen = false; continue; }
-          pen ? ctx.lineTo(q.x, q.y) : (ctx.moveTo(q.x, q.y), pen = true);
-        }
-        ctx.strokeStyle = col; ctx.lineWidth = side === 0 ? 3.4 : 2.2;
-        ctx.globalAlpha = side === 0 ? 1 : 0.3; ctx.stroke(); ctx.globalAlpha = 1;
-      }
-    }
-    // right-aligned caption at (tx,ty) with a hairline leader to the feature at (px,py)
-    function leader(ctx, tx, ty, px, py, text, col) {
-      ctx.beginPath(); ctx.moveTo(tx + 4, ty - 3); ctx.lineTo(px, py);
-      ctx.strokeStyle = "rgba(200,215,255,.45)"; ctx.lineWidth = 1; ctx.stroke();
-      tag(ctx, tx, ty, text, col, "right");
-    }
-    function legend(ctx, x, y, col, label) {
-      ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath();
-      ctx.moveTo(x, y); ctx.lineTo(x + 18, y); ctx.stroke();
-      ctx.fillStyle = C.dim; ctx.font = "11px system-ui"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(label, x + 24, y); ctx.textBaseline = "alphabetic";
-    }
-    function arrowHead(ctx, x0, y0, x1, y1, col) {
-      var a = Math.atan2(y1 - y0, x1 - x0);
-      ctx.beginPath(); ctx.moveTo(x1, y1);
-      ctx.lineTo(x1 - 8 * Math.cos(a - 0.4), y1 - 8 * Math.sin(a - 0.4));
-      ctx.lineTo(x1 - 8 * Math.cos(a + 0.4), y1 - 8 * Math.sin(a + 0.4));
-      ctx.closePath(); ctx.fillStyle = col; ctx.fill();
-    }
-    function starPath(ctx, cx, cy, ro, ri) {
-      ctx.beginPath();
-      for (var i = 0; i < 10; i++) {
-        var r = i % 2 ? ri : ro, a = -Math.PI / 2 + i * Math.PI / 5;
-        var x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
-        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-      }
-      ctx.closePath();
-    }
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-    }
+    reset();
   }
 });
