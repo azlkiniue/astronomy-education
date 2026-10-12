@@ -84,8 +84,10 @@ emits `assets/js/catalog-data.js`, which the site loads at runtime. It produces:
 
 - the **126-entry faithful listing** (`originals.html`) in the original ClassAction
   and NAAP module groupings, and
-- a **deduplicated, topic-grouped list** (`index.html`) — ~106 unique simulations
-  across 14 topics.
+- a **deduplicated, topic-grouped list** (`index.html`) — 104 unique simulations
+  across 14 topics. The 22 entries that repeat a simulator listed elsewhere carry a
+  `dup` tag (same file, identical copy or another build), which the home page lists
+  behind its "why not 126?" note.
 
 Each entry knows whether it has been rebuilt (`ready`). Titles, topic names and
 module names are bilingual; the longer descriptions are currently English and are

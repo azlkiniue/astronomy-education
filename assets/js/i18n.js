@@ -89,6 +89,15 @@ I18N.add({
     "home.all": "All",
     "home.statLabel": "simulations catalogued",
     "home.empty": "No simulations match your search.",
+    "home.whyFewer": "why not 126?",
+    "home.mergesLead":
+      "The original UNL catalog has {total} entries, but {extra} of them repeat a simulator that is already listed elsewhere — mostly NAAP lab simulators that ClassAction lists again in its own modules, plus a few ClassAction animations that appear in two of its modules. Each simulator was rebuilt once, so the {total} entries make {unique} simulations. The {groups} below each stand in for more than one original entry; the <a href=\"originals.html\">All {total}</a> page still lists every entry in its original place.",
+    "home.dup.file": "same file",
+    "home.dup.copy": "identical copy",
+    "home.dup.build": "another build",
+    "home.dupNote.file": "the very same .swf, listed again in another module",
+    "home.dupNote.copy": "a byte-for-byte copy of the .swf, saved under another name or folder",
+    "home.dupNote.build": "a separately compiled version of the same simulator",
     "card.open": "Open",
     "card.playOriginal": "▶ Original (Flash)",
     "footer.note":
@@ -122,6 +131,15 @@ I18N.add({
     "home.all": "Semua",
     "home.statLabel": "simulasi terdaftar",
     "home.empty": "Tidak ada simulasi yang cocok dengan pencarian Anda.",
+    "home.whyFewer": "mengapa bukan 126?",
+    "home.mergesLead":
+      "Katalog asli UNL memiliki {total} entri, tetapi {extra} di antaranya mengulang simulator yang sudah tercantum di tempat lain — kebanyakan simulator lab NAAP yang dicantumkan lagi oleh ClassAction di modulnya sendiri, ditambah beberapa animasi ClassAction yang muncul di dua modulnya. Setiap simulator hanya dibangun ulang sekali, sehingga {total} entri tersebut menjadi {unique} simulasi. Masing-masing dari {groups} simulasi di bawah ini mewakili lebih dari satu entri asli; halaman <a href=\"originals.html\">Semua {total}</a> tetap mencantumkan setiap entri di tempat aslinya.",
+    "home.dup.file": "berkas sama",
+    "home.dup.copy": "salinan identik",
+    "home.dup.build": "build lain",
+    "home.dupNote.file": "berkas .swf yang persis sama, dicantumkan lagi di modul lain",
+    "home.dupNote.copy": "salinan .swf yang identik byte demi byte, disimpan dengan nama atau di folder lain",
+    "home.dupNote.build": "versi simulator yang sama yang dikompilasi terpisah",
     "card.open": "Buka",
     "card.playOriginal": "▶ Asli (Flash)",
     "footer.note":

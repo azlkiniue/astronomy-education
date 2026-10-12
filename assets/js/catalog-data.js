@@ -1778,7 +1778,8 @@ window.ANIM = {
        },
        "desc": "Models the motions of the sun in the sky using a horizon diagram, demonstrating daily and seasonal changes in the sun's position.",
        "ready": "sun-motions",
-       "topic": "sun"
+       "topic": "sun",
+       "dup": "copy"
       },
       {
        "srcId": "ca17",
@@ -1834,7 +1835,8 @@ window.ANIM = {
        },
        "desc": "Shows the geometry of the earth and sun over the course of a year, demonstrating how seasons occur. This simulator allows both orbital and celestial sphere representations of the seasonal motions.",
        "ready": "seasons_ecliptic",
-       "topic": "sun"
+       "topic": "sun",
+       "dup": "copy"
       },
       {
        "srcId": "ca21",
@@ -1848,7 +1850,8 @@ window.ANIM = {
        },
        "desc": "Shows how the rotation of the earth leads to the apparent rotation of the sky, and how celestial sphere and horizon diagram representations of the sky are correlated.",
        "ready": "ce_hc",
-       "topic": "coords"
+       "topic": "coords",
+       "dup": "copy"
       },
       {
        "srcId": "ca22",
@@ -1918,7 +1921,8 @@ window.ANIM = {
        },
        "desc": "Helps demonstrate the difference between sidereal and solar time.",
        "ready": "siderealSolarTime",
-       "topic": "coords"
+       "topic": "coords",
+       "dup": "copy"
       }
      ]
     },
@@ -1982,7 +1986,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates the correspondence between the moon's position in its orbit, its phase, and its position in an observer's sky at different times of day.",
        "ready": "lunar-phases",
-       "topic": "moon"
+       "topic": "moon",
+       "dup": "copy"
       },
       {
        "srcId": "ca31",
@@ -2066,7 +2071,8 @@ window.ANIM = {
        },
        "desc": "Provides a method of learning the correlation between the phase of the moon, the time of day, and the position of the moon in the sky.",
        "ready": "positionsdemonstrator",
-       "topic": "moon"
+       "topic": "moon",
+       "dup": "copy"
       },
       {
        "srcId": "ca37",
@@ -2122,7 +2128,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates a method for determining moon phases using planes that bisect the earth and moon.",
        "ready": "moonbisector",
-       "topic": "moon"
+       "topic": "moon",
+       "dup": "copy"
       }
      ]
     },
@@ -2242,7 +2249,8 @@ window.ANIM = {
        },
        "desc": "Models the movements of the planets around the sun in a simplified Copernican model of the solar system.",
        "ready": "configurationssimulator",
-       "topic": "orbits"
+       "topic": "orbits",
+       "dup": "build"
       },
       {
        "srcId": "ca49",
@@ -2256,7 +2264,8 @@ window.ANIM = {
        },
        "desc": "Models the motion of a hypothetical planet that orbits the sun according to Kepler's laws of motion. This simulator includes controls for investigating each of Kepler's laws.",
        "ready": "kepler",
-       "topic": "orbits"
+       "topic": "orbits",
+       "dup": "copy"
       },
       {
        "srcId": "ca50",
@@ -2376,7 +2385,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates how the blackbody spectrum varies with temperature. This explorer also shows how the relative intensities observed through different filters (a 'color index') can give an estimate of temperature.",
        "ready": "blackbody",
-       "topic": "light"
+       "topic": "light",
+       "dup": "copy"
       },
       {
        "srcId": "ca58",
@@ -2390,7 +2400,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates how different light sources and filters combine to determine an observed spectrum. This simulator also shows the perceived colors associated with the spectra shown.",
        "ready": "filters",
-       "topic": "light"
+       "topic": "light",
+       "dup": "copy"
       },
       {
        "srcId": "ca59",
@@ -2404,7 +2415,8 @@ window.ANIM = {
        },
        "desc": "Models a hydrogen atom and its interactions with light, demonstrating the quantum nature of absorption and emission.",
        "ready": "hydrogen-atom",
-       "topic": "light"
+       "topic": "light",
+       "dup": "copy"
       },
       {
        "srcId": "ca60",
@@ -2596,7 +2608,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates how the technique of spectroscopic parallax works. Spectral type and luminosity class determine the observed spectrum of a star, from which the star's luminosity can be estimated.",
        "ready": "spectroparallax",
-       "topic": "stars"
+       "topic": "stars",
+       "dup": "build"
       },
       {
        "srcId": "ca72",
@@ -2638,7 +2651,8 @@ window.ANIM = {
        },
        "desc": "Introduces the Hertzsprung-Russell Diagram, a plot showing the relationship between luminosity and temperature for stars.",
        "ready": "hr-diagram",
-       "topic": "stars"
+       "topic": "stars",
+       "dup": "copy"
       }
      ]
     },
@@ -2660,7 +2674,8 @@ window.ANIM = {
        },
        "desc": "Models the motions of two stars in orbit around each other, and the combined lightcurve they produce. This simulator allows the user to control multiple parameters to see how they effect the lightcurve. Includes several real datasets.",
        "ready": "eclipsing-binary",
-       "topic": "binary"
+       "topic": "binary",
+       "dup": "copy"
       },
       {
        "srcId": "ca76",
@@ -2860,7 +2875,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates how a planet passing in front of its parent star can cause dips in the star's lightcurve, potentially leading to the planet's detection.",
        "ready": "exoplanet-transit",
-       "topic": "exoplanets"
+       "topic": "exoplanets",
+       "dup": "copy"
       },
       {
        "srcId": "ca88",
@@ -2874,7 +2890,8 @@ window.ANIM = {
        },
        "desc": "Demonstrates how the spectrum of a star is shifted as it and its planet orbit their common center of mass.",
        "ready": "radialvelocitydemo",
-       "topic": "exoplanets"
+       "topic": "exoplanets",
+       "dup": "file"
       },
       {
        "srcId": "ca89",
@@ -2888,7 +2905,8 @@ window.ANIM = {
        },
        "desc": "Models the motion of an extrasolar planet and its star around their common center of mass, and the effect this motion has on the star's observed radial velocity.",
        "ready": "radial-velocity",
-       "topic": "exoplanets"
+       "topic": "exoplanets",
+       "dup": "copy"
       },
       {
        "srcId": "ca90",
@@ -2902,7 +2920,8 @@ window.ANIM = {
        },
        "desc": "Shows circular waves expanding from a source. Movement of the source or observer affects the frequency of the waves seen by the observer, demonstrating doppler shift.",
        "ready": "dopplershift",
-       "topic": "exoplanets"
+       "topic": "exoplanets",
+       "dup": "file"
       },
       {
        "srcId": "ca91",
@@ -2966,7 +2985,8 @@ window.ANIM = {
        },
        "desc": "Models the movements of the planets around the sun in a simplified Copernican model of the solar system.",
        "ready": "configurationssimulator",
-       "topic": "solar"
+       "topic": "solar",
+       "dup": "file"
       },
       {
        "srcId": "ca95",
@@ -2980,7 +3000,8 @@ window.ANIM = {
        },
        "desc": "Models the motion of a hypothetical planet that orbits the sun according to Kepler's laws of motion. This simulator includes controls for investigating each of Kepler's laws.",
        "ready": "kepler",
-       "topic": "solar"
+       "topic": "solar",
+       "dup": "file"
       }
      ]
     },
@@ -3002,7 +3023,8 @@ window.ANIM = {
        },
        "desc": "Shows how sidereal time and the hour angle of a star are related.",
        "ready": "siderealtimeandhourangledemo",
-       "topic": "coords"
+       "topic": "coords",
+       "dup": "file"
       }
      ]
     }

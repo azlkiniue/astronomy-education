@@ -28,10 +28,54 @@
     hero.innerHTML =
       '<h1 data-i18n="home.heroTitle"></h1>' +
       '<p data-i18n="home.heroLead"></p>' +
-      '<p style="margin-top:14px">' +
-      '<span class="stat">' + total + '</span> <span data-i18n="home.statLabel"></span></p>';
+      '<details class="merges"><summary>' +
+      '<span class="stat">' + total + '</span> <span data-i18n="home.statLabel"></span>' +
+      ' <span aria-hidden="true">·</span> <span class="merges-why" data-i18n="home.whyFewer"></span>' +
+      '</summary><div class="merges-body"></div></details>';
     main.appendChild(hero);
+    var body = hero.querySelector(".merges-body");
+    renderMerges(body);
+    window.addEventListener("langchange", function () { renderMerges(body); });
   }
+
+  // Behind the stat: why the original catalog's entries make fewer simulations. Lists every
+  // simulator that stands in for more than one entry; build-catalog.js tags each extra entry
+  // with `dup` (file / copy / build), and the untagged one is the entry the card is based on.
+  function renderMerges(box) {
+    var groups = {}, ids = [], entries = 0, sims = {};
+    ANIM.sims.forEach(function (s) { sims[s.ready] = s; });
+    ANIM.sections.forEach(function (sec) {
+      sec.modules.forEach(function (mod) {
+        mod.items.forEach(function (it) {
+          entries++;
+          if (!it.ready) return;
+          if (!groups[it.ready]) { groups[it.ready] = []; ids.push(it.ready); }
+          groups[it.ready].push({ it: it, where: sec.title[lang()] + " › " + mod.title[lang()] });
+        });
+      });
+    });
+    ids = ids.filter(function (id) { return groups[id].length > 1; });
+    ids.sort(function (a, b) { return sims[a].title[lang()].localeCompare(sims[b].title[lang()]); });
+
+    var counts = { total: entries, unique: ANIM.sims.length, extra: entries - ANIM.sims.length, groups: ids.length };
+    var html = "<p>" + I18N.t("home.mergesLead").replace(/\{(\w+)\}/g, function (m, k) { return counts[k]; }) + "</p>" +
+      '<ul class="merges-key">' + ["file", "copy", "build"].map(function (k) {
+        return "<li>" + dupTag(k) + " " + esc(I18N.t("home.dupNote." + k)) + "</li>";
+      }).join("") + '</ul><div class="merges-grid">';
+    ids.forEach(function (id) {
+      var list = groups[id].slice().sort(function (a, b) { return (a.it.dup ? 1 : 0) - (b.it.dup ? 1 : 0); });
+      html += '<div class="merge"><a class="merge-sim" href="sims/' + id + '.html">' + esc(sims[id].title[lang()]) + "</a><ul>" +
+        list.map(function (e) {
+          var swf = e.it.swf.replace(/^originals\//, "");
+          return "<li><span>" + esc(e.it.title[lang()]) + (e.it.dup ? " " + dupTag(e.it.dup) : "") + "</span>" +
+            '<span class="merge-where">' + esc(e.where) + ' · <code title="' + esc(swf) + '">' +
+            esc(swf.split("/").pop()) + "</code></span></li>";
+        }).join("") + "</ul></div>";
+    });
+    box.innerHTML = html + "</div>";
+  }
+
+  function dupTag(k) { return '<span class="dup-tag ' + k + '">' + esc(I18N.t("home.dup." + k)) + "</span>"; }
 
   function renderToolbar(main) {
     var bar = document.createElement("div");

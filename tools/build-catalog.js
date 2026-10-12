@@ -14,6 +14,7 @@
    =========================================================================== */
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const ROOT = path.join(__dirname, "..");
 // Prefer the vendored copy (committed, makes the build reproducible);
@@ -327,16 +328,45 @@ outSections.forEach(function (sec) {
         const cur = seen[key];
         const better = (sec.id === "naap" && !/\(NAAP\)/.test(it.title.en)) ||
           (it.title.en.length < cur.title.en.length && !/\(NAAP\)/.test(it.title.en));
-        if (better) { cur.title = it.title; cur.desc = it.desc; cur.preview = it.preview; cur.swf = it.swf; cur.href = it.href; }
+        if (better) { cur.title = it.title; cur.desc = it.desc; cur.preview = it.preview; cur.swf = it.swf; cur.href = it.href; cur.rep = it; }
+        cur.entries.push(it);
         cur.count++;
         return;
       }
       const sim = {
         key: key, slug: it.slug, ready: it.ready, topic: it.topic,
-        title: it.title, desc: it.desc, href: it.href, preview: it.preview, swf: it.swf, count: 1
+        title: it.title, desc: it.desc, href: it.href, preview: it.preview, swf: it.swf, count: 1,
+        rep: it, entries: [it]
       };
       seen[key] = sim; sims.push(sim);
     });
+  });
+});
+
+/* ---- 5b. tag the repeats (why 126 entries make fewer simulations) ---- */
+// Every entry folded into a simulator other than its representative gets `dup`, saying how
+// it repeats the representative or an entry already tagged before it:
+//   "file"  — the very same .swf path, listed again in another module
+//   "copy"  — a byte-identical .swf saved under another name or folder
+//   "build" — a separately compiled .swf of the same simulator
+// index.html lists these behind its "why not 126?" disclosure.
+const md5 = {};
+const unhashed = [];
+function swfHash(swf) {
+  if (!(swf in md5)) {
+    const f = path.join(ROOT, swf);
+    md5[swf] = fs.existsSync(f) ? crypto.createHash("md5").update(fs.readFileSync(f)).digest("hex") : null;
+    if (!md5[swf]) unhashed.push(swf);
+  }
+  return md5[swf];
+}
+sims.forEach(function (s) {
+  const earlier = [s.rep];
+  s.entries.forEach(function (it) {
+    if (it === s.rep) return;
+    it.dup = earlier.some((e) => e.swf === it.swf) ? "file"
+      : earlier.some((e) => swfHash(e.swf) && swfHash(e.swf) === swfHash(it.swf)) ? "copy" : "build";
+    earlier.push(it);
   });
 });
 
@@ -362,6 +392,11 @@ const total = outSections.reduce((a, s) => a + s.modules.reduce((b, m) => b + m.
 const ready = sims.filter((s) => s.ready).length;
 console.log("entries (faithful):", total);
 console.log("unique sims (topic browse):", sims.length, "| ready:", ready);
+const dups = { file: 0, copy: 0, build: 0 };
+sims.forEach((s) => s.entries.forEach((it) => { if (it.dup) dups[it.dup]++; }));
+console.log("repeated entries:", dups.file + dups.copy + dups.build, "in", sims.filter((s) => s.count > 1).length,
+  "sims | same file:", dups.file, "| identical copy:", dups.copy, "| another build:", dups.build);
+if (unhashed.length) console.warn("WARNING: .swf missing, so its repeat is tagged \"build\" unchecked:", unhashed.join(", "));
 console.log("assets copied into originals/:", copied, fs.existsSync(SITE) ? "" : "(astroUNL/ not present — using committed assets)");
 console.log("untranslated titles:", sims.filter((s) => s.title.en === s.title.id &&
   !/^(NAAP|ClassAction)/.test(s.title.en)).map((s) => s.title.en).join(" | ") || "(none)");

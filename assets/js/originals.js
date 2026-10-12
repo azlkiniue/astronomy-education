@@ -147,13 +147,17 @@
   function itemCard(it) {
     var el = document.createElement("div");
     el.className = "card compact";
+    var sim = it.ready ? "sims/" + it.ready + ".html" : "";
+    var flash = it.swf ? "play.html?a=" + encodeURIComponent(it.slug) + "&s=" + encodeURIComponent(it.swf) : "";
     var actions = '<div class="card-actions">';
-    if (it.ready) actions += '<a class="mini-btn primary" href="sims/' + it.ready +
-      '.html" data-i18n="orig.interactive"></a>';
-    if (it.swf) actions += '<a class="mini-btn flash" href="play.html?a=' + encodeURIComponent(it.slug) +
-      '&s=' + encodeURIComponent(it.swf) + '" data-i18n="card.playOriginal"></a>';
+    if (sim) actions += '<a class="mini-btn primary" href="' + sim + '" data-i18n="orig.interactive"></a>';
+    if (flash) actions += '<a class="mini-btn flash" href="' + flash + '" data-i18n="card.playOriginal"></a>';
     actions += "</div>";
-    el.innerHTML =
+    // the original's preview still; it opens what the first button opens, and is kept out of
+    // the tab order / accessibility tree since the buttons already name both destinations
+    var thumb = '<a class="thumb" href="' + (sim || flash) + '" tabindex="-1" aria-hidden="true">' +
+      '<img src="' + attr(it.preview) + '" loading="lazy" alt="" onerror="this.remove()"></a>';
+    el.innerHTML = thumb +
       '<h3 data-en="' + attr(it.title.en) + '" data-idt="' + attr(it.title.id) + '">' +
         esc(it.title[lang()]) + "</h3>" +
       '<p>' + esc(it.desc || "") + "</p>" + actions;
