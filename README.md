@@ -47,6 +47,7 @@ the catalog are plain `<script>` files (no `fetch`).
 ├── assets/
 │   ├── css/styles.css         # all styling (dark space theme)
 │   ├── img/og-banner.svg      # social-share image
+│   ├── img/thumbs/<id>.webp   # GENERATED card picture of each rebuilt simulation
 │   └── js/
 │       ├── i18n.js            # translation engine + shared UI strings
 │       ├── ui.js              # shared header / footer / language switch / nav
@@ -60,7 +61,8 @@ the catalog are plain `<script>` files (no `fetch`).
 ├── tools/
 │   ├── animationsLinks.html   # vendored source catalog (UNL), for reproducible builds
 │   ├── catalog-id-titles.js   # Indonesian title translations
-│   └── build-catalog.js       # regenerates catalog-data.js + copies originals/ assets
+│   ├── build-catalog.js       # regenerates catalog-data.js + copies originals/ assets
+│   └── build-thumbs.js        # re-captures the card pictures (with thumbs.html)
 └── .github/workflows/deploy.yml   # GitHub Pages deploy
 ```
 
@@ -98,6 +100,23 @@ Regenerate after editing the build script, translations, or mappings:
 ```bash
 node tools/build-catalog.js
 ```
+
+### Card pictures
+
+The cards on the home page show the rebuilt simulations themselves: a still of each
+one's canvas, saved as `assets/img/thumbs/<id>.webp` (the "All 126" page keeps the
+originals' preview screenshots). Only a browser can draw a simulation, so
+`tools/build-thumbs.js` serves the site together with a capture page that opens each
+simulation, lets it settle, and saves its canvas 640 px wide. The few that open on an
+empty stage are first posed the way the originals' previews were (gases added, the
+animation run through — the `POSE` table in `tools/thumbs.html`).
+
+```bash
+node tools/build-thumbs.js
+```
+
+Then open <http://localhost:4179/> in Chrome, Edge or Firefox (add `?only=kepler,blackbody`
+to redo just those). Re-run it whenever a simulation's look changes.
 
 ---
 
@@ -151,6 +170,9 @@ The framework (`sim.js`) gives you the page chrome, a HiDPI canvas, and i18n-awa
 controls: `S.slider`, `S.toggle`, `S.select`, `S.button`, `S.readout`,
 `S.group`, `S.onDraw` / `S.requestDraw`, and `S.loop` + `S.playPause` for
 animation. Titles/descriptions come from the catalog entry automatically.
+
+**4.** Capture its card picture: run `node tools/build-thumbs.js` and open
+<http://localhost:4179/?only=my-sim>.
 
 ---
 

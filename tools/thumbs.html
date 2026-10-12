@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Card thumbnails — Astronomy Education (dev tool)</title>
+  <style>
+    body { margin: 24px; background: #0b1020; color: #e8ecf8; font: 14px/1.45 system-ui, sans-serif; }
+    h1 { margin: 0 0 4px; font-size: 1.3rem; }
+    #status { color: #9fabce; margin: 0 0 18px; }
+    #grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    figure { margin: 0; }
+    figure img { display: block; width: 100%; border: 1px solid #2c3a66; border-radius: 8px; }
+    figcaption { margin-top: 4px; color: #9fabce; font-size: 12px; }
+    .bad { color: #ff6b6b; }
+    /* the sim being captured: laid out like a desktop page, but out of sight */
+    iframe { position: fixed; left: -20000px; top: 0; width: 1280px; height: 900px; border: 0; }
+  </style>
+</head>
+<body>
+  <h1>Card thumbnails</h1>
+  <p id="status">Starting…</p>
+  <div id="grid"></div>
+  <!-- served by tools/build-thumbs.js, which saves what this page posts to assets/img/thumbs/ -->
+  <script src="../assets/js/catalog-data.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var WIDTH = 640;       // px; a card shows 240–500 CSS px of it, most often on a 2× screen
+    var QUALITY = 0.82;    // WebP
+    var DPR = 2;           // the sims draw at this pixel ratio, whatever the screen
+    var SETTLE = 800;      // ms of frames before the picture is taken…
+    var MAX_WAIT = 8000;   // …longer while images the sim asked for are still loading
+
+    /* Sims that open on an empty stage (nothing added or started yet) are posed first, much as
+       the originals' preview pictures were. Each step works the page's own controls, found by
+       their English text: click a button, check a box, pick an option (by its first words) in a
+       labelled list, or run the sim's animation frames for up to so many seconds. */
+    var POSE = {
+      fusion01: [["click", "start animation"], ["run", 10]],
+      fusion02: [["click", "start animation"], ["run", 15]],
+      pulsarperiodsim001: [["click", "Play"], ["run", 48]],   // pulses reach Earth, plot fills
+      gasRetentionPlot: [["check", "hydrogen"], ["check", "oxygen"], ["check", "gas giants"],
+        ["check", "terrestrial planets"], ["check", "icy bodies and moons"]],
+      gasRetentionSimulator: [["pick", "add a gas", "carbon dioxide"], ["pick", "add a gas", "methane"]],
+      blinkcomparatorsimulator: [["click", "Queue every tenth"]]
+    };
+
+    var only = new URLSearchParams(location.search).get("only");
+    var ids = ANIM.sims.map(function (s) { return s.ready; }).filter(Boolean);
+    if (only) ids = ids.filter(function (id) { return only.split(",").indexOf(id) !== -1; });
+    var state = window.__thumbs = { total: ids.length, done: 0, failed: [], log: [], finished: false };
+    var statusEl = document.getElementById("status"), grid = document.getElementById("grid");
+
+    /* Runs inside each sim page before its own scripts: a fixed pixel ratio and language, and
+       animation frames that only run when this page calls __frame — a background tab gets
+       none of its own, so every sim is stepped the same way whether this tab is on screen. */
+    function shim(dpr) {
+      Object.defineProperty(window, "devicePixelRatio", { get: function () { return dpr; }, configurable: true });
+      var getItem = Storage.prototype.getItem;
+      Storage.prototype.getItem = function (k) { return k === "lang" ? "en" : getItem.call(this, k); };
+      var errors = window.__errors = [];
+      window.addEventListener("error", function (e) { errors.push(e.message); });
+      window.addEventListener("unhandledrejection", function (e) { errors.push(String(e.reason)); });
+      var queue = [], next = 0, now = 1000;
+      window.requestAnimationFrame = function (cb) { queue.push({ id: ++next, cb: cb }); return next; };
+      window.cancelAnimationFrame = function (id) { queue = queue.filter(function (q) { return q.id !== id; }); };
+      window.__frame = function (dt) {            // -> frames still asked for
+        var due = queue; queue = []; now += dt;
+        due.forEach(function (q) {
+          try { q.cb(now); } catch (e) { errors.push(String(e && e.message || e)); }
+        });
+        return queue.length;
+      };
+      // every picture the sim loads, so the capture can wait for them
+      var images = [], src = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+      Object.defineProperty(HTMLImageElement.prototype, "src", {
+        get: src.get, configurable: true, enumerable: src.enumerable,
+        set: function (v) { images.push(this); src.set.call(this, v); }
+      });
+      window.__loading = function () {
+        return images.concat([].slice.call(document.images)).some(function (im) { return !im.complete; });
+      };
+    }
+
+    // a hidden tab's timers slow to one a second or less; a MessageChannel round trip doesn't
+    var channel = new MessageChannel(), waiting = [];
+    channel.port1.onmessage = function () { var w = waiting; waiting = []; w.forEach(function (f) { f(); }); };
+    function tick() { return new Promise(function (r) { waiting.push(r); channel.port2.postMessage(0); }); }
+    async function until(done, ms) { var end = performance.now() + ms; while (!done() && performance.now() < end) await tick(); }
+    function sleep(ms) { return until(function () { return false; }, ms); }
+
+    async function open(id) {
+      var url = new URL("../sims/" + id + ".html", location.href).href;
+      var html = await (await fetch(url, { cache: "no-store" })).text();
+      html = html.replace(/<head[^>]*>/i, function (m) {
+        return m + '<base href="' + url + '"><script>(' + shim + ")(" + DPR + ");<\/script>";
+      });
+      var frame = document.createElement("iframe"), loaded = false;
+      frame.onload = function () { loaded = true; };
+      frame.srcdoc = html;
+      document.body.appendChild(frame);
+      await until(function () { return loaded; }, 20000);
+      return frame;
+    }
+
+    async function settle(w) {
+      var t0 = performance.now();
+      for (;;) {
+        w.__frame(16);
+        var t = performance.now() - t0;
+        if ((t > SETTLE && !w.__loading()) || t > MAX_WAIT) break;
+        await sleep(16);
+      }
+      w.__frame(16);
+    }
+
+    function pose(frame, steps) {
+      var d = frame.contentDocument, w = frame.contentWindow;
+      function text(el) { return el.textContent.trim().toLowerCase(); }
+      function find(selector, test, what) {
+        var el = [].find.call(d.querySelectorAll(selector), test);
+        if (!el) throw new Error("pose: no " + what);
+        return el;
+      }
+      steps.forEach(function (s) {
+        var want = String(s[1]).toLowerCase();
+        if (s[0] === "click") {
+          find("button", function (b) { return text(b) === want; }, 'button "' + s[1] + '"').click();
+        } else if (s[0] === "check") {
+          var box = find("label", function (l) {
+            return text(l).indexOf(want) === 0 && l.querySelector("input[type=checkbox]");
+          }, 'checkbox "' + s[1] + '"').querySelector("input");
+          if (!box.checked) box.click();
+        } else if (s[0] === "pick") {
+          var list = find(".ctl", function (c) {
+            var l = c.querySelector("label");
+            return l && text(l) === want && c.querySelector("select");
+          }, 'list "' + s[1] + '"').querySelector("select");
+          var opt = [].find.call(list.options, function (o) { return text(o).indexOf(s[2].toLowerCase()) === 0; });
+          if (!opt) throw new Error('pose: no option "' + s[2] + '" in "' + s[1] + '"');
+          list.value = opt.value;
+          list.dispatchEvent(new w.Event("change", { bubbles: true }));
+        } else if (s[0] === "run") {
+          for (var i = 0; i < s[1] * 60; i++) if (!w.__frame(16)) break;
+        } else {
+          throw new Error("pose: unknown step " + s[0]);
+        }
+      });
+    }
+
+    // the sim's canvas over the stage colour that shows through it on the page, plus the
+    // text boxes a few sims lay over their canvas
+    function still(frame) {
+      var d = frame.contentDocument, w = frame.contentWindow;
+      var stage = d.querySelector(".sim-stage"), cv = stage && stage.querySelector("canvas");
+      if (!cv || !cv.width) throw new Error("no canvas on the stage");
+      var c = document.createElement("canvas");
+      c.width = cv.width; c.height = cv.height;
+      var g = c.getContext("2d");
+      g.fillStyle = w.getComputedStyle(stage).backgroundColor;
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(cv, 0, 0);
+      var box = cv.getBoundingClientRect(), k = cv.width / box.width;
+      stage.querySelectorAll("input").forEach(function (el) {
+        var r = el.getBoundingClientRect(), cs = w.getComputedStyle(el);
+        if (!el.value || !r.width || cs.visibility !== "visible") return;
+        var left = r.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft);
+        var right = r.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight);
+        var align = cs.textAlign === "center" ? "center" : /right|end/.test(cs.textAlign) ? "right" : "left";
+        g.save();
+        g.globalAlpha = parseFloat(cs.opacity);
+        g.fillStyle = cs.webkitTextFillColor || cs.color;
+        g.font = cs.fontStyle + " " + cs.fontWeight + " " + parseFloat(cs.fontSize) * k + "px " + cs.fontFamily;
+        g.textAlign = align;
+        g.textBaseline = "middle";
+        var x = align === "center" ? (left + right) / 2 : align === "right" ? right : left;
+        g.fillText(el.value, (x - box.left) * k, (r.top + r.height / 2 - box.top) * k);
+        g.restore();
+      });
+      return c;
+    }
+
+    function shrink(src) {
+      var c = src, width = Math.min(WIDTH, src.width);
+      while (c.width >= 2 * width) c = scaled(c, Math.round(c.width / 2), Math.round(c.height / 2));
+      return scaled(c, width, Math.round(src.height * width / src.width));
+    }
+    function scaled(src, w, h) {
+      var c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      var g = c.getContext("2d");
+      g.imageSmoothingQuality = "high";
+      g.drawImage(src, 0, 0, w, h);
+      return c;
+    }
+
+    function webp(c) {
+      return new Promise(function (resolve, reject) {
+        c.toBlob(function (b) {
+          if (b && b.type === "image/webp") resolve(b);
+          else reject(new Error("this browser cannot write WebP; use Chrome, Edge or Firefox"));
+        }, "image/webp", QUALITY);
+      });
+    }
+
+    async function save(id, blob) {
+      var r = await fetch("/__thumb?id=" + encodeURIComponent(id), { method: "POST", body: blob });
+      if (!r.ok) throw new Error("not saved: " + r.status + " " + (await r.text()));
+    }
+
+    function show(item, blob, size) {
+      var fig = document.createElement("figure"), cap = document.createElement("figcaption");
+      if (blob) {
+        var img = document.createElement("img");
+        img.src = URL.createObjectURL(blob);
+        fig.appendChild(img);
+      }
+      cap.textContent = item.id + (blob ? " · " + size + " · " + item.kb.toFixed(1) + " KB" : "");
+      var problem = item.fail || (item.errors.length ? "page errors: " + item.errors.join(" | ") : "");
+      if (problem) {
+        var p = document.createElement("div");
+        p.className = "bad"; p.textContent = problem;
+        cap.appendChild(p);
+      }
+      fig.appendChild(cap);
+      grid.appendChild(fig);
+    }
+
+    async function run() {
+      for (var i = 0; i < ids.length; i++) {
+        var item = { id: ids[i], errors: [] }, frame = null;
+        statusEl.textContent = "Capturing " + (i + 1) + " of " + ids.length + ": " + item.id + "…";
+        try {
+          frame = await open(item.id);
+          await settle(frame.contentWindow);
+          if (POSE[item.id]) {
+            pose(frame, POSE[item.id]);
+            await settle(frame.contentWindow);
+          }
+          var pic = shrink(still(frame)), blob = await webp(pic);
+          item.errors = frame.contentWindow.__errors.slice();
+          item.kb = blob.size / 1024;
+          await save(item.id, blob);
+          show(item, blob, pic.width + "×" + pic.height);
+        } catch (e) {
+          item.fail = String(e && e.message || e);
+          state.failed.push(item.id);
+          show(item, null);
+        }
+        if (frame) frame.remove();
+        state.log.push(item);
+        state.done++;
+      }
+      state.finished = true;
+      statusEl.textContent = "Done: " + (ids.length - state.failed.length) + " of " + ids.length +
+        " saved to assets/img/thumbs/" + (state.failed.length ? "; failed: " + state.failed.join(", ") : "") + ".";
+    }
+
+    run();
+  })();
+  </script>
+</body>
+</html>

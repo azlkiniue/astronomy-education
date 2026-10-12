@@ -170,8 +170,10 @@
     var el = document.createElement("a");
     el.className = "card";
     el.href = "sims/" + sim.ready + ".html";
+    // a still of the rebuilt sim itself (made by tools/build-thumbs.js); the topic sketch
+    // underneath shows if it is missing
     var thumb = '<div class="thumb">' + thumbFor(sim.topic) +
-      (sim.preview ? '<img src="' + esc(sim.preview) + '" loading="lazy" alt="" onerror="this.remove()">' : "") +
+      '<img src="assets/img/thumbs/' + esc(sim.ready) + '.webp" loading="lazy" alt="" onerror="this.remove()">' +
       "</div>";
     el.innerHTML =
       thumb +
