@@ -1,170 +1,312 @@
 /* Small-Angle Approximation Demonstrator --------------------------------------
-   Faithful rebuild of the ClassAction "Small-Angle Approximation Demonstrator"
-   (smallangledemo.swf). Mirrors the original:
-     • the headline equation  α = 206,265 × (linear diameter / distance) = N arcsec
-     • an observer sighting a distant object, with the angle α subtended
-     • distance + diameter sliders, each with the original's preset buttons
-       (distance 20/30/40/50/60, diameter 1/2/3).                              */
+   Rebuild of the ClassAction "Small-Angle Approximation Demonstrator"
+   (smallangledemo.swf, smallAngleDemo003 of 27 August 2009; SmallAngleDemoClass,
+   CubicEasingClass and MovieClip.drawArc decompiled). The canvas is the SWF's
+   own panel below its title bar, drawn from its art and at its coordinates:
+     • the equation  α = 206,265 × linear diameter / distance = N arcsec, in the
+       SWF's Times with the Symbol-font α, the result set the way the SWF's
+       Number.toFixed rounds it,
+     • the observer (the SWF's figure, mirrored, at x 42 on the centre line
+       y 193) sighting the beach ball 14.73 px per unit away, the ball's
+       radius 14.73·diameter/2 px,
+     • the two grey tangent lines from the eye to the ball, the 3-px black arc
+       of radius 200 between them (drawArc's quadratic segments) and its α.
+   Drag the ball to change the distance, as in the SWF. The sliders and the
+   preset buttons sit in the sidebar: distance 20–60 and diameter 1–3 units,
+   one decimal place (Slider Logic v6 'fixed digits'), and the presets ease to
+   their value over 300 ms along the SWF's cubic spline.                       */
 Sim.create({
   id: "small-angle",
-  width: 760, height: 470,
+  width: 960, height: 270,
   strings: {
     en: {
-      "sa.controls": "Controls", "sa.dist": "distance", "sa.diam": "diameter", "sa.units": "units",
-      "sa.exact": "angular size (exact)", "sa.err": "approximation error",
-      "sa.num": "linear diameter", "sa.den": "distance", "sa.arcsec": "arcsec"
+      "sa.dist": "distance", "sa.diam": "diameter", "sa.units": "units", "sa.reset": "Reset", "sa.sp": "",
+      "sa.k": "206,265", "sa.num": "linear diameter", "sa.den": "distance", "sa.arcsec": "arcsec"
     },
     id: {
-      "sa.controls": "Kontrol", "sa.dist": "jarak", "sa.diam": "diameter", "sa.units": "satuan",
-      "sa.exact": "ukuran sudut (eksak)", "sa.err": "galat aproksimasi",
-      "sa.num": "diameter linier", "sa.den": "jarak", "sa.arcsec": "detik busur"
+      "sa.dist": "jarak", "sa.diam": "diameter", "sa.units": "satuan", "sa.reset": "Atur ulang", "sa.sp": "",
+      "sa.k": "206.265", "sa.num": "diameter linier", "sa.den": "jarak", "sa.arcsec": "detik busur"
     }
   },
   about: {
     en: "<p>How big something <em>looks</em> — its <strong>angular size</strong> α — depends on both its real size and its distance. " +
         "For a small angle, α (in arcseconds) ≈ <strong>206,265 × (linear diameter / distance)</strong>. " +
         "The number 206,265 is just the count of arcseconds in one radian.</p>" +
-        "<p>Drag the sliders (or use the preset buttons) and watch the object's apparent size change. Doubling the diameter doubles the angle; doubling the distance halves it.</p>" +
-        "<p>The approximation is excellent while the angle stays small — push the diameter up or the distance down and the <em>approximation error</em> (vs. the exact 2·arctan formula) starts to grow.</p>" +
+        "<p>Drag the ball, move the sliders, or press a preset button, and watch the angle the ball spans at the observer's eye change. Doubling the diameter doubles the angle; doubling the distance halves it.</p>" +
         "<p>Why astronomers care: almost everything in the sky is tiny in angle, so this shortcut is used constantly. The Moon and Sun each span about <strong>0.5°</strong>.</p>",
     id: "<p>Seberapa besar sesuatu <em>terlihat</em> — <strong>ukuran sudut</strong> α — bergantung pada ukuran asli dan jaraknya. " +
         "Untuk sudut kecil, α (dalam detik busur) ≈ <strong>206.265 × (diameter linier / jarak)</strong>. " +
         "Angka 206.265 hanyalah banyaknya detik busur dalam satu radian.</p>" +
-        "<p>Geser penggeser (atau pakai tombol preset) dan amati perubahan ukuran tampak objek. Menggandakan diameter menggandakan sudut; menggandakan jarak memotongnya separuh.</p>" +
-        "<p>Aproksimasi ini sangat baik selama sudut tetap kecil — naikkan diameter atau turunkan jarak, maka <em>galat aproksimasi</em> (terhadap rumus eksak 2·arctan) mulai membesar.</p>" +
+        "<p>Seret bola, geser penggeser, atau tekan tombol preset, lalu amati sudut yang dibentang bola di mata pengamat. Menggandakan diameter menggandakan sudut; menggandakan jarak memotongnya separuh.</p>" +
         "<p>Mengapa astronom peduli: hampir semua benda langit kecil secara sudut, jadi jalan pintas ini terus dipakai. Bulan dan Matahari masing-masing membentang sekitar <strong>0,5°</strong>.</p>"
   },
   build: function (S) {
-    var diam = 2, dist = 40;        // "units"
+    var OY = -30;                                  // the SWF's title bar is the page header here
+    var SERIF = "'Times New Roman', Times, serif";
+    var TIMES_ASC = 0.8984375;                     // the SWF's embedded "Times": ascent / em
+    function t(k) { return I18N.t(k); }
 
-    S.group("sa.controls");
-    var distCtl = S.slider({ labelKey: "sa.dist", min: 10, max: 100, step: 0.5, value: dist,
-      format: function (v) { return v.toFixed(1) + " " + I18N.t("sa.units"); }, on: function (v) { dist = v; upd(); } });
-    [20, 30, 40, 50, 60].forEach(function (v) { S.button({ label: String(v), on: function () { distCtl.set(v); } }); });
+    /* ---------------- SmallAngleDemoClass ---------------- */
+    var CENTER_Y = 193, ORIGIN_X = 42, ARC_R = 200, PX_PER_UNIT = 14.73, EASE_MS = 300;
+    function snap(v, lo, hi) {                     // Slider Logic v6, 'fixed digits', 1 digit
+      v = Math.min(hi, Math.max(lo, v));
+      return 0.1 * Math.round(v / 0.1);
+    }
+    function toFixed(x, f) {                       // the SWF's own Number.prototype.toFixed
+      var s = "";
+      if (x < 0) { s = "-"; x = -x; }
+      var n = String(Math.round(x * Math.pow(10, f)));
+      if (f > 0) {
+        while (n.length < f + 1) n = "0" + n;
+        n = n.slice(0, n.length - f) + "." + n.slice(n.length - f);
+      }
+      return s + n;
+    }
 
-    var diamCtl = S.slider({ labelKey: "sa.diam", min: 0.5, max: 5, step: 0.1, value: diam,
-      format: function (v) { return v.toFixed(1) + " " + I18N.t("sa.units"); }, on: function (v) { diam = v; upd(); } });
-    [1, 2, 3].forEach(function (v) { S.button({ label: String(v), on: function () { diamCtl.set(v); } }); });
+    /* CubicEasingClass: a two-point clamped cubic spline (slope0 carried over from
+       the running ease, slope1 = 0), read off getTimer() every frame */
+    function Easer(v) { this.init(v); }
+    Easer.prototype.init = function (v) { this.setTarget(0, v, 1, v, 0); };
+    Easer.prototype.setTarget = function (x0, y0, x1, y1, m0) {
+      this.x0 = x0; this.y0 = y0; this.x1 = x1; this.y1 = y1; this.m0 = m0; this.target = y1;
+    };
+    Easer.prototype.easeTo = function (now, y1) {
+      var y0 = this.value(now), m0 = this.slope(now);
+      this.setTarget(now, y0, now + EASE_MS, y1, m0);
+    };
+    Easer.prototype.value = function (x) {
+      if (!(x < this.x1)) return this.target;
+      var h = this.x1 - this.x0, s = (x - this.x0) / h, s2 = s * s, s3 = s2 * s;
+      return (2 * s3 - 3 * s2 + 1) * this.y0 + (s3 - 2 * s2 + s) * h * this.m0 + (-2 * s3 + 3 * s2) * this.y1;
+    };
+    Easer.prototype.slope = function (x) {
+      if (!(x < this.x1)) return 0;
+      var h = this.x1 - this.x0, s = (x - this.x0) / h, s2 = s * s;
+      return ((6 * s2 - 6 * s) * this.y0 + (3 * s2 - 4 * s + 1) * h * this.m0 + (-6 * s2 + 6 * s) * this.y1) / h;
+    };
 
-    var outExact = S.readout({ labelKey: "sa.exact" });
-    var outErr = S.readout({ labelKey: "sa.err" });
+    var distance = 40, diameter = 2;              // the sliders' values
+    var distEaser = new Easer(distance), diamEaser = new Easer(diameter);
+    function now() { return performance.now(); }
+    function setDistance(x) {                      // setDistance: the slider snaps it
+      distance = snap(x, 20, 60);
+      distEaser.init(distance);
+      changed();
+    }
+    function setDiameter(d) {
+      diameter = snap(d, 1, 3);
+      diamEaser.init(diameter);
+      changed();
+    }
+    function easeToDistance(x) { distEaser.easeTo(now(), x); easeLoop.play(); }
+    function easeToDiameter(d) { diamEaser.easeTo(now(), d); easeLoop.play(); }
+    var easeLoop = S.loop(function () {            // easeOnEnterFrame
+      var tm = now(), nx = distEaser.value(tm), nd = diamEaser.value(tm);
+      if (nx !== distance) distance = snap(nx, 20, 60);
+      if (nd !== diameter) diameter = snap(nd, 1, 3);
+      syncSidebar();
+      if (!(tm < distEaser.x1) && !(tm < diamEaser.x1)) easeLoop.pause();
+    });
+    function geometry() {                          // refresh()
+      var r = PX_PER_UNIT * distance, pr = PX_PER_UNIT * diameter / 2;
+      var a2 = Math.asin(pr / r), a = Math.sqrt(r * r - pr * pr);
+      return { ballX: ORIGIN_X + r, pr: pr, a2: a2, ax: ORIGIN_X + a * Math.cos(a2), ay: a * Math.sin(a2),
+        alphaX: ORIGIN_X + ARC_R * Math.cos(a2), alphaY: CENTER_Y - ARC_R * Math.sin(a2) };
+    }
 
-    function approxArcsec() { return 206265 * diam / dist; }            // small-angle
-    function exactRad() { return 2 * Math.atan(diam / (2 * dist)); }    // true angle
-    function upd() {
-      var ap = approxArcsec() / 206265;            // approx in radians
-      var ex = exactRad();
-      outExact(fmtAngle(ex));
-      outErr(((ap - ex) / ex * 100).toFixed(3) + " %");
-      S.requestDraw();
+    /* ---------------- the SWF's art ---------------- */
+    var ART = {
+      62: {nz:false, layers:[[[["#775439","M108.35 68.35L140.3 94.8Q138.45 98.05 101.1 116.95Q62.75 136 59.8 137.6Q52.3 141.7 44.35 143.55Q33.15 146.1 30.3 140.85Q27.4 136.3 24.1 128Q17.5 111.5 15.7 93.05Q14.05 76.1 13.55 68.2Q12.9 57.35 13.6 51.8Q13.9 50.65 8.85 44.6L3.7 38.7Q3.15 36.05 2.7 32.3Q2.25 28.7 2.25 27.15Q2.25 26.3 2.5 25.45L2.8 24.45L2.3 20.4Q1.85 16.6 2.1 16.25L3.3 15.15Q4.1 14.55 4.5 14.65Q4.75 14.7 4.75 13.95Q4.8 13 5.3 12.45L6.65 11.3Q7.8 10.4 8.4 10.5Q8.8 10.6 8.55 9.15Q8.25 7.45 9 6.85Q10.45 5.8 11.7 5.55L10.85 4.05Q10.05 2.45 10.15 1.95Q10.3 1 11.7 -0.1Q13.35 -1.4 14.85 -0.8Q16.4 -0.15 18.95 2.25Q21.15 4.35 22.5 6.15Q24 8.1 27.45 14.35L27.7 12.75Q27.95 11 28.25 10.35L28.85 7Q29.2 4.3 29.55 4Q32.15 1.65 33.05 2.8Q33.65 3.55 33.5 4.55L33.35 5.75L34.5 7.85Q35.55 9.7 35.6 10.25Q35.75 11.85 33.9 21.6Q32 31.85 30.9 33.95L29.1 36.2Q27.75 37.75 27.65 38.35L27.15 40.95L27.3 41.8L27.25 43Q26 47.3 37.35 67Q49.7 88.5 50.3 91.55L51.05 95.3L51 96.05Q52 95.15 76.4 83.25Q101.55 71 108.35 68.35Z"]],[]],[[["#82541c","M9.4 -7.9Q9.4 -11.85 12.1 -14.6Q14.85 -17.4 18.7 -17.4Q22.55 -17.4 25.3 -14.6Q28 -11.85 28 -7.9Q28 -4.85 26.2 -2.3L37.35 25.1L38.85 24.9Q39.25 25.05 37.75 26.05L40.85 33.65L42.75 35L47.1 32.25L49.4 36.1L46.65 38.15Q42.95 40.6 38.25 42.3Q39.65 43.55 37.5 44.2Q34.35 45.2 33.55 48.15Q33 50.35 33.65 52.1L28 52.5L19.2 54Q14.55 54.95 13.65 55.6Q12.2 56.6 11.45 52.9Q10.7 49.3 11.3 48.05L12.3 45.65L11.1 45.6Q-3.75 44.45 -16.75 32.35Q-20.85 28.55 -24.2 24.15L-26.8 20.5L-23.4 18.15L-20.5 22.25L-17.4 22.25L5.4 -1.9L9.7 -5.55Q9.4 -6.7 9.4 -7.9ZM-11.4 17.3L-16.15 22.25L-16.55 26.7L-11.1 31.35L-5.35 22.55Q-9.05 19.65 -11.4 17.3ZM11.9 -1.45L-3.85 22.65L-0.85 24.8Q2.8 19.25 13.05 -0.4L11.9 -1.45ZM-4.15 27.75Q-3 25.65 -1.9 26L-1.3 25.45L-4.3 23.35L-10 32.15Q-1.45 37.95 11.3 40.95L14 41.5L18.05 31.2L11.3 30.85L8.8 30.4Q8.8 31.4 7.3 34.2Q5.8 37 5.2 36.95Q4.45 36.9 -0.1 34.25Q-4.75 31.5 -4.95 30.75Q-5.2 29.75 -4.15 27.75ZM10.1 -4.3L-9.95 15.8Q-8.25 18.75 -4.85 21.75L11 -2.6L10.1 -4.3ZM13.85 20.75L9.25 29.1L11.85 29.65L18.4 30.3L18.7 29.55L17.55 14.7L13.85 20.75ZM36.15 27.05Q31.85 29.55 26.35 30.55L26.5 35.6Q26.5 36.35 28.45 37.5L32.65 39.5Q36.2 38.3 38.95 36.95L38.95 34.1L36.15 27.05ZM25.35 11.8L26.3 29.6Q31.6 28.5 35.65 25.85L24.85 -0.85L24.05 -0.15Q24.6 1.15 25.35 11.8Z"]],[]],[[[{t:"l",m:[-0.000763,0.005722,0.005722,0.000763,29.35,3.05],s:[[0,"#a25800"],[0.5137,"#ffbf73"],[1,"#733b00"]]},"M52.2 10.75L5.35 5L6.55 -4.75L53.4 1.4L52.2 10.75Z"]],[]],[[["#2d221a","M105.2 527.7L126.65 526.8Q148.5 526.2 150.35 527.7Q153.5 530.2 155.5 536Q158.1 543.45 155.55 550.55Q154.2 554.35 145.95 556.25Q138.65 557.95 128.05 557.8Q118.05 557.65 109.7 556Q101.05 554.25 98.75 551.7Q97.6 550.4 100.8 540.5L105.2 527.7Z"]],[]],[[["#916541","M78.2 -23.55L92.6 -25.2L103.3 -24.85L110.25 -23.35Q114.75 -21.95 119.15 -17.8L123.95 -13.35Q126.95 -10.05 128.25 -5.7Q132 6.4 123.95 30.25Q123.25 32.4 118.1 36.45Q113.7 39.85 114.45 41.7Q115.25 43.65 116.25 47.7L117.3 51.55Q119.15 51.95 124.4 55.6Q129.95 59.5 135.5 64.55Q150.3 78 151.4 86.8Q151.85 90.7 147.15 118.05Q141.9 148.15 141.7 166.25L141.65 179.25Q141.9 184.1 143.7 189.25Q145.75 195.1 150.6 205.2Q155.15 214.75 156.65 219.6Q161.75 235.95 152.85 255Q153.2 263.1 152.4 276.65Q152 284.2 152.85 298.65L154.55 325.2Q156.5 359.3 152.55 371.95Q152.65 372.85 151.9 373.95L151.85 373.95L151.15 375.65Q149.75 378.4 147.85 380.55Q144.55 387.2 146.4 394.95Q146.8 396.75 154.75 419.4Q160.75 436.45 151.45 472.85Q149.1 482 144.4 497.1Q140.95 508.25 141 509.7Q141.1 511.35 143.85 517.65L149.15 530Q155.95 546.75 151.3 549.7Q148.5 551.5 140 552.5L122.75 553.3Q100.05 552.95 100.9 548Q101.65 543.65 105.2 532.65L111.2 514.6Q113.45 507.9 109.65 481Q107.8 468.1 102.95 441.7Q100.6 428.95 99.75 419.05Q99.05 410.9 98.8 397.1Q98.7 390.7 100.55 385.85Q101.75 382.65 100.05 377.85Q97.65 374.95 96.15 371.85Q93.95 367.1 89.85 336.55Q84.8 346.15 73.25 363.85Q60.15 383.9 57.5 384.3Q55.2 384.65 57.7 393.5Q62.95 412.1 64.2 418.15Q66.9 431.15 56.5 468.65L49.05 493.65Q45.55 505 45.55 505.9Q45.55 506.5 49.3 515.75Q52.45 523.55 50.45 525.8Q46.9 529.75 37.15 529.05Q28.05 528.35 20.75 524.45Q16.55 522.2 0.2 526.15Q-18.2 530.6 -22.15 530.3Q-28.8 529.75 -32.4 526.25Q-33.75 524.9 -34.1 523.65Q-34.45 522.5 -33.65 522.2L-12.1 514.95Q8.6 507.6 11.7 504.6Q14.9 501.5 16.35 485Q17.3 474 17.3 460.5L16.8 436.15Q16.3 417.5 16.3 411.85Q16.3 395.9 15.25 387.5Q15.1 386.55 14.35 386.05Q13.5 385.55 13.2 384.2Q12.2 379.45 15.2 357.85Q18.4 334.8 40.1 289.55Q48.25 272.45 56.45 257.8Q64.1 244.2 67.2 240.65Q66.5 228.9 67 212.4Q67.35 199.7 68.6 179.1Q69.45 165.25 67.2 146.25Q57.3 147.75 49.2 144.1Q39.95 139.9 38 129.2Q37.3 125.3 37.95 122.05Q38.5 119 39.7 118.85Q41.75 118.55 54.7 108.65Q67.35 99 68.9 96.9Q83 81.4 83.5 78.3Q83.75 76.6 82.05 74.35L77.95 68.5L73.65 60.15Q68.7 50.35 66 49.95L56.2 49.3Q49.3 48.9 47.8 47.95Q46.2 46.9 45.4 44.85Q44.6 42.85 45.35 41.85Q46.9 39.75 46.55 37.4L45.65 35.3Q44.9 33.9 44.85 33.15Q44.8 32.3 45.6 31.2L46.4 30.3L45.3 28.9Q44.25 27.4 44.75 27L46.1 26.05Q46.8 25.4 46.45 24.6L43 21.65Q40 19.3 40.2 17.95Q40.4 16.85 46.6 12Q52.6 7.25 52.65 4.9Q52.75 1.75 53 0.25Q53.3 -1.2 54 -2.55L56.15 -8.45Q58 -13.5 59.7 -15.3Q62.5 -18.2 65.35 -19.7Q70 -22.2 78.2 -23.55Z"]],[]],[[[{t:"b",id:61,m:[1,0,0,1,8.6,237.4],r:false,s:true},"M90.6 237.4L90.6 503.4L8.6 503.4L8.6 237.4L90.6 237.4Z"]],[]],[[[{t:"b",id:60,m:[1,0,0,1,66.1,198.55],r:false,s:true},"M162.1 198.55L162.1 511.55L66.1 511.55L66.1 198.55L162.1 198.55Z"]],[]],[[[{t:"b",id:59,m:[1,0,0,1,35.6,50.45],r:false,s:true},"M154.6 50.45L154.6 230.45L35.6 230.45L35.6 50.45L154.6 50.45Z"]],[]],[[["#2d221a","M79.7 -32.1Q91.5 -33.5 99.3 -32.15Q109.2 -30.45 119 -23.8Q129 -17.05 130.95 -1.15Q132.75 13.3 127.4 24.3Q123.6 32.15 119.9 42.1Q118.6 45.05 117.7 45.7Q116.7 46.5 115.4 44.95Q111.85 40.6 110.65 37.2L108.7 29.9Q108.45 29.1 109.4 23.05Q110.4 16.65 110.05 14.25Q109.15 7.7 106.7 6.55L100.4 6.25Q96.65 6.15 91.3 19.6Q87.15 31.9 87.7 29.55Q88.5 26.55 79.45 19.4Q73.1 14.35 66.1 10.25Q60.3 6.75 57.5 3.9Q53.05 -0.65 53.05 -5.75Q53.05 -17.95 61.55 -25Q68.5 -30.75 79.7 -32.1Z"]],[]],[[["#916541","M91.7 82.25L128.2 101.9Q126.95 105.8 103.25 132.75Q80.7 158.4 75.9 162.5Q69.4 168 61.9 171.35Q51.45 176.05 47.65 171.5Q43.85 167.6 39 160.1Q29.3 145.2 23.9 127.5Q19.05 111.6 16.9 103.55Q14.15 93.05 13.7 87.45Q13.8 86.25 11.95 83.8L10 81.5L7.75 75.4Q6.6 71.95 6.35 70.5L6.25 68.8L6.35 67.7L5.05 63.85Q3.85 60.25 4.05 59.8Q4.35 59.2 5 58.5Q5.7 57.75 6.1 57.75Q6.35 57.75 6.2 57.05Q6.05 56.15 6.45 55.5Q8.15 52.95 9.1 52.95Q9.5 52.95 8.95 51.6Q8.35 49.95 9 49.25Q10.2 47.95 11.4 47.45Q9.1 45.05 9.1 44.2Q9.1 43.3 10.25 41.95Q11.65 40.3 13.2 40.6Q14.85 40.95 17.8 42.8Q20.4 44.45 22.05 45.9Q23.9 47.55 28.5 52.95Q28.3 49.95 28.5 48.9L28.45 45.45Q28.25 42.75 28.5 42.4L29.85 40.9Q31 39.9 31.75 40.55Q32.45 41.2 32.55 42.2L32.6 43.4L34.15 45.2L35.7 47.35Q36.15 48.95 36.3 58.85Q36.45 69.25 35.75 71.55L34.45 74.1Q33.45 75.9 33.45 76.45L33.5 79.15L33.8 79.95L33.95 81.15Q33.55 85.7 44.25 100.2Q56.55 116.8 57.55 119.25L59 122.75L59.1 123.5L72.4 104.55Q86.1 85.8 91.7 82.25Z"]],[]],[[[{t:"b",id:58,m:[1,0,0,1,68.75,62.95],r:false,s:true},"M68.75 62.95L141.75 62.95L141.75 143.95L68.75 143.95L68.75 62.95Z"]],[]],[[["#2d221a","M54.7 6.5Q54.05 6.8 53.4 4.15Q53.3 3.75 54.85 3.35L57.1 3Q57.6 3.05 59.35 4.6L60.7 5.85L58.85 4.95L56.6 4.15Q56.3 4.1 55.65 5.2L54.7 6.5Z"]],[]],[[["#2d221a","M55.55 8.6L55.75 8.5L58.15 8.3L60.15 8.5L60.1 8.55L59.75 8.65L55.55 8.6Z"]],[]],[[["#2d221a","M124.8 531.45Q116.35 532 109.6 533.4Q102.95 534.8 102.5 536.1L105.8 525.9L147.9 523.6L153.5 533.2Q158.05 541.7 152.65 536.1Q146.95 530.1 124.8 531.45Z"]],[]],[[["#2d221a","M35.2 528.6Q50.35 528.95 51.4 528.55Q52.65 528.1 52.65 530L52.4 532.05L35.05 532.45Q17.3 532.7 15.4 532.05L-10.75 531.15L-35.6 530.95Q-36.5 530.9 -36.8 530.3L-37.1 528.55L-12.85 528.55L-12.85 528.35Q-12.5 527.15 -15.05 521.75Q-17.5 516.55 -18.6 515.55L-13.05 513.25Q-7.05 511 -4.85 511.3Q-3.05 511.55 -2.1 518.25Q-1.5 522.55 -1.4 528.5L18.4 528.5Q19.7 528.2 35.2 528.6Z"]],[]]]},
+      63: {nz:false, layers:[[[["#2d221a","M0.35 0.9Q-0.1 0.5 0.05 0.4L0.95 0.15L2 0Q2.7 -0.15 4.55 2.25Q2.95 1.75 2.9 1.3L2.15 1.15L1.1 1.3Q0.75 1.3 0.35 0.9Z"]],[]]]},
+      65: {nz:false, layers:[[[["#775439","M104.35 9.7Q103.25 9.05 102.2 8.95Q100.85 8.85 100.15 9.75Q99.85 10.2 98.25 10.1Q99.15 8.9 101.05 8.45L104.3 8.35Q106.5 8.85 107.5 10.4Q108.55 12 108.15 14.15Q108.1 14.7 106.25 14.65Q106.8 11.05 104.35 9.7Z"]],[]],[[["#775439","M97.05 18.1L96.6 16.85Q96.35 16.25 97.3 16Q98.25 15.7 98.5 16.3Q99.15 17.8 99 18.55Q98.75 19.6 97.45 20.3Q96.55 20.7 96.15 20.15Q95.75 19.6 96.6 19.2Q97.2 18.9 97.05 18.1Z"]],[]],[[["#775439","M103.15 30.2Q98.65 32.45 93.4 32Q92.75 31.95 93.5 31.55L94.65 31.15Q99.05 31.55 102.6 29.55Q106.5 27.35 107.1 23.15Q107.15 22.8 108.1 22.65Q109.05 22.5 109 22.85Q108.3 27.65 103.15 30.2Z"]],[]],[[["#775439","M91.55 26.55Q92.5 26.3 92.65 26.8L92.8 29.4Q92.9 31.3 93.75 31.35L94.25 31.5Q94.45 31.7 94.3 31.95Q93.8 32.55 93 32.45Q91.25 32.35 91 30.55Q91.05 28.3 90.75 27.35Q90.6 26.85 91.55 26.55Z"]],[]],[[["#775439","M95.45 25.9Q95.15 25.45 95.25 24.55Q95.35 24.15 96.3 23.95Q97.25 23.8 97.15 24.25Q97.05 25.4 97.75 25.45Q98.65 25.45 98.25 25.9Q97.85 26.4 97 26.4Q95.7 26.25 95.45 25.9Z"]],[]],[[["#775439","M106 20.45Q105.75 22.3 103.8 24Q103.2 24.55 102.45 24.35L102.1 24.15Q102.05 24 102.3 23.8Q103.8 22.55 104.1 20.7Q104.15 20.3 105.1 20.15Q106.05 20 106 20.45Z"]],[]]]},
+      51: {nz:false, layers:[[[["#ffffff","M35.35 -35.4Q50 -20.75 50 0Q50 20.75 35.35 35.35Q20.75 50 0 50Q-20.75 50 -35.4 35.35Q-50 20.75 -50 0Q-50 -20.75 -35.4 -35.4Q-20.75 -50 0 -50Q20.75 -50 35.35 -35.4Z"]],[]]]},
+      52: {nz:false, layers:[[[["#ff4fff","M384.4 57.3Q364.95 66.8 349.5 82.25L339.05 92.35Q332.2 87 323.15 87Q316.8 87 311.55 89.65L310.45 84.25Q307.2 67.45 306.2 57.4Q305.15 46.6 306.1 38.35Q332.45 27.4 363.35 27.4Q405.3 27.4 438.95 47.6Q411.8 43.9 384.4 57.3Z"],["#ffb426","M324.9 136.55Q334.85 135.7 341.6 128.25Q347.1 122.2 347.85 114.65Q362.15 117.45 376.5 121.5Q404.35 129.45 423.65 137.85Q437.55 143.9 459.6 156.25L463.05 158.2Q478.1 166.9 488.1 175.85Q502.05 188.25 510 204.1Q502.2 248.25 468.7 281.75Q443.15 307.3 411.45 317.9Q401 301.85 382.95 266.1L377.5 255.2Q359.1 218.15 344.1 184.55Q332.8 159.25 324.9 136.55Z"],["#3aefff","M224.9 120.15Q242.45 108.6 273.5 108.25Q285.85 108.15 297.45 108.65Q296.95 110.7 296.8 112.95Q296.25 122.25 302.05 129.4L301.5 130Q286.1 147.1 276.7 161.35Q257.7 190.3 251 221Q248.5 232.45 249.5 247.95Q250.45 262.9 254.4 278.1Q214.35 235.55 214.35 176.4Q214.35 146.1 224.9 120.15Z"]],[]],[[[{t:"r",m:[0.278381,0.0,0.0,0.278381,314.95,116.0],s:[[0,"rgba(255,255,255,0)"],[0.6039,"rgba(150,150,150,0.141)"],[1,"rgba(0,0,0,0.471)"]]},"M468.7 71.05Q512.35 114.7 512.35 176.4Q512.35 238.1 468.7 281.75Q425.05 325.4 363.35 325.4Q301.6 325.4 257.95 281.75Q214.35 238.1 214.35 176.4Q214.35 114.7 257.95 71.05Q301.6 27.4 363.35 27.4Q425.05 27.4 468.7 71.05Z"]],[]],[[],[[0.05,"#cccccc","M468.7 71.05Q512.35 114.7 512.35 176.4Q512.35 238.1 468.7 281.75Q425.05 325.4 363.35 325.4Q301.6 325.4 257.95 281.75Q214.35 238.1 214.35 176.4Q214.35 114.7 257.95 71.05Q301.6 27.4 363.35 27.4Q425.05 27.4 468.7 71.05"]]]]},
+    };
+
+    // the figure's four bitmaps (58–61: head, shirt, jeans, legs), packed into one atlas
+    SwfShape.bitmaps("../assets/img/sims/small-angle-person.webp",
+      [[58, 0, 0, 73, 81], [59, 73, 0, 119, 180], [60, 192, 0, 96, 313], [61, 288, 0, 82, 266]],
+      function () { S.requestDraw(); });
+
+    function drawArc(ctx, x, y, radius, startAngle, endAngle) {   // MovieClip.prototype.drawArc
+      var TAU = 2 * Math.PI;
+      startAngle = startAngle < 0 ? startAngle % TAU + TAU : startAngle % TAU;
+      endAngle = endAngle < 0 ? endAngle % TAU + TAU : endAngle % TAU;
+      var range = endAngle - startAngle;
+      if (range < 0) range += TAU;
+      var n = Math.ceil(range / 0.5), step = range / n, half = step / 2, cR = radius / Math.cos(half);
+      var a = startAngle, c = startAngle - half;
+      ctx.moveTo(x + radius * Math.cos(a), y - radius * Math.sin(a));
+      for (var i = 0; i < n; i++) {
+        a += step; c += step;
+        ctx.quadraticCurveTo(x + cR * Math.cos(c), y - cR * Math.sin(c), x + radius * Math.cos(a), y - radius * Math.sin(a));
+      }
+    }
+    /* the SWF's embedded fonts ("Times", and "Symbol" bold for α and =), glyph outlines
+       from tools/swf-inspect.py glyphs; text a font lacks (the Indonesian words) falls
+       back to the system serif. Static text advances are rounded to a twip, a
+       TextField's floored (see _flashtext.js). */
+    var TIMES = {name: 'Times', bold: false, italic: false, em: 51.2, asc: 46, desc: 11.15, lead: 5.95, g: {
+        ' ': [12.8, ""],
+        ',': [12.8, "M2.9 -2.25Q2.9 -3.55 3.7 -4.35Q4.55 -5.2 5.85 -5.2Q7.75 -5.2 8.85 -3.85Q10 -2.55 10 -0.3Q10 1.65 8.35 3.9Q6.75 6.1 4.35 7.3L4.35 7.3L3.8 6.3L3.8 6.3Q6.25 4.8 7.3 2.95L8.05 1.1Q8.15 0.6 7.9 0.35L7.05 0.2L5.85 0.35Q4.55 0.35 3.75 -0.4Q2.9 -1.1 2.9 -2.25L2.9 -2.25"],
+        '.': [12.8, "M6.45 -5.1Q7.65 -5.1 8.45 -4.3Q9.3 -3.45 9.3 -2.25Q9.3 -1.1 8.45 -0.25Q7.65 0.55 6.45 0.55Q5.25 0.55 4.4 -0.25Q3.6 -1.1 3.6 -2.25Q3.6 -3.45 4.4 -4.3Q5.25 -5.1 6.45 -5.1L6.45 -5.1"],
+        '0': [25.6, "M12.8 0.7Q7.65 0.7 4.45 -4.15Q1.25 -9.05 1.25 -16.9Q1.25 -24.8 4.45 -29.7Q7.65 -34.55 12.8 -34.55Q18 -34.55 21.2 -29.7Q24.4 -24.8 24.4 -16.9Q24.4 -9.05 21.2 -4.15Q18 0.7 12.8 0.7L12.8 0.7M12.8 -0.65Q16.2 -0.65 17.85 -4.7Q19.5 -8.75 19.5 -17.1Q19.5 -25.3 17.85 -29.25Q16.2 -33.25 12.8 -33.25Q9.45 -33.25 7.8 -29.15Q6.15 -25.1 6.15 -16.7Q6.15 -8.55 7.8 -4.6Q9.45 -0.65 12.8 -0.65L12.8 -0.65"],
+        '1': [25.6, "M10.9 -5.4L10.9 -27.95Q10.9 -30.05 9.8 -30.3Q8.7 -30.55 5.7 -29.2L5.7 -29.95L10.4 -32.25L15.1 -34.55L15.35 -34.4L15.35 -5.4Q15.35 -2.7 16.3 -1.85Q17.2 -1 20.3 -0.95L20.3 0L13.1 0L5.95 0L5.95 -0.95Q9 -1 9.95 -1.85Q10.9 -2.7 10.9 -5.4L10.9 -5.4"],
+        '2': [25.6, "M21.8 -25.4Q21.8 -21.8 19.15 -17.85Q16.5 -13.9 9.15 -6.55L6.45 -3.85L6.45 -3.85L18.25 -3.85Q20.2 -3.85 21.15 -4.45Q22.1 -5.1 23.4 -7.25L24.15 -7L22.75 -3.5L21.35 0L21.35 0L1.55 0L1.55 -0.35L1.55 -0.7L8.15 -7.55Q13.3 -12.85 15.35 -16.4Q17.35 -19.9 17.35 -23.6Q17.35 -26.75 15.3 -28.8Q13.25 -30.8 10.05 -30.8Q7.5 -30.8 5.6 -29.05Q3.7 -27.3 2.75 -24.1L1.65 -24.4Q2.35 -29.05 5.25 -31.8Q8.15 -34.55 12.3 -34.55Q16.5 -34.55 19.15 -32Q21.8 -29.45 21.8 -25.4L21.8 -25.4"],
+        '3': [25.6, "M16.3 -26.2Q16.3 -28.65 14.75 -30.05Q13.15 -31.5 10.4 -31.5Q8.25 -31.5 6.25 -30Q4.3 -28.55 3.1 -26.1L2.35 -26.3Q3.45 -30.1 6.05 -32.3Q8.7 -34.55 12 -34.55Q15.75 -34.55 18.05 -32.65Q20.3 -30.75 20.3 -27.7Q20.3 -24.8 17.9 -22.35L15.5 -20.5L15.5 -20.5Q17.7 -19.8 19.35 -18.25Q22.1 -15.55 22.1 -11.2Q22.1 -5.85 18.25 -2.6Q14.4 0.7 8.15 0.7Q5.15 0.7 3.7 0Q2.2 -0.7 2.2 -2.15Q2.2 -3.05 2.7 -3.45Q3.2 -3.9 4.05 -3.95Q5.45 -4.05 7.8 -2.5Q10.15 -1 11.55 -1.1Q13.4 -1.1 14.7 -1.75Q16 -2.45 17 -3.95Q18.35 -6.05 18.4 -8.9Q18.4 -12.55 16 -14.7Q13.65 -16.85 9.65 -16.85L7.8 -16.85L7.75 -17.45Q12.1 -18.9 14.2 -21Q16.3 -23.15 16.3 -26.2L16.3 -26.2"],
+        '4': [25.6, "M15 -8.55L0.65 -8.55L0.65 -10.2L0.65 -11.9L16.7 -34.55L17.85 -34.55L19 -34.55L19 -11.85L19 -11.85L24.2 -11.85L24.2 -8.55L19 -8.55L19 -8.55L19 0L15 0L15 -8.55L15 -8.55M15 -11.85L15 -11.85L15 -29.4L15 -29.4L15 -29.4L2.7 -11.9L2.65 -11.85L15 -11.85"],
+        '5': [25.6, "M21.8 -11.85Q21.8 -6.25 18.05 -2.75Q14.25 0.7 8.1 0.7Q5.25 0.7 3.45 -0.15Q1.65 -1 1.65 -2.3Q1.65 -3.3 2.2 -3.8Q2.75 -4.35 3.75 -4.35L3.85 -4.35Q5.55 -4.35 7.6 -2.75Q9.65 -1.2 11.35 -1.2Q13.4 -1.2 15.05 -2.5Q16.7 -3.85 17.6 -6.2Q18.3 -8.1 18.3 -10.15Q18.3 -14.95 14.4 -17.8Q10.55 -20.65 3.5 -21.1L3.35 -21.6L9.05 -33.9L9.05 -33.9L19 -33.9L20.85 -34.15L21.9 -35.2L22.45 -34.8L21.4 -32.3L20.35 -29.85L20.35 -29.85L9.25 -29.85L9.25 -29.85L7.2 -25.45L7.2 -25.45Q13.65 -24.65 17.2 -22Q21.8 -18.6 21.8 -11.85L21.8 -11.85"],
+        '6': [25.6, "M22.9 -35L23.05 -34.2Q15.95 -33.3 11.25 -27.35Q8.3 -23.65 7.2 -19.05L7.2 -19.05L7.4 -19.2Q10.75 -21.9 14.65 -21.9Q18.9 -21.9 21.45 -19.05Q23.95 -16.15 23.95 -11.3Q23.95 -5.8 20.95 -2.55Q17.95 0.7 12.85 0.7Q7.85 0.7 4.8 -3.55Q1.75 -7.8 1.75 -14.75Q1.75 -23 7.9 -28.85Q14.05 -34.75 22.9 -35L22.9 -35M13.65 -0.7Q16.4 -0.7 17.95 -2.9Q19.45 -5.1 19.45 -9.15Q19.45 -14.2 17.65 -16.85Q15.9 -19.55 12.5 -19.55L9.8 -19.1Q7.95 -18.45 7.3 -17.45Q6.7 -16.5 6.6 -14L6.55 -13.4Q6.55 -7.55 8.5 -4.1Q10.4 -0.7 13.65 -0.7L13.65 -0.7"],
+        '7': [25.6, "M8.8 0.4L18.95 -30L18.95 -30L8.15 -30Q5.8 -30 4.6 -29.25Q3.4 -28.45 1.9 -25.9L1.05 -26.3L2.55 -30.1L4.05 -33.9L4.05 -33.9L23 -33.9L23 -33.4L23 -32.85L12.05 0.4L8.8 0.4"],
+        '8': [25.6, "M3.25 -26.2Q3.25 -29.85 5.95 -32.2Q8.7 -34.55 12.9 -34.55Q16.8 -34.55 19.3 -32.5Q21.8 -30.5 21.8 -27.3Q21.8 -24.6 19.45 -22.15Q17.75 -20.45 14.95 -18.95L14.95 -18.95Q19.45 -15.5 21.05 -13.4Q22.8 -11.1 22.8 -7.65Q22.8 -4 19.95 -1.65Q17.1 0.7 12.65 0.7Q8.35 0.7 5.65 -1.65Q2.9 -4.05 2.9 -7.75Q2.9 -10.4 4.95 -12.95Q6.5 -14.85 9.55 -17.05L9.55 -17.05Q6.4 -19.5 4.95 -21.4Q3.25 -23.7 3.25 -26.2L3.25 -26.2M18.3 -27.6Q18.3 -30.2 16.75 -31.65Q15.2 -33.15 12.5 -33.15Q10.1 -33.15 8.55 -31.65Q7 -30.2 7 -27.85Q7 -25.85 8.2 -24.4Q9.4 -22.95 13.55 -19.9L13.55 -19.9Q15.6 -21.3 16.65 -22.7Q18.3 -24.8 18.3 -27.6L18.3 -27.6M6.8 -7.9Q6.8 -4.55 8.55 -2.65Q10.25 -0.7 13.3 -0.7Q15.95 -0.7 17.5 -2.25Q19 -3.8 19 -6.5Q19 -8.85 17.55 -10.6Q16.1 -12.35 10.95 -16L10.95 -16Q9.1 -14.5 8.2 -13.05Q6.8 -10.9 6.8 -7.9L6.8 -7.9"],
+        '9': [25.6, "M2.95 1.05L2.8 0.1Q9.9 -0.8 14.25 -6.3Q17.2 -10.05 18.15 -14.95L18.15 -14.95L17.9 -14.75Q14.6 -12.1 10.8 -12.1Q6.55 -12.1 4.05 -14.95Q1.55 -17.8 1.55 -22.65Q1.55 -27.9 4.65 -31.2Q7.7 -34.55 12.55 -34.55Q17.5 -34.55 20.5 -30.45Q23.5 -26.35 23.5 -19.65Q23.5 -11.25 17.55 -5.25Q11.6 0.75 2.95 1.05L2.95 1.05M11.85 -33.2Q9.2 -33.2 7.75 -31Q6.3 -28.8 6.3 -24.75Q6.3 -19.7 8 -17.05Q9.75 -14.35 13 -14.35L15.45 -14.7Q17.35 -15.3 18 -16.3Q18.6 -17.35 18.6 -19.9L18.6 -20Q18.6 -26.7 16.95 -29.95Q15.3 -33.2 11.85 -33.2L11.85 -33.2"],
+        'a': [22.75, "M7.4 0.5Q5 0.5 3.45 -1Q1.9 -2.5 1.9 -4.9Q1.9 -7.4 3.7 -9.25Q5.45 -11.1 9.4 -12.75L14.7 -14.95L14.7 -14.95L14.7 -17.65Q14.7 -20.05 13.75 -21.2Q12.8 -22.3 10.75 -22.3Q8.85 -22.3 7.85 -21.3Q6.8 -20.25 7.25 -18.8Q7.6 -17.5 6.95 -16.55Q6.3 -15.6 5.05 -15.6Q4.15 -15.6 3.5 -16.2Q2.9 -16.85 2.9 -17.8Q2.9 -20.15 5.35 -21.85Q7.85 -23.55 11.25 -23.55Q15 -23.55 16.95 -21.75Q18.85 -20 18.85 -16.55L18.85 -4.75Q18.85 -3.45 19.2 -2.9Q19.55 -2.4 20.35 -2.4L21.55 -2.65L22.65 -3.4L22.65 -2.05Q21.75 -0.95 20.5 -0.25Q19.2 0.45 18.1 0.45Q16.5 0.45 15.65 -0.55Q14.85 -1.45 14.8 -3.3L14.8 -3.3L12.7 -1.55Q9.85 0.5 7.4 0.5L7.4 0.5M14.7 -6.05L14.7 -13.7L14.7 -13.7L11.85 -12.6Q9.25 -11.65 7.85 -10.05Q6.45 -8.45 6.45 -6.5Q6.45 -4.65 6.45 -6.5Q6.45 -4.65 7.4 -3.55Q8.3 -2.4 9.85 -2.4Q11.7 -2.4 13.6 -3.7L14.5 -4.65L14.7 -6.05L14.7 -6.05"],
+        'c': [22.75, "M21.1 -7.5Q19.25 -3.45 16.75 -1.45Q14.25 0.5 10.95 0.5Q6.7 0.5 4 -2.65Q1.3 -5.85 1.3 -10.85Q1.3 -16.25 4.6 -19.9Q7.85 -23.55 12.8 -23.55Q15.75 -23.55 18.1 -21.95Q20.4 -20.4 20.4 -18.4Q20.4 -17.4 19.75 -16.75Q19.1 -16.15 18.05 -16.15Q16.95 -16.15 16.35 -16.85Q15.7 -17.55 15.35 -19.2Q14.95 -20.9 14.25 -21.45Q13.5 -22.05 11.85 -22.05Q9 -22.05 7.1 -19.45Q5.25 -16.8 5.25 -12.9Q5.25 -8.75 7.5 -5.95Q9.75 -3.15 13.15 -3.15Q15.15 -3.15 16.8 -4.25Q18.45 -5.3 20.4 -7.95L21.1 -7.5"],
+        'd': [25.6, "M10.8 0.5Q6.5 0.5 3.95 -2.5Q1.4 -5.55 1.4 -10.7Q1.4 -15.95 4.55 -19.75Q7.65 -23.55 11.95 -23.55Q14.6 -23.55 17.4 -21.3L17.4 -21.3L17.4 -28.85Q17.4 -31.1 16.8 -31.65L13.9 -31.95L13.9 -32.7L17.7 -33.75L21.45 -34.95L21.7 -34.8L21.7 -5.85Q21.7 -4 22.35 -3.45Q22.95 -2.95 25.15 -2.95L25.15 -2.1L21.45 -0.8L17.7 0.5L17.45 0.35L17.45 -2.95L17.45 -2.95Q14.95 0.5 10.8 0.5L10.8 0.5M12.05 -22.1Q9.2 -22.1 7.55 -19.45Q5.85 -16.8 5.85 -12.35Q5.85 -7.7 7.75 -4.9Q9.6 -2.15 12.8 -2.15Q14.8 -2.15 16.2 -3.3L17.15 -4.45L17.4 -6.25L17.4 -16.05L17.05 -18.3Q16.75 -19.5 16.3 -20.1Q14.7 -22.1 12.05 -22.1L12.05 -22.1"],
+        'e': [22.75, "M10.75 0.5Q6.4 0.5 3.85 -2.55Q1.3 -5.65 1.3 -10.85Q1.3 -16.4 4.25 -19.95Q7.2 -23.55 11.8 -23.55Q15.9 -23.55 18.35 -20.75Q20.6 -18.3 20.75 -14.15L20.75 -14.15L4.95 -14.15L4.95 -14.15Q4.95 -9.05 7.15 -6Q9.35 -2.95 13 -2.95Q15.45 -2.95 17.2 -4.2Q19 -5.45 20.9 -8.45L21.7 -7.95Q19.8 -3.55 17.2 -1.5Q14.55 0.5 10.75 0.5L10.75 0.5M15.5 -15.8L15.5 -15.8Q15.3 -18.3 14.35 -19.75Q13.1 -21.75 10.65 -21.75L10.6 -21.75Q8 -21.75 6.5 -19.7Q5.35 -18.2 5.05 -15.8L5.05 -15.8L15.5 -15.8"],
+        'i': [14.25, "M4.8 -4.75L4.8 -16.95Q4.8 -19.3 4.1 -19.85Q3.4 -20.4 1 -19.85L1 -20.7L4.95 -22.05L8.9 -23.6L9.1 -23.45L9.1 -4.75Q9.1 -2.3 9.85 -1.55Q10.55 -0.8 12.9 -0.75L12.9 0L6.9 0L0.85 0L0.85 -0.75Q3.3 -0.8 4.05 -1.55Q4.8 -2.3 4.8 -4.75L4.8 -4.75M6.65 -34.95Q7.75 -34.95 8.5 -34.2Q9.25 -33.45 9.25 -32.35Q9.25 -31.25 8.5 -30.5Q7.75 -29.75 6.65 -29.75Q5.55 -29.75 4.8 -30.5Q4.05 -31.25 4.05 -32.35Q4.05 -33.45 4.8 -34.2Q5.55 -34.95 6.65 -34.95L6.65 -34.95"],
+        'l': [14.25, "M5 -4.75L5 -28.85Q5 -31.15 4.3 -31.7L1 -31.95L1 -32.7L5.05 -33.75L9.05 -34.95Q9.2 -34.9 9.3 -34.8L9.3 -4.75Q9.3 -2.3 10 -1.55Q10.75 -0.8 13.1 -0.75L13.1 0L7.05 0L1 0L1 -0.75Q3.5 -0.8 4.25 -1.55Q5 -2.3 5 -4.75L5 -4.75"],
+        'm': [39.85, "M4.5 -4.75L4.5 -17.55Q4.5 -19.85 3.85 -20.4L1 -20.45L1 -21.3L4.7 -22.35L8.4 -23.6L8.6 -23.45L8.6 -19.65L8.6 -19.65L8.6 -19.65L12.65 -22.5Q14.6 -23.55 16.25 -23.55Q19.35 -23.55 20.95 -21.35L21.95 -19.3L21.95 -19.3Q24 -21.4 25.75 -22.4Q27.75 -23.55 29.95 -23.55Q33.05 -23.55 34.65 -21.35Q36.25 -19.15 36.25 -14.85L36.25 -4.75Q36.25 -2.3 36.9 -1.5Q37.55 -0.75 39.7 -0.75L39.7 0L34.1 0L28.45 0L28.45 -0.75Q30.6 -0.75 31.3 -1.5Q31.95 -2.3 31.95 -4.75L31.95 -15.7Q31.95 -18.35 31.05 -19.6Q30.15 -20.85 28.25 -20.85Q26.45 -20.85 25 -20.1Q23.7 -19.35 22.5 -17.9L22.5 -17.9L22.5 -4.75Q22.5 -2.3 23.25 -1.55Q23.95 -0.8 26.3 -0.75L26.3 0L20.5 0L14.65 0L14.65 -0.75Q16.85 -0.8 17.55 -1.55Q18.2 -2.3 18.2 -4.75L18.2 -15.75Q18.2 -18.4 17.35 -19.6Q16.45 -20.85 14.6 -20.85Q12.85 -20.85 11.4 -20.1Q10.1 -19.5 8.8 -18L8.8 -18L8.8 -4.75Q8.8 -2.3 9.45 -1.5Q10.1 -0.75 12.25 -0.75L12.25 0L6.55 0L0.85 0L0.85 -0.75Q3.1 -0.75 3.8 -1.55Q4.5 -2.3 4.5 -4.75L4.5 -4.75"],
+        'n': [25.6, "M4.15 -4.75L4.15 -17.45Q4.15 -19.6 3.45 -20.2L0.85 -20.4L0.85 -21.2L4.45 -22.3L8.05 -23.6L8.25 -23.45L8.25 -19.4L8.25 -19.4L8.25 -19.4Q10.15 -21.25 11.8 -22.3Q13.8 -23.55 15.45 -23.55Q18.55 -23.55 20.15 -21.5Q21.75 -19.5 21.75 -15.6L21.75 -4.75Q21.75 -2.3 22.35 -1.5Q22.9 -0.75 24.85 -0.75L24.85 0L19.5 0L14.2 0L14.2 -0.75Q16.2 -0.75 16.85 -1.5Q17.45 -2.3 17.45 -4.75L17.45 -15.65Q17.45 -18.25 16.5 -19.5Q15.55 -20.7 13.5 -20.7Q12.45 -20.7 11.15 -19.95L8.45 -17.8L8.45 -17.8L8.45 -4.75Q8.45 -2.3 9.05 -1.5Q9.65 -0.75 11.7 -0.75L11.7 0L6.35 0L0.95 0L0.95 -0.75Q2.95 -0.75 3.55 -1.55Q4.15 -2.3 4.15 -4.75L4.15 -4.75"],
+        'r': [17.05, "M3.9 -4.75L3.9 -16.95Q3.9 -19.3 3.25 -19.8L0.35 -19.85L0.35 -20.7L4.15 -22.05L7.95 -23.6L8.15 -23.45L8.15 -18.65L8.15 -18.65L8.15 -18.65Q9.45 -20.65 10.75 -21.85Q12.55 -23.55 14.4 -23.55Q15.65 -23.55 16.4 -22.8Q17.15 -22.05 17.15 -20.75Q17.15 -19.75 16.6 -19.1Q16.05 -18.5 15.2 -18.5L14.25 -18.7L13.3 -19.35L12.4 -20.05L11.7 -20.3Q10.85 -20.3 9.95 -19.4L8.8 -17.85L8.35 -16.95L8.2 -16L8.2 -4.75Q8.2 -2.3 9.05 -1.5Q9.9 -0.75 12.65 -0.75L12.65 0L6.45 0L0.25 0L0.25 -0.75Q2.55 -0.75 3.25 -1.55Q3.9 -2.3 3.9 -4.75L3.9 -4.75"],
+        's': [19.95, "M15.35 -16.1Q14.7 -19.25 13.3 -20.8Q11.9 -22.35 9.7 -22.35Q8 -22.35 6.9 -21.45Q5.8 -20.5 5.8 -19.05Q5.8 -17.45 6.75 -16.45Q7.7 -15.45 10.7 -13.8Q14.85 -11.5 16.35 -9.85Q17.85 -8.25 17.85 -6.05Q17.85 -3.25 15.7 -1.35Q13.6 0.5 10.4 0.5Q8.35 0.5 5.3 -0.4L4.3 -0.4Q3.8 -0.3 3.5 0L3.3 0.2L2.6 0.2L2.6 0.2L2.6 -7.75L2.6 -7.75L3.55 -7.75Q4.1 -4.25 5.75 -2.4Q7.45 -0.6 10.1 -0.6Q12.05 -0.6 13.15 -1.55Q14.25 -2.55 14.25 -4.35Q14.25 -5.85 13.25 -6.85Q12.2 -7.9 8.95 -9.65Q5.25 -11.7 3.95 -13.3Q2.6 -14.85 2.6 -17.2Q2.6 -20 4.6 -21.75Q6.6 -23.55 9.7 -23.55Q11.45 -23.55 13.85 -22.65L14.65 -22.55L15.25 -22.95L15.3 -23.05L15.9 -23.05L15.9 -23.05L16.15 -16.1L16.15 -16.1L15.35 -16.1"],
+        't': [14.25, "M3.6 -5.05L3.6 -21.4L3.6 -21.4L1 -21.4Q0.7 -21.4 0.7 -21.7L0.7 -21.65L0.95 -22.15L3.9 -24.75Q5.5 -26.55 7.3 -29.25L7.55 -29.65L7.55 -29.65L7.85 -29.45L7.9 -28.95L7.9 -23L7.9 -23L13.1 -23L13.1 -21.4L7.9 -21.4L7.9 -21.4L7.9 -6.4Q7.9 -4.1 8.5 -3.1Q9.1 -2.1 10.5 -2.1Q11.35 -2.1 12.25 -2.6Q13.1 -3.1 13.65 -3.95L14.3 -3.35Q13.05 -1.4 11.6 -0.45Q10.15 0.45 8.3 0.45Q6.1 0.45 4.85 -1Q3.6 -2.45 3.6 -5.05L3.6 -5.05"],
+        '×': [28.9, "M14.45 -10.6L4.35 -0.45L1.95 -2.8L12.1 -12.95L1.95 -23.05L4.35 -25.45L14.45 -15.3L24.6 -25.45L26.95 -23.05L16.8 -12.95L26.95 -2.8L24.6 -0.45L14.45 -10.6"]
+    }};
+    var SYMBOL = {name: 'Symbol', bold: true, italic: false, em: 51.2, asc: null, desc: null, lead: null, g: {
+        '=': [null, "M0.9 -19.6L27.7 -19.6L27.7 -16.2L0.9 -16.2L0.9 -19.6M0.9 -10.45L27.7 -10.45L27.7 -7L0.9 -7L0.9 -10.45"],
+        'a': [null, "M23.15 -23.45L28.1 -23.45L24.8 -11.65L23.9 -8.45Q24.8 -4.9 25.3 -4.1Q25.9 -3.15 27 -3.15Q27.75 -3.15 28.45 -3.8Q29.15 -4.5 29.45 -6.45L31.4 -6.45Q31.05 -2.25 29.75 -0.75Q28.5 0.75 26.75 0.75Q25.15 0.75 23.9 -0.55Q22.6 -1.85 22 -5.45Q21.55 -3.55 20.05 -2.25Q18.95 -0.8 17.15 0Q15.35 0.8 13.1 0.8Q7.4 0.8 4.75 -3Q2.1 -6.75 2.1 -11.5Q2.1 -17.1 5.2 -20.6Q8.35 -24.1 12.6 -24.1Q15.55 -24.1 17.8 -22.3Q20.1 -20.45 21.3 -16.05L23.15 -23.45M20 -12.8Q18.75 -17.55 16.8 -19.45Q14.8 -21.35 12.85 -21.35Q10.75 -21.35 9.3 -18.9Q7.8 -16.45 7.8 -10.8Q7.8 -7.5 8.45 -5.65Q9.1 -3.8 10.35 -2.85Q11.6 -1.9 12.95 -1.9Q14.65 -1.9 16.95 -3.6Q18.1 -5.75 20 -12.8L20 -12.8"]
+    }};
+    TIMES.g["\u03b1"] = SYMBOL.g.a;
+    function glyphs(ctx, F, str, x, y, size, align, field) {
+      var cs = Array.from(String(str)), k = size / F.em, xs = [], w = 0, i;
+      for (i = 0; i < cs.length; i++) if (!F.g[cs[i]] || F.g[cs[i]][0] == null && cs.length > 1) break;
+      if (i < cs.length) {                         // a glyph the SWF never embedded
+        ctx.font = (F.bold ? "bold " : "") + size + "px " + SERIF;
+        return field ? FlashText.fill(ctx, str, x, y, align) : FlashText.fillStatic(ctx, str, x, y, align);
+      }
+      for (i = 0; i < cs.length; i++) {
+        xs.push(w);
+        var tw = 20 * (F.g[cs[i]][0] || 0) * k;
+        w += (field ? Math.floor(tw + 1e-6) : Math.round(tw)) / 20;
+      }
+      var x0 = align === "center" ? x - w / 2 : align === "right" ? x - w : x;
+      for (i = 0; i < cs.length; i++) {
+        var d = F.g[cs[i]][1];
+        if (!d) continue;
+        var P = F.p || (F.p = {});
+        var path = P[cs[i]] || (P[cs[i]] = new Path2D(d));
+        ctx.save(); ctx.translate(x0 + xs[i], y); ctx.scale(k, k); ctx.fill(path); ctx.restore();
+      }
+      return w;
     }
 
     S.onDraw(function () {
-      var ctx = S.ctx, W = S.W, H = S.H;
-      S.clear();
-      drawEquation(ctx, W, 56);
-
-      var vx = 96, cy = 300, ox = W - 110, baseLen = ox - vx;
-      var ang = exactRad();
-      var halfH = Math.min(baseLen * Math.tan(ang / 2), 150);
-
-      // baseline (line of sight to centre)
-      ctx.strokeStyle = "#2c3a66"; ctx.setLineDash([5, 5]); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(vx, cy); ctx.lineTo(ox, cy); ctx.stroke(); ctx.setLineDash([]);
-
-      // sight lines to top & bottom of the object
-      ctx.strokeStyle = "#6ea8fe"; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(vx, cy); ctx.lineTo(ox, cy - halfH);
-      ctx.moveTo(vx, cy); ctx.lineTo(ox, cy + halfH); ctx.stroke();
-
-      // angle marker at the vertex
-      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(vx, cy, 42, -ang / 2, ang / 2); ctx.stroke();
-      ctx.fillStyle = "#ffd166"; ctx.font = "italic 15px Georgia, serif"; ctx.textAlign = "left";
-      ctx.textBaseline = "middle"; ctx.fillText("α", vx + 50, cy);
-      ctx.textBaseline = "alphabetic";
-
-      drawObserver(ctx, vx, cy);
-      drawObject(ctx, ox, cy, halfH);
-
-      // distance + diameter annotations
-      ctx.fillStyle = "#9fabce"; ctx.font = "12px system-ui"; ctx.textAlign = "center";
-      ctx.fillText(I18N.t("sa.dist") + " = " + dist.toFixed(1) + " " + I18N.t("sa.units"), (vx + ox) / 2, cy + 26);
+      var ctx = S.ctx, g = geometry();
+      FlashText.begin(ctx);
       ctx.save();
-      ctx.strokeStyle = "#9fabce"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(ox + halfH * 0.5 + 14, cy - halfH); ctx.lineTo(ox + halfH * 0.5 + 14, cy + halfH); ctx.stroke();
-      ctx.translate(ox + halfH * 0.5 + 28, cy); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(I18N.t("sa.diam") + " = " + diam.toFixed(1) + " " + I18N.t("sa.units"), 0, 0);
+      ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 0, S.W, S.H);
+      ctx.translate(0, OY);
+      // Panel Background, cut off above the sliders
+      ctx.fillStyle = "#fafafa"; ctx.fillRect(7, 37, 946, 256);
+      ctx.strokeStyle = "#666666"; ctx.lineWidth = 1; ctx.strokeRect(7, 37, 946, 256);
+
+      // the equation: static text at its placements, the result an EditText
+      ctx.fillStyle = "#000000";
+      glyphs(ctx, SYMBOL, "a", 240, 98.2, 22, "left");
+      glyphs(ctx, SYMBOL, "=", 273.7, 98.2, 22, "left");
+      glyphs(ctx, TIMES, t("sa.k"), 305.55, 98.4, 22, "left");
+      glyphs(ctx, TIMES, "\u00d7", 385.7, 98.4, 22, "left");
+      glyphs(ctx, TIMES, t("sa.num"), 475.975, 85.9, 22, "center");
+      glyphs(ctx, TIMES, t("sa.den"), 475.95, 110.9, 22, "center");
+      ctx.fillRect(408.55, 90.5, 135, 1);                         // shape 73, a hairline
+      glyphs(ctx, SYMBOL, "=", 564.95, 98.2, 22, "left");
+      glyphs(ctx, TIMES, toFixed(206265 * diameter / distance, 1) + " " + t("sa.arcsec"),
+        596.8, 77.4 + TIMES_ASC * 22, 22, "left", true);
+
+      // alphaMC: the Symbol α over the upper end of the arc
+      glyphs(ctx, SYMBOL, "a", g.alphaX - 4.55, g.alphaY - 5.2, 14, "left");
+
+      // personMC: the observer, mirrored (_xscale −15 %)
+      ctx.save();
+      ctx.translate(ORIGIN_X, CENTER_Y); ctx.scale(-0.149994, 0.149994);
+      SwfShape.draw(ctx, ART[62]);
+      ctx.save(); ctx.translate(43.5, 19.9); ctx.globalAlpha = 0.5; SwfShape.draw(ctx, ART[63]); ctx.restore();
+      SwfShape.draw(ctx, ART[65]);
+      ctx.restore();
+
+      // tangentsMC: lineStyle(1, 0xA0A0A0) to the ball's tangent points, then the 3-px arc
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.strokeStyle = "#a0a0a0"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(g.ax, CENTER_Y + g.ay); ctx.lineTo(ORIGIN_X, CENTER_Y); ctx.lineTo(g.ax, CENTER_Y - g.ay);
+      ctx.stroke();
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 3;
+      ctx.beginPath(); drawArc(ctx, ORIGIN_X, CENTER_Y, ARC_R, -g.a2, g.a2); ctx.stroke();
+
+      // ballMC: the white disc and its coloured panels, scaled to 2·pr %
+      ctx.save();
+      ctx.translate(g.ballX, CENTER_Y); ctx.scale(2 * g.pr / 100, 2 * g.pr / 100);
+      SwfShape.draw(ctx, ART[51]);
+      ctx.transform(0.335571, 0, 0, 0.335571, -121.95, -59.2);
+      SwfShape.draw(ctx, ART[52]);
+      ctx.restore();
       ctx.restore();
     });
 
-    upd();
-
-    /* ---- the headline equation ---- */
-    function drawEquation(ctx, W, midY) {
-      var lang = I18N.getLang();
-      var k = lang === "id" ? "206.265" : "206,265";
-      var a = "α  =  " + k + "  ×  ";
-      var b = "  =  " + approxArcsec().toFixed(1) + " " + I18N.t("sa.arcsec");
-      var num = I18N.t("sa.num"), den = I18N.t("sa.den");
-      ctx.textBaseline = "middle";
-      ctx.font = "18px Georgia, serif"; var wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
-      ctx.font = "14px Georgia, serif";
-      var wf = Math.max(ctx.measureText(num).width, ctx.measureText(den).width) + 16;
-      var total = wa + wf + wb, x = (W - total) / 2;
-
-      ctx.fillStyle = "#e8ecf8"; ctx.textAlign = "left"; ctx.font = "18px Georgia, serif";
-      ctx.fillText(a, x, midY);
-      // fraction
-      var fx = x + wa, fcx = fx + wf / 2;
-      ctx.font = "14px Georgia, serif"; ctx.textAlign = "center";
-      ctx.fillText(num, fcx, midY - 11);
-      ctx.fillText(den, fcx, midY + 11);
-      ctx.strokeStyle = "#e8ecf8"; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(fx + 4, midY); ctx.lineTo(fx + wf - 4, midY); ctx.stroke();
-      // result
-      ctx.font = "18px Georgia, serif"; ctx.textAlign = "left";
-      ctx.fillStyle = "#ffd166"; ctx.fillText(b, fx + wf, midY);
-      ctx.textBaseline = "alphabetic";
+    /* ---------------- dragging the ball (onBallPress / onBallMouseMoveFunc) ---------------- */
+    var drag = null;
+    function at(ev) {
+      var r = S.canvas.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height - OY };
     }
+    function onBall(p, touch) {
+      var g = geometry(), dx = p.x - g.ballX, dy = p.y - CENTER_Y, rr = Math.max(g.pr, touch ? 12 : 0);
+      return dx * dx + dy * dy <= rr * rr;
+    }
+    S.canvas.addEventListener("pointerdown", function (ev) {
+      var p = at(ev);
+      if (!onBall(p, ev.pointerType === "touch")) return;
+      ev.preventDefault();
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      drag = { off: p.x - geometry().ballX };     // xOffset = _parent._xmouse − _x
+      S.canvas.style.cursor = "grabbing";
+    });
+    S.canvas.addEventListener("pointermove", function (ev) {
+      var p = at(ev);
+      if (!drag) { S.canvas.style.cursor = onBall(p, ev.pointerType === "touch") ? "grab" : "default"; return; }
+      setDistance((p.x - drag.off - ORIGIN_X) / PX_PER_UNIT);
+    });
+    function release() { if (drag) { drag = null; S.canvas.style.cursor = "grab"; } }
+    S.canvas.addEventListener("pointerup", release);
+    S.canvas.addEventListener("pointercancel", release);
 
-    function drawObserver(ctx, x, y) {
-      ctx.fillStyle = "#cfe0ff";
-      ctx.beginPath(); ctx.arc(x, y, 9, 0, 2 * Math.PI); ctx.fill();          // head
-      ctx.fillStyle = "#3b6fd6";
-      roundRect(ctx, x - 9, y + 8, 18, 34, 7); ctx.fill();                    // body
-      ctx.strokeStyle = "#3b6fd6"; ctx.lineWidth = 4; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(x + 5, y + 16); ctx.lineTo(x + 22, y + 6); ctx.stroke();  // arm
-      ctx.lineCap = "butt";
+    /* ---------------- the sidebar: the SWF's sliders and preset buttons ---------------- */
+    var syncing = false;
+    var distCtl = S.slider({ labelKey: "sa.dist", min: 20, max: 60, step: 0.1, value: distance,
+      format: function (v) { return toFixed(v, 1) + " " + t("sa.units"); },
+      on: function (v) { if (!syncing) setDistance(v); } });
+    [20, 30, 40, 50, 60].forEach(function (v) { S.button({ label: String(v), on: function () { easeToDistance(v); } }); });
+    var diamCtl = S.slider({ labelKey: "sa.diam", min: 1, max: 3, step: 0.1, value: diameter,
+      format: function (v) { return toFixed(v, 1) + " " + t("sa.units"); },
+      on: function (v) { if (!syncing) setDiameter(v); } });
+    [1, 2, 3].forEach(function (v) { S.button({ label: String(v), on: function () { easeToDiameter(v); } }); });
+    S.group("sa.sp");
+    S.button({ labelKey: "sa.reset", on: reset });
+    function syncSidebar() {
+      syncing = true;
+      if (Math.abs(distCtl.value() - distance) > 1e-9) distCtl.set(distance);
+      if (Math.abs(diamCtl.value() - diameter) > 1e-9) diamCtl.set(diameter);
+      syncing = false;
     }
+    function changed() { syncSidebar(); S.requestDraw(); }
 
-    function drawObject(ctx, x, y, r) {
-      r = Math.max(4, r);
-      var g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r);
-      g.addColorStop(0, "#ffe0a3"); g.addColorStop(1, "#e8794f");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
-      // beach-ball stripes
-      ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 1;
-      for (var i = -1; i <= 1; i++) {
-        ctx.beginPath(); ctx.ellipse(x, y, Math.max(1, r * Math.abs(i) * 0.55 + (i === 0 ? 0 : 0)), r, 0, 0, 2 * Math.PI);
-        if (i === 0) { ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); }
-        ctx.stroke();
-      }
-      ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.stroke();
+    function reset() {                             // onReset
+      easeLoop.pause();
+      distance = 40; distEaser.init(distance);
+      diameter = 2; diamEaser.init(diameter);
+      changed();
     }
-
-    function fmtAngle(rad) {
-      var deg = rad * 180 / Math.PI;
-      if (deg >= 1) return deg.toFixed(2) + "°";
-      var arcmin = deg * 60;
-      if (arcmin >= 1) return arcmin.toFixed(2) + "′";
-      return (arcmin * 60).toFixed(1) + "″";
-    }
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-    }
+    reset();
   }
 });

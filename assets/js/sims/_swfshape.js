@@ -12,6 +12,11 @@
    drawShape), for the sims that draw SWF art without a celestial sphere:
      SwfShape.draw(ctx, spec [, {fill, stroke}])   the whole shape, layer by layer
      SwfShape.path(spec)                            its fills as one Path2D (a mask)
+     SwfShape.bitmaps(url, rects [, onload])        load an atlas of the SWF's bitmaps
+                                                    (rects: [[id, x, y, w, h], …]) for
+                                                    the bitmap fills {t: "b", id, m, r, s}
+   A bitmap fill's matrix m maps the bitmap's pixels into the shape (r: repeat,
+   s: smoothed); until its atlas has loaded the fill is left out.
    Strokes get round caps and joins, like Flash's lineStyle; one thinner than a
    device pixel (the SWFs' 0.05 px "hairlines") is drawn one device pixel wide.
    =========================================================================== */
@@ -29,9 +34,30 @@ window.SwfShape = (function () {
   // a gradient is built in the shape's own space: a linear one runs along its matrix's
   // x axis between the gradient square's edges (worked out from the inverse matrix, so a
   // skewed one comes out right); the radial ones are plain circles of 819.2 × the scale
+  var images = {};                              // bitmap id -> canvas, cut from an atlas
+  function bitmaps(url, rects, onload) {
+    var img = new Image();
+    img.onload = function () {
+      rects.forEach(function (r) {
+        var c = document.createElement("canvas");
+        c.width = r[3]; c.height = r[4];
+        c.getContext("2d").drawImage(img, r[1], r[2], r[3], r[4], 0, 0, r[3], r[4]);
+        images[r[0]] = c;
+      });
+      if (onload) onload();
+    };
+    img.src = url;
+  }
   function paint(ctx, st) {
     if (typeof st === "string") return st;
     var m = st.m, grad;
+    if (st.t === "b") {
+      var src = images[st.id];
+      if (!src) return "rgba(0,0,0,0)";
+      var pat = ctx.createPattern(src, st.r ? "repeat" : "no-repeat");
+      pat.setTransform(new DOMMatrix(m));
+      return pat;
+    }
     if (st.t === "l") {
       var det = m[0] * m[3] - m[1] * m[2];
       if (!det) return st.s[0][1];
@@ -52,8 +78,11 @@ window.SwfShape = (function () {
     for (var i = 0; i < Ls.length; i++) {
       var L = Ls[i], j;
       for (j = 0; j < L.fills.length; j++) {
-        ctx.fillStyle = override && override.fill ? override.fill : paint(ctx, L.fills[j].style);
+        var fs = L.fills[j].style;
+        ctx.fillStyle = override && override.fill ? override.fill : paint(ctx, fs);
+        if (fs.t === "b" && !fs.s) { ctx.imageSmoothingEnabled = false; }
         ctx.fill(L.fills[j].path, spec.nz ? "nonzero" : "evenodd");
+        if (fs.t === "b" && !fs.s) { ctx.imageSmoothingEnabled = true; }
       }
       for (j = 0; j < L.strokes.length; j++) {
         var s = L.strokes[j];
@@ -69,5 +98,5 @@ window.SwfShape = (function () {
     spec.layers.forEach(function (L) { L[0].forEach(function (f) { p.addPath(new Path2D(f[1])); }); });
     return (spec._mask = p);
   }
-  return { draw: draw, paint: paint, path: path };
+  return { draw: draw, paint: paint, path: path, bitmaps: bitmaps };
 })();

@@ -93,7 +93,11 @@ def decompile(code, pool, indent=0, out=None):
         elif op==0x30: st.append('random(%s)'%pop())
         elif op==0x26: out.append(pad+'trace(%s);'%pop())
         elif op==0x9D: out.append(pad+'if (%s) jump %+d;'%(pop(), struct.unpack('<h',d)[0]))
-        elif op==0x99: out.append(pad+'jump %+d;'%struct.unpack('<h',d)[0])
+        elif op==0x99:
+            # a value left on the stack across a jump is a branch's result (e.g. one piece of a
+            # piecewise fit that the code after the join returns) — show it, then drop it
+            if st: out.append(pad+'jump %+d;   // stack: %s'%(struct.unpack('<h',d)[0], ' | '.join(st))); del st[:]
+            else: out.append(pad+'jump %+d;'%struct.unpack('<h',d)[0])
         elif op in (0x9B,0x8E):
             name,k=cstr(d,0); np_=struct.unpack('<H',d[k:k+2])[0]; k+=2
             params=[]

@@ -251,16 +251,21 @@ Sim.create({
       ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 400, 440);
       ctx.fillStyle = "#000000"; ctx.fillRect(BOX.x, BOX.y, BOX.w, BOX.h);
 
-      var cs = circles();
+      /* the engine's layer stack, back to front: back lines · back circle halves ·
+         back inner shading · the inner objects, sorted by depth · front inner
+         shading · front circle halves · front lines                            */
+      var cs = circles(), sh = shading();
       ctx.save();
       ctx.beginPath(); ctx.rect(BOX.x, BOX.y, BOX.w, BOX.h); ctx.clip();
 
       axis(ctx, false);
-      sphereShading(ctx, cs);
-      tangentPlane(ctx, tr);
-      stickfigure(ctx);
-      globe(ctx);
       ctx.save(); disc(ctx);
+      cs.forEach(function (p) { drawCircle(ctx, p, false, p.c, p.a, p.w); });
+      ctx.drawImage(sh.back, C.x - R, C.y - R, 2 * R, 2 * R);
+      ctx.restore();
+      innerObjects(ctx, tr);
+      ctx.save(); disc(ctx);
+      ctx.drawImage(sh.front, C.x - R, C.y - R, 2 * R, 2 * R);
       cs.forEach(function (p) { drawCircle(ctx, p, true, p.c, p.a, p.w); });
       ctx.restore();
       axis(ctx, true);
@@ -271,29 +276,63 @@ Sim.create({
     });
     function disc(ctx) { ctx.beginPath(); ctx.arc(C.x, C.y, R, 0, TAU); ctx.clip(); }
 
-    /* the two 'Sphere Shading' clips and the engine's celestialBowl together read
-       as one radial wash, #262626 at the centre to #414141 at the limb (measured
-       off the SWF); the back halves of the circles sit under it, dimmed. The wash
-       never changes, so it is baked once — painting this gradient live costs
-       about 4 ms a frame, which is most of a 60 fps budget.                     */
-    var washTile = null;
-    function wash() {
-      if (washTile) return washTile;
-      var N = 2 * R;
-      washTile = document.createElement("canvas");
-      washTile.width = washTile.height = N;
-      var g2 = washTile.getContext("2d");
-      var g = g2.createRadialGradient(R, R, 0, R, R, R);
-      g.addColorStop(0, "rgba(38,38,38,0.86)"); g.addColorStop(1, "rgba(65,65,65,0.86)");
-      g2.fillStyle = g;
-      g2.beginPath(); g2.arc(R, R, R, 0, TAU); g2.fill();
-      return washTile;
+    /* The sphere's shading, stacked as the SWF stacks it. initSphere puts a
+       'Sphere Shading' clip (#e1e1e1 at alpha 18 → 31 → 44 of 255) in both the
+       back and the front inner layer, and the engine gives every sphere a
+       celestialBowl (white at alpha 0 in the middle → black at 20 % on the rim)
+       in the front one, under that clip. So the back halves of the circles lie
+       under one thin wash, the globe, plane and figure under the bowl and the
+       other wash, and only the front halves and the near axis sit on top. The
+       layers never change, so each is baked once — painting the gradients live
+       costs about 4 ms a frame, which is most of a 60 fps budget.              */
+    var shadeTiles = null;
+    function shading() {
+      if (shadeTiles) return shadeTiles;
+      function tile(paint) {
+        var c = document.createElement("canvas");
+        c.width = c.height = 4 * R;               // 2 px per stage px
+        var g = c.getContext("2d");
+        g.scale(2, 2); g.translate(R, R);
+        g.scale(R / 100, R / 100);               // shading clips are drawn at radius 100
+        paint(g);
+        return c;
+      }
+      function sphereShading(g) {                // 'Sphere Shading', shape 37
+        var gr = g.createRadialGradient(0, 0, 0, 0, 0, 100.875);
+        gr.addColorStop(0, "rgba(225,225,225," + 18 / 255 + ")");
+        gr.addColorStop(176 / 255, "rgba(225,225,225," + 31 / 255 + ")");
+        gr.addColorStop(1, "rgba(225,225,225," + 44 / 255 + ")");
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(0, 0, 100, 0, TAU); g.fill();
+      }
+      function bowl(g) {                         // CSGradientDisk, as the engine sets it up
+        var gr = g.createRadialGradient(0, 0, 0, 0, 0, 100);
+        gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(1, "rgba(0,0,0,0.2)");
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(0, 0, 100, 0, TAU); g.fill();
+      }
+      shadeTiles = { back: tile(sphereShading),
+        front: tile(function (g) { bowl(g); sphereShading(g); }) };
+      return shadeTiles;
     }
-    function sphereShading(ctx, cs) {
-      ctx.save(); disc(ctx);
-      cs.forEach(function (p) { drawCircle(ctx, p, false, p.c, p.a * 0.55, p.w); });
-      ctx.drawImage(wash(), C.x - R, C.y - R, 2 * R, 2 * R);
-      ctx.restore();
+
+    /* The three inner objects — tangent plane, stick figure and globe sphere —
+       share one band (the horizon plane is hidden, so the engine folds 'above'
+       into 'below'), and updateObjectsSort redraws that band back to front by
+       screen depth on every update. The figure stands 0.001 further out than the
+       plane, and changeLatitude parks the globe at z = ±0.001 on the observer's
+       side of the equator: so the plane covers the globe while the observer
+       faces you and slips behind it once they turn away.                     */
+    function innerObjects(ctx, tr) {
+      var L = circleLat(), n = hCart(180, L), r = t * MAX_GLOBE / SIZE;
+      var planeZ = vecH(n).z * r;                // WtoSz's z of each position
+      var list = [
+        { z: planeZ, draw: function () { tangentPlane(ctx, tr, planeZ < 0); } },
+        { z: vecH(n).z * (r + 0.001), draw: function () { stickfigure(ctx); } },
+        { z: vecH({ x: 0, y: 0, z: L < 0 ? -0.001 : 0.001 }).z, draw: function () { globe(ctx); } }
+      ];
+      list.sort(function (a, b) { return a.z - b.z; });
+      list.forEach(function (o) { o.draw(); });
     }
     function axis(ctx, front) {                  // ncpAxis / scpAxis, 2 px #75a9ff
       ctx.strokeStyle = "#75a9ff"; ctx.lineWidth = 2;
@@ -304,52 +343,61 @@ Sim.create({
       });
     }
 
-    /* Two frames for art that lies on the sphere. The plane is laid out with
-       east to the right and north up (the engine's horizon-plane mapping); the
-       stick figure keeps east to the right but stands along the local vertical. */
-    var NORTH = { x: 1, y: 0, z: 0 };
-    function frames(n) {
-      var d = NORTH.x * n.x + NORTH.y * n.y + NORTH.z * n.z;
-      var u = { x: NORTH.x - d * n.x, y: NORTH.y - d * n.y, z: NORTH.z - d * n.z };
-      var l = Math.hypot(u.x, u.y, u.z);
-      if (l < 1e-9) { u = { x: 0, y: 0, z: 1 }; l = 1; }
-      u = { x: u.x / l, y: u.y / l, z: u.z / l };
-      var w = { x: u.y * n.z - u.z * n.y, y: u.z * n.x - u.x * n.z, z: u.x * n.y - u.y * n.x };
-      var W = vecH(w), U = vecH(u), N3 = vecH(n);
-      var flat = [W.x / R, W.y / R, -U.x / R, -U.y / R];
-      if (flat[0] * flat[3] - flat[1] * flat[2] < 0) { flat[0] = -flat[0]; flat[1] = -flat[1]; }
-      // the figure is a billboard: it stands along the projected local vertical
-      // and keeps its width across the screen, so it never collapses edge-on
-      var vx = N3.x, vy = N3.y, vl = Math.hypot(vx, vy) || 1;
+    /* The stick figure is a billboard: it stands along the projected local
+       vertical and keeps its width across the screen, so it never collapses
+       edge-on.                                                                */
+    function standMatrix(n) {
+      var N3 = vecH(n), vx = N3.x, vy = N3.y, vl = Math.hypot(vx, vy) || 1;
       vx /= vl; vy /= vl;
-      return { flat: flat, stand: [vy, -vx, -vx, -vy] };
+      return [vy, -vx, -vx, -vy];
+    }
+
+    /* setOrientationType('absolute'), as CSObjects.update builds it: the shell
+       turns its y axis onto the projected normal and is squashed by the normal's
+       depth — negative from below, which mirrors the art just as Flash does — and
+       the instance turns inside it so the art's up points along u, the way to the
+       zenith (here the celestial pole: local north at every latitude).         */
+    function absoluteMatrix(n) {
+      var u = n.x === 0 && n.y === 0 ? { x: 0, y: 1, z: 0 }
+        : { x: -n.x * n.z, y: -n.y * n.z, z: n.x * n.x + n.y * n.y };
+      var N = vecH(n), U = vecH(u), npz = N.z / R;
+      var A = Math.atan2(N.y, N.x) + Math.PI / 2, cA = Math.cos(A), sA = Math.sin(A);
+      var x1 = cA * U.x + sA * U.y, y1 = -sA * U.x + cA * U.y;
+      var I = Math.atan2(y1 / npz, x1) + Math.PI / 2, cI = Math.cos(I), sI = Math.sin(I);
+      return [cA * cI - npz * sA * sI, sA * cI + npz * cA * sI,     // rot(A)·scale(1, npz)·rot(I)
+        -cA * sI - npz * sA * cI, -sA * sI + npz * cA * cI];
     }
 
     /* Tangent Plane: _xscale = size · (1 − t) / 2 %, so it is invisible in the
-       celestial view and a full-radius horizon plane once the morph finishes.  */
-    function tangentPlane(ctx, tr) {
+       celestial view and a full-radius horizon plane once the morph finishes,
+       and _alpha = 40 + 0.6 · _xscale for the whole clip. Frame 1, seen from
+       above, is the green CSAboveHorizonPlane with white labels; frame 2, seen
+       from below, the dark CSBelowHorizonPlane with grey ones. The labels are
+       the SWF's static text, 12 px bold Verdana, and scale with the plane.     */
+    var PLANE_LABELS = [["ch.N", -0.075, -79.7], ["ch.S", -0.075, 89.3],   // run centres
+      ["ch.E", 83.25, 5.35], ["ch.W", -83.025, 5.35]];
+    function tangentPlane(ctx, tr, below) {
       var scale = SIZE * (1 - t) / 200;          // size 300 → 150 % at t = 0
       if (scale <= 0.01) return;
-      var n = hCart(180, lat + (90 - lat) * s);
-      var pos = projH(n, standRadius()), m = frames(n).flat;
+      var n = hCart(180, circleLat());
+      var pos = projH(n, standRadius()), m = absoluteMatrix(n);
       ctx.save();
       ctx.transform(m[0], m[1], m[2], m[3], pos.x, pos.y);
       ctx.scale(scale, scale);
-      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, 101.4);
-      g.addColorStop(0, "#5ac55a"); g.addColorStop(1, "#4f9a4f");
       ctx.globalAlpha = Math.min(1, (40 + 60 * scale) / 100);
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, 100, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 1;
-      if (scale > 0.5) {                          // the direction labels ride the plane
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold " + (16 / scale).toFixed(1) + "px " + FONT;
-        ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-        ctx.fillText(tr("ch.N"), 0, -73.85);
-        ctx.fillText(tr("ch.S"), 0, 86.15);
-        ctx.fillText(tr("ch.E"), 81.93, 6.35);
-        ctx.fillText(tr("ch.W"), -77.08, 6.35);
+      var cx = below ? 0 : -0.05;                // where each frame places its disc
+      if (below) ctx.fillStyle = "#006600";
+      else {
+        var g = ctx.createRadialGradient(cx, 0, 0, cx, 0, 101.4);
+        g.addColorStop(0, "#51c451"); g.addColorStop(1, "#3aa53a");
+        ctx.fillStyle = g;
       }
+      ctx.beginPath(); ctx.arc(cx, 0, 100, 0, TAU); ctx.fill();
+      var dx = below ? 1.15 : 1.1;               // Direction Labels Dark / Light
+      ctx.fillStyle = below ? "#999999" : "#ffffff";
+      ctx.font = "bold 12px " + FONT;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      PLANE_LABELS.forEach(function (l) { ctx.fillText(tr(l[0]), l[1] + dx, l[2]); });
       ctx.restore();
     }
     /* Stickfigure: _xscale = 100 − t·100, so it grows in as the globe shrinks. */
@@ -357,7 +405,7 @@ Sim.create({
       var k = 1 - t;
       if (k <= 0.02) return;
       var n = hCart(180, lat + (90 - lat) * s);
-      var pos = projH(n, standRadius() + 0.001), m = frames(n).stand;
+      var pos = projH(n, standRadius() + 0.001), m = standMatrix(n);
       ctx.save();
       ctx.transform(m[0], m[1], m[2], m[3], pos.x, pos.y);
       ctx.scale(k, k);
@@ -378,23 +426,23 @@ Sim.create({
        nested sphere sits at latitude 90 with siderealTime 0 its celestial→horizon
        matrix is just (x, y, z) → (−x, −y, z) — which is what puts the Americas
        towards the viewer at the default theta 90 / phi 30, as in the original.  */
-    var waterFill = null, landFill = null, limbFill = null;
+    var waterFill = null, landFill = null, bowlFill = null;
     function globeFills(ctx) {                   // built once, in globe units
       if (waterFill) return;
-      function rad(inner, outer) {               // the highlight sits up and right
-        var g = ctx.createRadialGradient(GLOBE_R * 0.25, -GLOBE_R * 0.15, GLOBE_R * 0.04,
-          GLOBE_R * 0.25, -GLOBE_R * 0.15, GLOBE_R * 1.30);
+      function rad(inner, outer) {               // shapes 55 / 58: the highlight up and right
+        var g = ctx.createRadialGradient(12.8, -12.75, 0, 12.8, -12.75, 58.36);
         g.addColorStop(0, inner); g.addColorStop(1, outer);
         return g;
       }
-      waterFill = rad("#d0d8fa", "#8a93cf");     // GlobeComponentWater
-      landFill = rad("#cdad78", "#8d7348");      // GlobeComponentLand
-      limbFill = ctx.createRadialGradient(0, 0, GLOBE_R * 0.55, 0, 0, GLOBE_R);
-      limbFill.addColorStop(0, "rgba(36,42,86,0)");
-      limbFill.addColorStop(1, "rgba(36,42,86,0.28)");
+      waterFill = rad("#e2eafc", "#8493f0");     // GlobeComponentWater
+      landFill = rad("#c8a977", "#98753d");      // GlobeComponentLand
+      // the nested sphere's own celestialBowl, which lies over the globe art
+      bowlFill = ctx.createRadialGradient(0, 0, 0, 0, 0, GLOBE_R);
+      bowlFill.addColorStop(0, "rgba(255,255,255,0)");
+      bowlFill.addColorStop(1, "rgba(0,0,0,0.2)");
     }
     function globe(ctx) {
-      if (t <= 0.02) return;
+      if (t <= 0.02) return;                     // under a pixel across
       globeFills(ctx);
       var ct = Math.cos(theta * RAD), st = Math.sin(theta * RAD);
       var cp = Math.cos(phi * RAD), sp = Math.sin(phi * RAD);
@@ -408,7 +456,6 @@ Sim.create({
       }
       var D = 2 * GLOBE_R;
       ctx.save();
-      ctx.globalAlpha = Math.min(1, t * 3);
       ctx.translate(C.x, C.y);                   // the whole globe scales with t, so its
       ctx.scale(t, t);                           // gradients can be built once and reused
       ctx.save();
@@ -419,7 +466,7 @@ Sim.create({
       EARTH.landPath(ctx, shorePt, GLOBE_R);
       ctx.fillStyle = landFill;
       ctx.fill("evenodd");
-      ctx.fillStyle = limbFill;
+      ctx.fillStyle = bowlFill;
       ctx.fillRect(-GLOBE_R, -GLOBE_R, D, D);
       ctx.restore();
       ctx.strokeStyle = "#707070"; ctx.lineWidth = 1 / t;

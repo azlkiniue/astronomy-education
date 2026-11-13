@@ -78,7 +78,8 @@
         get: src.get, configurable: true, enumerable: src.enumerable,
         set: function (v) { images.push(this); src.set.call(this, v); }
       });
-      window.__loading = function () {
+      window.__loading = function () {           // (a sim that fetches data counts window.__simBusy up while it loads)
+        if ((window.__simBusy || 0) > 0) return true;
         return images.concat([].slice.call(document.images)).some(function (im) { return !im.complete; });
       };
     }

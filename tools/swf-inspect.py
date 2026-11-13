@@ -26,6 +26,8 @@
 #                                fills' regions and the strokes' runs as paths whose every
 #                                point carries its start AND end position, styles with
 #                                their start and end colours / gradients / widths
+#    glyphs  <file.swf> <fontid> [chars]  an embedded font's glyph outlines + metrics as a JS
+#                                object (px at size `em`; scale by size / em)
 #    bitmaps <file.swf> [outdir] every embedded bitmap: id, tag, size; with an outdir,
 #                                each is written out as <id>.jpg / <id>.png (JPEGTables
 #                                merged, the bogus FFD9FFD8 prefix stripped, lossless
@@ -183,7 +185,7 @@ def styles(bits, ver):
             if t == 0x13: bits.u16()
             fills.append(('linear' if t == 0x10 else 'radial', m, stops))
         elif t in (0x40, 0x41, 0x42, 0x43):
-            fills.append(('bitmap', bits.u16(), matrix(bits)))
+            fills.append(('bitmap', bits.u16(), matrix(bits), t))
     cnt = bits.u8()
     if cnt == 0xff: cnt = bits.u16()
     lines = []
@@ -212,7 +214,7 @@ def styles_one_fill(bits, ver):
             r = bits.u8(); c = rgba(); stops.append((r, '#%02x%02x%02x' % tuple(c[:3]), c[3]))
         if t == 0x13: bits.u16()
         return ('linear' if t == 0x10 else 'radial', m, stops)
-    return ('bitmap', bits.u16(), matrix(bits))
+    return ('bitmap', bits.u16(), matrix(bits), t)
 
 def cmd_fills(path, ids):
     _, b, off = load(path)
@@ -374,7 +376,12 @@ def js_fill(f):
         stops = ','.join('[%s,%s]' % (('%.4f' % (r / 255)).rstrip('0').rstrip('.') or '0', js_colour(c, a))
                          for r, c, a in f[2])
         return '{t:"%s",m:[%s,%s,%s,%s,%s,%s],s:[%s]}' % (f[0][0], sx, r0, r1, sy, tx, ty, stops)
-    return '"#808080"'                               # bitmap fills: not handled
+    if f[0] == 'bitmap' and len(f) > 3:              # {t:"b", id, m: bitmap px -> shape px, r: repeat, s: smoothed}
+        sx, r0, r1, sy, tx, ty = f[2]
+        n = lambda v: ('%.6f' % v).rstrip('0').rstrip('.') or '0'
+        return '{t:"b",id:%d,m:[%s,%s,%s,%s,%s,%s],r:%s,s:%s}' % (f[1], n(sx / 20), n(r0 / 20), n(r1 / 20), n(sy / 20),
+            n(tx), n(ty), 'true' if f[3] in (0x40, 0x42) else 'false', 'true' if f[3] in (0x40, 0x41) else 'false')
+    return '"#808080"'                               # morph-shape bitmap fills: not handled
 
 def cmd_canvas(path, ids):
     """Print shapes as a JS object for a canvas renderer: per shape, its layers,
@@ -676,6 +683,69 @@ def cmd_statictext(path, ids):
                     x += adv
     walk(off, len(b))
 
+def cmd_glyphs(path, fid, chars):
+    """An embedded font's glyph outlines (DefineFont2/3) as a JS object a canvas can
+    fill: {name, bold, italic, em, asc, desc, lead, g: {char: [advance, pathData]}}.
+    Path data and metrics are in px for a font size of `em` (51.2 for DefineFont2's
+    1024-unit square, 1024 for DefineFont3's 20480): scale by size / em, fill the
+    path (nonzero) with its origin on the baseline."""
+    _, b, off = load(path)
+    out = []
+    def walk(o, end):
+        for code, p0, ln in tags(b, o, end):
+            body = b[p0:p0 + ln]
+            if code == 39: walk(p0 + 4, p0 + ln)
+            elif code in (48, 75) and struct.unpack('<H', body[:2])[0] == fid:
+                fl = body[2]; nl = body[4]
+                name = body[5:5 + nl].decode('latin1').rstrip('\0'); p = 5 + nl
+                n = struct.unpack('<H', body[p:p + 2])[0]; p += 2
+                wo, wc, lay = fl & 0x08, fl & 0x04, fl & 0x80; ot = p
+                offs = [struct.unpack('<I', body[ot + 4 * i:ot + 4 * i + 4])[0] if wo else
+                        struct.unpack('<H', body[ot + 2 * i:ot + 2 * i + 2])[0] for i in range(n + 1)]
+                cp = ot + offs[n]
+                codes = [struct.unpack('<H', body[cp + 2 * i:cp + 2 * i + 2])[0] if wc else body[cp + i] for i in range(n)]
+                cp += n * (2 if wc else 1)
+                em = 51.2 if code == 48 else 1024.0
+                asc = desc = lead = None; adv = [None] * n
+                if lay:
+                    asc, desc, lead = struct.unpack('<HHh', body[cp:cp + 6]); cp += 6
+                    adv = [struct.unpack('<h', body[cp + 2 * i:cp + 2 * i + 2])[0] for i in range(n)]
+                def fmt(v):
+                    s = ('%.3f' % (v / 20)).rstrip('0').rstrip('.')
+                    return '0' if s in ('', '-0') else s
+                gl = []
+                for i in range(n):
+                    ch = chr(codes[i])
+                    if chars and ch not in chars: continue
+                    bits = Bits(body, ot + offs[i]); nf, nlb = bits.ub(4), bits.ub(4)
+                    x = y = 0; d = []
+                    while True:
+                        if bits.ub(1) == 0:
+                            f = bits.ub(5)
+                            if f == 0: break
+                            if f & 1: m = bits.ub(5); x = bits.sb(m); y = bits.sb(m); d.append('M%s %s' % (fmt(x), fmt(y)))
+                            if f & 2: bits.ub(nf)
+                            if f & 4: bits.ub(nf)
+                            if f & 8: bits.ub(nlb)
+                        elif bits.ub(1):
+                            m = bits.ub(4) + 2
+                            if bits.ub(1): x += bits.sb(m); y += bits.sb(m)
+                            elif bits.ub(1): y += bits.sb(m)
+                            else: x += bits.sb(m)
+                            d.append('L%s %s' % (fmt(x), fmt(y)))
+                        else:
+                            m = bits.ub(4) + 2
+                            cx = x + bits.sb(m); cy = y + bits.sb(m); x = cx + bits.sb(m); y = cy + bits.sb(m)
+                            d.append('Q%s %s %s %s' % (fmt(cx), fmt(cy), fmt(x), fmt(y)))
+                    a = 'null' if adv[i] is None else fmt(adv[i])
+                    gl.append('    %s: [%s, "%s"]' % (repr(ch) if ch not in '\\"' else repr(ch), a, ''.join(d)))
+                m = lambda v: 'null' if v is None else fmt(v)
+                out.append('{name: %r, bold: %s, italic: %s, em: %s, asc: %s, desc: %s, lead: %s, g: {\n%s\n}}' % (
+                    name, 'true' if fl & 1 else 'false', 'true' if fl & 2 else 'false', em, m(asc), m(desc), m(lead),
+                    ',\n'.join(gl)))
+    walk(off, len(b))
+    print('\n'.join(out) if out else 'font %d not found' % fid)
+
 def cmd_bitmaps(path, outdir):
     import os, subprocess
     _, b, off = load(path)
@@ -725,6 +795,8 @@ if __name__ == '__main__':
         cmd_bitmaps(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None); sys.exit(0)
     if sys.argv[1] == 'statictext':
         cmd_statictext(sys.argv[2], [int(x) for x in sys.argv[3].split(',')] if len(sys.argv) > 3 else []); sys.exit(0)
+    if sys.argv[1] == 'glyphs':
+        cmd_glyphs(sys.argv[2], int(sys.argv[3]), sys.argv[4] if len(sys.argv) > 4 else ''); sys.exit(0)
     cmd, path = sys.argv[1], sys.argv[2]
     ids = [int(x) for x in sys.argv[3].split(',')] if len(sys.argv) > 3 and sys.argv[3] != 'all' else []
     if cmd == 'text': cmd_text(path)

@@ -1,211 +1,218 @@
 /* EM Spectrum Module ---------------------------------------------------------
-   Faithful rebuild of the ClassAction "EM Spectrum Module" (emspectrum.swf):
-     • a logarithmic spectrum bar from gamma rays to radio waves, with a wavelength
-       (m) scale above and a frequency (Hz) scale below, and a draggable cursor,
-     • the visible band drawn as a true rainbow; a "blackbody colour" swatch for the
-       star whose thermal peak sits at the cursor (Wien's law),
-     • a Spectrum Screen with λ, f = c/λ and E = h·f, the band name, and a panel of
-       band facts (scale of the wavelength, the instruments used, what we observe).
-   c = 2.998×10⁸ m/s, h = 6.626×10⁻³⁴ J·s, λ_peak = 2.898×10⁻³/T.                  */
+   Rebuild of the ClassAction "EM Spectrum Module" (emspectrum.swf, decompiled),
+   kept in the site's dark style but laid out like the SWF's own stage:
+     • the SWF's spectrum bar (its bitmap: the blue bar with the white
+       atmospheric-opacity profile, the wavelength scale above and the red
+       frequency scale below, its labels lightened for the dark page) and its
+       blue handle, 25 px per decade from 10⁻¹⁷ to 10⁷ m,
+     • "Blackbody Color" — the colour of a blackbody whose Wien peak is at the
+       handle (T = 0.002898 m·K / λ, the SWF's colour fit),
+     • the Spectrum Screen — wavelength, frequency (c = 3×10⁸ m/s) and photon
+       energy (the SWF's h = 6.6×10⁻³⁴ J·s) to four significant figures, and the
+       band: gamma rays < 10⁻¹² m < X-rays < 10⁻⁹ m < ultraviolet < 400 nm <
+       visible < 750 nm < near-infrared < 2.5 µm < infrared < 25 µm < microwave
+       < 1 mm < radio,
+     • the three pictures for that band — something of that size, an
+       instrument that observes it, and an astronomy picture taken in it — the
+       SWF's own photos and captions.
+   Inside each decade the SWF's wavelength runs linearly (1 × 10ⁿ at the decade's
+   start, reaching 10 × 10ⁿ nine-tenths of the way across), exactly as here.
+   Drag the handle (or anywhere on the bar); the sidebar mirrors it.         */
 Sim.create({
   id: "em-spectrum",
-  width: 760, height: 470,
+  width: 800, height: 650,
   strings: {
     en: {
-      "em.band": "Jump to band", "em.tune": "Tuning", "em.wl": "wavelength (log₁₀ m)",
-      "em.screen": "Spectrum Screen", "em.bb": "Blackbody Colour",
-      "em.size": "Scale of this wavelength", "em.inst": "Detected with", "em.src": "We observe",
-      "em.gamma": "Gamma rays", "em.xray": "X-rays", "em.uv": "Ultraviolet", "em.vis": "Visible",
-      "em.ir": "Infrared", "em.micro": "Microwaves", "em.radio": "Radio waves",
-      "em.peakT": "blackbody peaks here at"
+      "em.band": "Jump to band", "em.tune": "Wavelength", "em.wl": "handle position",
+      "em.screen": "Spectrum Screen", "em.bb": "Blackbody Color",
+      "em.size": "Size", "em.inst": "Instrument", "em.pic": "Astronomy Picture",
+      "em.wave": "Wavelength = {m} × 10", "em.freq": "Frequency = {m} × 10", "em.energy": "E = h × f = {m} × 10",
+      "em.m": "m", "em.hz": "Hz", "em.joule": "Joule",
+      "em.gamma": "Gamma-rays", "em.xray": "X-rays", "em.uv": "Ultraviolet", "em.vis": "Visible",
+      "em.nir": "Near-infrared", "em.ir": "Infrared", "em.micro": "Microwave", "em.radio": "Radio waves",
+      "em.cap": "Carbon Nucleus|Compton Gamma-Ray Observatory|False Color Gamma-Ray Image of Galaxy 3C279|Helium Atom|Chandra X-Ray Observer|X-Ray Image of the Orion Region|Bacteria|Extreme Ultraviolet Explorer|Ultraviolet image of the Spiral Galaxy M74|Dust|Hubble Space Telescope|Visual Image of Spiral Galaxy M51|Pin-head|Artists Conception of IRAS|Infrared Image of the Orion Nebula|Fingernail|Owens Valley Microwave Telescope|False color image of the cosmic microwave background|Mountain|A Radio Telescope|Radio Image of Spiral Galaxy M51"
     },
     id: {
-      "em.band": "Lompat ke pita", "em.tune": "Penyetelan", "em.wl": "panjang gelombang (log₁₀ m)",
+      "em.band": "Lompat ke pita", "em.tune": "Panjang gelombang", "em.wl": "posisi pegangan",
       "em.screen": "Layar Spektrum", "em.bb": "Warna Benda Hitam",
-      "em.size": "Skala panjang gelombang ini", "em.inst": "Dideteksi dengan", "em.src": "Kita amati",
-      "em.gamma": "Sinar gamma", "em.xray": "Sinar-X", "em.uv": "Ultraviolet", "em.vis": "Cahaya tampak",
-      "em.ir": "Inframerah", "em.micro": "Gelombang mikro", "em.radio": "Gelombang radio",
-      "em.peakT": "benda hitam memuncak di sini pada"
+      "em.size": "Ukuran", "em.inst": "Instrumen", "em.pic": "Citra Astronomi",
+      "em.wave": "Panjang gelombang = {m} × 10", "em.freq": "Frekuensi = {m} × 10", "em.energy": "E = h × f = {m} × 10",
+      "em.m": "m", "em.hz": "Hz", "em.joule": "Joule",
+      "em.gamma": "Sinar gamma", "em.xray": "Sinar-X", "em.uv": "Ultraungu", "em.vis": "Cahaya tampak",
+      "em.nir": "Inframerah dekat", "em.ir": "Inframerah", "em.micro": "Gelombang mikro", "em.radio": "Gelombang radio",
+      "em.cap": "Inti karbon|Observatorium Sinar Gamma Compton|Citra sinar gamma berwarna semu Galaksi 3C279|Atom helium|Observatorium Sinar-X Chandra|Citra sinar-X wilayah Orion|Bakteri|Extreme Ultraviolet Explorer|Citra ultraungu Galaksi Spiral M74|Debu|Teleskop Antariksa Hubble|Citra tampak Galaksi Spiral M51|Kepala peniti|Gambaran seniman tentang IRAS|Citra inframerah Nebula Orion|Kuku jari|Teleskop Gelombang Mikro Owens Valley|Citra berwarna semu latar belakang gelombang mikro kosmik|Gunung|Sebuah teleskop radio|Citra radio Galaksi Spiral M51"
     }
   },
   about: {
-    en: "<p>Visible light is a tiny slice of the <strong>electromagnetic spectrum</strong> — the same kind of wave stretches from gamma rays a thousandth the width of an atom out to radio waves longer than a mountain. They differ only in <strong>wavelength</strong> (and so frequency and energy).</p>" +
-        "<p>Drag the cursor across the bar. Frequency is <em>f = c / λ</em> and the photon energy is <em>E = h·f</em>, so short waves on the left are high-energy and long waves on the right are low-energy. Only the narrow rainbow in the middle is light your eyes can see.</p>" +
-        "<p>The <strong>blackbody swatch</strong> shows the colour of a hot object whose thermal glow peaks at the cursor — by Wien's law, hotter means bluer and shorter. Every band needs its own kind of telescope, which is why astronomers observe the whole spectrum.</p>",
-    id: "<p>Cahaya tampak hanyalah irisan kecil <strong>spektrum elektromagnetik</strong> — gelombang serupa terbentang dari sinar gamma seperseribu lebar atom hingga gelombang radio lebih panjang dari gunung. Mereka hanya berbeda <strong>panjang gelombang</strong> (dan karenanya frekuensi serta energi).</p>" +
-        "<p>Seret kursor melintasi pita. Frekuensi adalah <em>f = c / λ</em> dan energi foton <em>E = h·f</em>, jadi gelombang pendek di kiri berenergi tinggi dan gelombang panjang di kanan berenergi rendah. Hanya pelangi sempit di tengah yang dapat dilihat mata.</p>" +
-        "<p><strong>Petak benda hitam</strong> menampilkan warna benda panas yang puncak pancarannya di kursor — menurut hukum Wien, makin panas makin biru dan pendek. Setiap pita butuh teleskopnya sendiri, itulah mengapa astronom mengamati seluruh spektrum.</p>"
+    en: "<p>Visible light is a tiny slice of the <strong>electromagnetic spectrum</strong> — the same kind of wave stretches from gamma rays smaller than an atomic nucleus out to radio waves longer than a mountain. They differ only in <strong>wavelength</strong> (and so frequency and energy).</p>" +
+        "<p>Drag the handle across the bar. Frequency is <em>f = c / λ</em> and the photon energy is <em>E = h·f</em>, so short waves on the left are high-energy and long waves on the right are low-energy. The white profile on the bar shows where Earth's atmosphere blocks the light — only the optical and radio windows reach the ground.</p>" +
+        "<p>The three pictures show something about the size of the wavelength, an instrument that observes it, and what the sky looks like in it. The <strong>blackbody colour</strong> is the colour of a hot object whose thermal glow peaks at the handle — by Wien's law, hotter means bluer and shorter.</p>",
+    id: "<p>Cahaya tampak hanyalah irisan kecil <strong>spektrum elektromagnetik</strong> — gelombang serupa terbentang dari sinar gamma yang lebih kecil dari inti atom hingga gelombang radio yang lebih panjang dari gunung. Mereka hanya berbeda <strong>panjang gelombang</strong> (dan karenanya frekuensi serta energi).</p>" +
+        "<p>Seret pegangan melintasi pita. Frekuensi adalah <em>f = c / λ</em> dan energi foton <em>E = h·f</em>, jadi gelombang pendek di kiri berenergi tinggi dan gelombang panjang di kanan berenergi rendah. Profil putih pada pita menunjukkan bagian yang dihalangi atmosfer Bumi — hanya jendela optik dan radio yang sampai ke tanah.</p>" +
+        "<p>Ketiga gambar menunjukkan sesuatu seukuran panjang gelombang itu, instrumen yang mengamatinya, dan rupa langit pada panjang gelombang itu. <strong>Warna benda hitam</strong> adalah warna benda panas yang puncak pancarannya di pegangan — menurut hukum Wien, makin panas makin biru dan pendek.</p>"
   },
   build: function (S) {
-    var C = 2.998e8, H = 6.626e-34, WIEN = 2.898e-3;
-    var LOGMIN = -16, LOGMAX = 4;                          // log10(λ/m) range of the bar
-    var logL = 0;                                          // current log10(wavelength); 0 → 1 m (radio)
+    var UI = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+    function t(k) { return I18N.t(k); }
+    function fmt(k, o) { return t(k).replace(/\{(\w+)\}/g, function (m, n) { return o[n]; }); }
 
-    // band boundaries by wavelength (m), ordered short→long
-    var BANDS = [
-      { key: "em.gamma", max: 1e-11, col: [150, 90, 220], size: "smaller than an atomic nucleus", inst: "space γ-ray telescopes (Fermi, INTEGRAL)", src: "supernovae, pulsars, black-hole jets" },
-      { key: "em.xray", max: 1e-8, col: [90, 130, 235], size: "atoms (~0.1–10 nm)", inst: "X-ray observatories (Chandra, XMM)", src: "million-degree gas, neutron stars, AGN" },
-      { key: "em.uv", max: 4e-7, col: [165, 90, 230], size: "molecules / viruses (~10–400 nm)", inst: "UV space telescopes (Hubble, GALEX)", src: "hot young stars, the solar corona" },
-      { key: "em.vis", max: 7e-7, col: null, size: "bacteria & cells (0.4–0.7 µm)", inst: "optical telescopes — and your eye", src: "stars, nebulae, reflected sunlight" },
-      { key: "em.ir", max: 1e-3, col: [220, 110, 70], size: "a pinhead to dust grains (0.7 µm–1 mm)", inst: "infrared telescopes (JWST, Spitzer)", src: "warm dust, forming stars, exoplanets" },
-      { key: "em.micro", max: 1e-1, col: [170, 80, 60], size: "insects to a hand (1 mm–10 cm)", inst: "microwave dishes (Planck, WMAP)", src: "the cosmic microwave background" },
-      { key: "em.radio", max: 1e9, col: [150, 60, 60], size: "buildings to mountains (> 10 cm)", inst: "radio telescopes (VLA, ALMA)", src: "pulsars, galaxies, neutral hydrogen" }
+    /* ---------------- the SWF's model (onClipEvent(enterFrame) of the handle) ---------------- */
+    var X0 = 526, XMIN = X0 - 425, XMAX = X0 + 175, HANDLE_Y = 116;
+    var BANDS = [                                  // [max wavelength, status, picture frame]
+      [1e-12, "em.gamma", 0], [1e-9, "em.xray", 1], [4e-7, "em.uv", 2], [7.5e-7, "em.vis", 3],
+      [2.5e-6, "em.nir", 4], [2.5e-5, "em.ir", 4], [1e-3, "em.micro", 5], [Infinity, "em.radio", 6]
     ];
-    function bandFor(lam) { for (var i = 0; i < BANDS.length; i++) if (lam < BANDS[i].max) return BANDS[i]; return BANDS[BANDS.length - 1]; }
-    function lambda() { return Math.pow(10, logL); }
-    function freq() { return C / lambda(); }
-    function energy() { return H * freq(); }
-    function peakT() { return WIEN / lambda(); }
-
-    // colour of the spectrum bar at a given wavelength (blue gradient, rainbow in the visible — like the SWF)
-    function barColor(lam) {
-      if (lam >= 4e-7 && lam <= 7e-7) return visibleRGB(lam * 1e9);        // true rainbow in the visible window
-      var f = (Math.log10(lam) - LOGMIN) / (LOGMAX - LOGMIN);
-      return "rgb(" + Math.round(34 + 30 * f) + "," + Math.round(74 + 70 * f) + "," + Math.round(150 + 48 * f) + ")";
+    var handleX = X0, band = 7, status = "em.radio", frame = 6;
+    function wavelength(x) {
+      var tm = x - X0, n = Math.floor(tm / 25), f = (tm - 25 * n) / 25;
+      var w = Math.pow(10, n) + f * Math.pow(10, n + 1);
+      return Math.min(w, Math.pow(10, n + 1));
     }
-    // atmospheric opacity 0..1 (white "mountains" = blocked; low = a window onto the sky)
-    function atmOpacity(lg) {
-      if (lg < -6.5) return 0;                              // short λ drawn as the plain blue bar (as in the SWF)
-      if (lg >= -6.5 && lg < -6.0) return 0.05;             // optical window
-      if (lg >= -2.0 && lg <= 1.0) return 0.05;             // radio window
-      if (lg > 1.0) return Math.min(0.92, 0.05 + (lg - 1.0) * 0.55);   // long-wave ionospheric cutoff
-      var j = 0.30 * Math.sin(lg * 7.0) + 0.20 * Math.sin(lg * 17.0 + 1.0) + 0.15 * Math.sin(lg * 31.0);
-      return Math.max(0.18, Math.min(0.97, 0.62 + j));      // jagged molecular absorption through the IR
+    function update() {
+      var w = wavelength(handleX), i, pick = -1;
+      for (i = 0; i < BANDS.length; i++) {
+        var lo = i ? BANDS[i - 1][0] : 0;
+        if (w > lo && w < BANDS[i][0]) { pick = i; break; }
+        // exactly on a boundary the SWF changes nothing (the band the handle came from stays);
+        // a jump from further away (sidebar) takes the band below
+        if (w === BANDS[i][0]) { pick = band === i || band === i + 1 ? band : i; break; }
+      }
+      if (pick < 0) return;
+      band = pick; status = BANDS[pick][1]; frame = BANDS[pick][2];
     }
-
-    /* ---- controls ---- */
-    S.group("em.band");
-    [["em.gamma", -12], ["em.xray", -9.3], ["em.uv", -7], ["em.vis", Math.log10(5.5e-7)], ["em.ir", -4.5], ["em.micro", -1.7], ["em.radio", 1]].forEach(function (b) {
-      S.button({ labelKey: b[0], on: function () { logL = b[1]; wlC.set(logL); } });
-    });
-    S.group("em.tune");
-    var wlC = S.slider({ labelKey: "em.wl", min: LOGMIN, max: LOGMAX, step: 0.01, value: logL,
-      format: function (v) { return sci(Math.pow(10, v)) + " m"; }, on: function (v) { logL = v; upd(); } });
-
-    function upd() { S.requestDraw(); }
-    S.refreshers.push(function () { S.requestDraw(); });
-
-    /* ===================================================================== */
-    var BAR = { x: 12, y: 28, w: 736, h: 176 };
-    var SCR = { x: 12, y: 216, w: 470, h: 132 };
-    var BB = { x: 494, y: 216, w: 254, h: 132 };
-    var INFO = { x: 12, y: 360, w: 736, h: 98 };
-
-    var barL = BAR.x + 54, barR = BAR.x + BAR.w - 18, barT = BAR.y + 64, barB = BAR.y + 116;
-    function xToLog(x) { return LOGMIN + (x - barL) / (barR - barL) * (LOGMAX - LOGMIN); }
-    function logToX(lg) { return barL + (lg - LOGMIN) / (LOGMAX - LOGMIN) * (barR - barL); }
-
-    /* drag the cursor along the bar */
-    var dragging = false;
-    function localXY(ev) { var r = S.canvas.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (S.W / r.width), y: (ev.clientY - r.top) * (S.H / r.height) }; }
-    S.canvas.addEventListener("pointerdown", function (ev) { var m = localXY(ev); if (m.x >= barL - 16 && m.x <= barR + 16 && m.y >= barT - 24 && m.y <= barB + 24) { dragging = true; setFromX(m.x); S.canvas.setPointerCapture(ev.pointerId); } });
-    S.canvas.addEventListener("pointermove", function (ev) { if (!dragging) return; setFromX(localXY(ev).x); });
-    S.canvas.addEventListener("pointerup", function () { dragging = false; });
-    function setFromX(x) { logL = Math.max(LOGMIN, Math.min(LOGMAX, xToLog(x))); wlC.set(logL); }
-
-    S.onDraw(function () { var ctx = S.ctx; S.clear(); drawBar(ctx); drawScreen(ctx); drawBB(ctx); drawInfo(ctx); });
-    upd();
-
-    function drawBar(ctx) {
-      panel(ctx, BAR, "");
-      // spectrum strip — blue gradient with a rainbow in the visible window (per-pixel column)
-      for (var x = barL; x <= barR; x++) { var lam = Math.pow(10, xToLog(x)); ctx.strokeStyle = barColor(lam); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, barT); ctx.lineTo(x, barB); ctx.stroke(); }
-      // atmospheric-opacity overlay — white "mountains" where the atmosphere blocks light; gaps = windows
-      for (var xo = barL; xo <= barR; xo++) { var op = atmOpacity(xToLog(xo)); if (op <= 0.03) continue; ctx.strokeStyle = "rgba(244,247,255,0.82)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xo, barB - 1); ctx.lineTo(xo, barB - 1 - op * (barB - barT - 2)); ctx.stroke(); }
-      ctx.fillStyle = "rgba(15,22,40,0.7)"; ctx.font = "italic 8px system-ui"; ctx.textAlign = "right"; ctx.fillText("atmospheric opacity", barR - 4, barB - 4);
-      ctx.strokeStyle = "#2c3a66"; ctx.lineWidth = 1; ctx.strokeRect(barL, barT, barR - barL, barB - barT);
-
-      // wavelength scale (top)
-      ctx.fillStyle = "#9fabce"; ctx.font = "9px system-ui"; ctx.textAlign = "center";
-      ctx.fillText("WAVELENGTH (m)", (barL + barR) / 2, BAR.y + 16);
-      for (var e = LOGMIN; e <= LOGMAX; e += 2) { var X = logToX(e); ctx.strokeStyle = "#2c3a66"; ctx.beginPath(); ctx.moveTo(X, barT - 6); ctx.lineTo(X, barT); ctx.stroke(); ctx.fillStyle = "#8595bd"; ctx.fillText("10" + sup(e), X, barT - 9); }
-      // frequency scale (bottom): f = c/λ — labelled in red, like the SWF
-      ctx.fillStyle = "#e8645a"; ctx.fillText("FREQUENCY (Hz)", (barL + barR) / 2, BAR.y + BAR.h - 6);
-      for (var e2 = LOGMIN; e2 <= LOGMAX; e2 += 2) { var X2 = logToX(e2), fe = Math.round(Math.log10(C) - e2); ctx.strokeStyle = "#7a3631"; ctx.beginPath(); ctx.moveTo(X2, barB); ctx.lineTo(X2, barB + 6); ctx.stroke(); ctx.fillStyle = "#e8645a"; ctx.fillText("10" + sup(fe), X2, barB + 18); }
-
-      // cursor — blue arrowheads top & bottom (as in the SWF) + thin guide line
-      var cxp = logToX(logL);
-      ctx.strokeStyle = "rgba(10,16,30,0.55)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cxp, barT); ctx.lineTo(cxp, barB); ctx.stroke();
-      ctx.fillStyle = "#4a86ff";
-      ctx.beginPath(); ctx.moveTo(cxp, barT + 2); ctx.lineTo(cxp - 6, barT - 10); ctx.lineTo(cxp + 6, barT - 10); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(cxp, barB - 2); ctx.lineTo(cxp - 6, barB + 10); ctx.lineTo(cxp + 6, barB + 10); ctx.closePath(); ctx.fill();
+    function toScientific(num) {                   // Math.toScientific(num, 4): a 3-decimal mantissa
+      var e = num === 0 ? 0 : Math.floor(Math.log(Math.abs(num)) / Math.LN10), m = num / Math.pow(10, e);
+      var s = String(Math.round(m * 1000) / 1000);
+      if (s.indexOf(".") < 0) s += ".0";
+      while (s.split(".")[1].length < 3) s += "0";
+      return { m: s, e: e };
+    }
+    function colorFromTemp(T) {                    // getColorFromTemp, clamped 700–240 000 K
+      T = Math.min(240000, Math.max(700, T));
+      var l = Math.log(T) / Math.LN10, l2 = l * l, l3 = l * l2;
+      var r = Math.min(255, Math.max(0, 22686.34111 - l * 15082.52755 + l2 * 3375.333832 - l3 * 252.4073853));
+      var g = T > 6500 ? 13836.23586 - l * 9069.078214 + l2 * 2015.254756 - l3 * 149.7766966
+        : -811.6499145 + l * 36.97365953 + l2 * 160.7861677 - l3 * 25.57573664;
+      g = Math.min(255, Math.max(0, g));
+      var b = Math.min(255, Math.max(0, -11545.34298 + l * 8529.658165 - l2 * 2150.198586 + l3 * 190.0306573));
+      return [Math.floor(r), Math.floor(g), Math.floor(b)];
     }
 
-    function drawScreen(ctx) {
-      panel(ctx, SCR, I18N.t("em.screen"));
-      var b = bandFor(lambda());
-      ctx.textAlign = "left"; ctx.font = "13px ui-monospace, monospace";
-      ctx.fillStyle = "#69db7c";
-      ctx.fillText("λ  = " + sci(lambda()) + " m", SCR.x + 18, SCR.y + 46);
-      ctx.fillText("f  = " + sci(freq()) + " Hz", SCR.x + 18, SCR.y + 72);
-      ctx.fillText("E = h·f = " + sci(energy()) + " J", SCR.x + 18, SCR.y + 98);
-      ctx.font = "700 15px system-ui"; ctx.fillStyle = "#cbd6f0"; ctx.textAlign = "right";
-      ctx.fillText(I18N.t(b.key), SCR.x + SCR.w - 18, SCR.y + 30);
-      ctx.font = "11px system-ui"; ctx.fillStyle = "#9fabce";
-      ctx.fillText("E = " + (energy() / 1.602e-19 > 0.01 ? (energy() / 1.602e-19).toPrecision(3) + " eV" : sci(energy() / 1.602e-19) + " eV"), SCR.x + SCR.w - 18, SCR.y + SCR.h - 14);
+    /* ---------------- images: the bar, the handle, the photo atlas ---------------- */
+    function img(src) { var i = new Image(); i.onload = function () { S.requestDraw(); }; i.src = src; return i; }
+    var BAR = img("../assets/img/sims/em-spectrum-bar.webp");
+    var HANDLE = img("../assets/img/sims/em-spectrum-handle.webp");
+    var PHOTOS = img("../assets/img/sims/em-spectrum-photos.webp");   // 3 × 7 tiles of 200 px: pic1a … pic7c
+
+    /* ---------------- drawing ---------------- */
+    function rr(ctx, x, y, w, h, r) {
+      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    }
+    function sciLine(ctx, key, num, unit, x, y) {  // "Wavelength = 1.000 × 10⁰ m"
+      var p = toScientific(num);
+      ctx.font = "16px " + UI; ctx.textAlign = "left";
+      var head = fmt(key, { m: p.m }), w = ctx.measureText(head).width;
+      ctx.fillStyle = "#e8ecf8"; ctx.fillText(head, x, y);
+      ctx.font = "11px " + UI; ctx.fillStyle = "#9be7c0";
+      var es = String(p.e).replace("-", "−"), ew = ctx.measureText(es).width;
+      ctx.fillText(es, x + w + 1, y - 8);
+      ctx.font = "16px " + UI; ctx.fillStyle = "#e8ecf8";
+      ctx.fillText(" " + t(unit), x + w + 2 + ew, y);
+    }
+    function wrapCentered(ctx, text, cx, y, maxw, lh) {
+      var words = text.split(" "), line = "", lines = [];
+      words.forEach(function (wd) { var tst = line ? line + " " + wd : wd; if (ctx.measureText(tst).width > maxw && line) { lines.push(line); line = wd; } else line = tst; });
+      lines.push(line);
+      lines.slice(0, 2).forEach(function (l, i) { ctx.fillText(l, cx, y + i * lh); });
     }
 
-    function drawBB(ctx) {
-      panel(ctx, BB, I18N.t("em.bb"));
-      var T = peakT(), rgb = tempToRGB(Math.max(1, T));
-      var cx = BB.x + 54, cy = BB.y + 78, r = 30;
-      var g = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
-      g.addColorStop(0, "rgb(" + rgb.map(function (v) { return Math.min(255, v + 30); }).map(Math.round).join(",") + ")");
-      g.addColorStop(1, "rgb(" + rgb.map(Math.round).join(",") + ")");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill();
+    S.onDraw(function () {
+      var ctx = S.ctx, w = wavelength(handleX);
+      ctx.clearRect(0, 0, S.W, S.H);
+      // the stage: one rounded dark card, as the SWF's glossy background
+      rr(ctx, 4, 1, 791, 645, 18);
+      var bg = ctx.createLinearGradient(0, 0, 0, 646);
+      bg.addColorStop(0, "#111a37"); bg.addColorStop(1, "#0a1027");
+      ctx.fillStyle = bg; ctx.fill();
       ctx.strokeStyle = "#2c3a66"; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = "#9fabce"; ctx.font = "11px system-ui"; ctx.textAlign = "left";
-      ctx.fillText(I18N.t("em.peakT"), BB.x + 100, BB.y + 64);
-      ctx.fillStyle = "#cbd6f0"; ctx.font = "700 16px system-ui";
-      ctx.fillText(T >= 1e6 ? sci(T) + " K" : T >= 100 ? Math.round(T) + " K" : T.toFixed(2) + " K", BB.x + 100, BB.y + 86);
-    }
-
-    function drawInfo(ctx) {
-      panel(ctx, INFO, "");
-      var b = bandFor(lambda()), cw = (INFO.w - 28) / 3;
-      [["em.size", b.size], ["em.inst", b.inst], ["em.src", b.src]].forEach(function (row, i) {
-        var x = INFO.x + 14 + i * cw;
-        ctx.fillStyle = "#6ea8fe"; ctx.font = "700 10px system-ui"; ctx.textAlign = "left"; ctx.fillText(I18N.t(row[0]).toUpperCase(), x, INFO.y + 26);
-        ctx.fillStyle = "#cbd6f0"; ctx.font = "12px system-ui"; wrap(ctx, row[1], x, INFO.y + 46, cw - 12, 15);
-        if (i < 2) { ctx.strokeStyle = "#1c2747"; ctx.beginPath(); ctx.moveTo(x + cw - 6, INFO.y + 14); ctx.lineTo(x + cw - 6, INFO.y + INFO.h - 12); ctx.stroke(); }
+      // the spectrum bar (the SWF's bitmap) and the handle
+      if (BAR.complete && BAR.naturalWidth) ctx.drawImage(BAR, 95, 42);
+      if (HANDLE.complete && HANDLE.naturalWidth) ctx.drawImage(HANDLE, handleX - 8, HANDLE_Y - 34);
+      // Blackbody Color
+      ctx.font = "12px " + UI; ctx.fillStyle = "#9fabce"; ctx.textAlign = "left";
+      ctx.fillText(t("em.bb"), 568, 203);
+      var c = colorFromTemp(0.002898 / w), cx = 682.6, cy = 198.6;
+      var sw = ctx.createRadialGradient(cx - 3, cy - 3, 1, cx, cy, 9);
+      sw.addColorStop(0, "rgb(" + c.map(function (v) { return Math.min(255, v + 60); }).join(",") + ")");
+      sw.addColorStop(1, "rgb(" + c.join(",") + ")");
+      ctx.fillStyle = sw; ctx.beginPath(); ctx.arc(cx, cy, 8.6, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = "rgba(232,236,248,0.35)"; ctx.stroke();
+      // the Spectrum Screen
+      rr(ctx, 49, 214, 702, 160, 10);
+      var sg = ctx.createLinearGradient(0, 214, 0, 374);
+      sg.addColorStop(0, "rgba(64,190,140,0.20)"); sg.addColorStop(0.5, "rgba(30,120,90,0.16)"); sg.addColorStop(1, "rgba(64,190,140,0.24)");
+      ctx.fillStyle = "#0b1a24"; ctx.fill(); ctx.fillStyle = sg; ctx.fill();
+      ctx.strokeStyle = "rgba(105,219,160,0.45)"; ctx.stroke();
+      ctx.font = "14px " + UI; ctx.fillStyle = "#9be7c0"; ctx.textAlign = "center";
+      ctx.fillText(t("em.screen"), 403, 240);
+      sciLine(ctx, "em.wave", w, "em.m", 83, 282);
+      sciLine(ctx, "em.freq", 300000000 / w, "em.hz", 83, 317);
+      sciLine(ctx, "em.energy", 6.6e-34 * (300000000 / w), "em.joule", 83, 352);
+      ctx.font = "600 16px " + UI; ctx.fillStyle = "#e8ecf8"; ctx.textAlign = "right";
+      ctx.fillText(t(status), 702, 282);
+      // the three pictures with their headers and captions
+      var caps = t("em.cap").split("|");
+      [["em.size", 51], ["em.inst", 301], ["em.pic", 551]].forEach(function (col, k) {
+        var x = col[1];
+        ctx.font = "16px " + UI; ctx.fillStyle = "#cbd6f0"; ctx.textAlign = "center";
+        ctx.fillText(t(col[0]), x + 100, 402);
+        rr(ctx, x - 4, 411, 208, 208, 8); ctx.fillStyle = "#070b16"; ctx.fill();
+        ctx.strokeStyle = "#2c3a66"; ctx.stroke();
+        if (PHOTOS.complete && PHOTOS.naturalWidth) {
+          ctx.save(); rr(ctx, x, 415, 200, 200, 5); ctx.clip();
+          ctx.drawImage(PHOTOS, k * 200, frame * 200, 200, 200, x, 415, 200, 200);
+          ctx.restore();
+        }
+        ctx.font = "11px " + UI; ctx.fillStyle = "#cbd6f0";
+        wrapCentered(ctx, caps[frame * 3 + k], x + 100, 628, 200, 12);
       });
-    }
+    });
 
-    /* ---- helpers ---- */
-    function sci(v) { if (v === 0) return "0"; var e = Math.floor(Math.log10(Math.abs(v))), m = v / Math.pow(10, e); return m.toFixed(3) + "×10" + sup(e); }
-    function sup(e) { var m = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" }; return String(e).split("").map(function (c) { return m[c] || c; }).join(""); }
-    function wrap(ctx, text, x, y, maxw, lh) { var words = text.split(" "), line = "", yy = y; for (var i = 0; i < words.length; i++) { var test = line + words[i] + " "; if (ctx.measureText(test).width > maxw && line) { ctx.fillText(line, x, yy); line = words[i] + " "; yy += lh; } else line = test; } ctx.fillText(line, x, yy); }
-    function panel(ctx, r, title) {
-      roundRect(ctx, r.x, r.y, r.w, r.h, 12); ctx.fillStyle = "#0e1530"; ctx.fill();
-      ctx.strokeStyle = "#2c3a66"; ctx.lineWidth = 1; ctx.stroke();
-      if (title) { ctx.fillStyle = "#6ea8fe"; ctx.font = "700 12px system-ui"; ctx.textAlign = "left"; ctx.fillText(title.toUpperCase(), r.x + 14, r.y + 18); }
-    }
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-    }
+    /* ---------------- dragging the handle (or pressing on the bar) ---------------- */
+    var drag = null;
+    function at(ev) { var r = S.canvas.getBoundingClientRect(); return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height }; }
+    function onBar(p) { return p.x >= XMIN - 10 && p.x <= XMAX + 10 && p.y >= 70 && p.y <= 160; }
+    function setX(x) { handleX = Math.round(Math.min(XMAX, Math.max(XMIN, x))); update(); sync(); S.requestDraw(); }
+    S.canvas.addEventListener("pointerdown", function (ev) {
+      var p = at(ev);
+      if (!onBar(p)) return;
+      ev.preventDefault();
+      try { S.canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      drag = { off: Math.abs(p.x - handleX) <= 8 ? p.x - handleX : 0 };
+      setX(p.x - drag.off);
+    });
+    S.canvas.addEventListener("pointermove", function (ev) {
+      var p = at(ev);
+      if (!drag) { S.canvas.style.cursor = onBar(p) ? "ew-resize" : "default"; return; }
+      setX(p.x - drag.off);
+    });
+    function release() { drag = null; }
+    S.canvas.addEventListener("pointerup", release);
+    S.canvas.addEventListener("pointercancel", release);
+
+    /* ---------------- the sidebar ---------------- */
+    var syncing = false;
+    S.group("em.tune");
+    var posCtl = S.slider({ labelKey: "em.wl", min: XMIN, max: XMAX, step: 1, value: handleX,
+      format: function (v) { var p = toScientific(wavelength(v)); return p.m + "×10" + String(p.e).replace("-", "−") + " m"; },
+      on: function (v) { if (!syncing) setX(v); } });
+    S.group("em.band");
+    // handle offsets (px from 1 m) that sit inside each band: 3×10⁻¹³, 10⁻¹⁰, 10⁻⁸, 5.4×10⁻⁷, 10⁻⁶, 10⁻⁵, 5.8×10⁻⁴, 1 m
+    [["em.gamma", -320], ["em.xray", -250], ["em.uv", -200], ["em.vis", -164], ["em.nir", -150], ["em.ir", -125], ["em.micro", -88], ["em.radio", 0]].forEach(function (b) {
+      S.button({ labelKey: b[0], on: function () { setX(X0 + b[1]); } });
+    });
+    function sync() { syncing = true; if (posCtl.value() !== handleX) posCtl.set(handleX); syncing = false; }
+    update();
   }
 });
-
-/* approximate visible-light colour for a wavelength in nm (380–750) */
-function visibleRGB(nm) {
-  var r = 0, g = 0, b = 0;
-  if (nm >= 380 && nm < 440) { r = -(nm - 440) / 60; b = 1; }
-  else if (nm < 490) { g = (nm - 440) / 50; b = 1; }
-  else if (nm < 510) { g = 1; b = -(nm - 510) / 20; }
-  else if (nm < 580) { r = (nm - 510) / 70; g = 1; }
-  else if (nm < 645) { r = 1; g = -(nm - 645) / 65; }
-  else if (nm <= 750) { r = 1; }
-  var f = nm < 420 ? 0.3 + 0.7 * (nm - 380) / 40 : nm > 700 ? 0.3 + 0.7 * (750 - nm) / 50 : 1;
-  return "rgb(" + Math.round(255 * r * f) + "," + Math.round(255 * g * f) + "," + Math.round(255 * b * f) + ")";
-}
-
-/* blackbody colour (Tanner Helland approximation), T in K */
-function tempToRGB(T) {
-  var t = T / 100, r, g, b;
-  if (t <= 66) r = 255; else r = clamp(329.7 * Math.pow(t - 60, -0.1332));
-  if (t <= 66) g = clamp(99.47 * Math.log(t) - 161.12); else g = clamp(288.12 * Math.pow(t - 60, -0.0755));
-  if (t >= 66) b = 255; else if (t <= 19) b = 0; else b = clamp(138.52 * Math.log(t - 10) - 305.04);
-  return [r, g, b];
-  function clamp(x) { return Math.max(0, Math.min(255, x)); }
-}

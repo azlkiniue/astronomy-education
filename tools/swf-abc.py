@@ -300,6 +300,8 @@ class ABC:
 def fmtnum(v):
     if v != v:
         return 'NaN'
+    if v in (float('inf'), float('-inf')):
+        return 'Infinity' if v > 0 else '-Infinity'
     if v == int(v) and abs(v) < 1e15:
         return str(int(v))
     return repr(v)

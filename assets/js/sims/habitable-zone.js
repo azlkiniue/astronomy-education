@@ -1,40 +1,50 @@
-/* Circumstellar Habitable Zone Simulator -------------------------------------
-   Faithful rebuild of the NAAP "Circumstellar Habitable Zone Simulator"
-   (stellarHabitableZone.swf):
-     • a top-down orbital view with the habitable-zone annulus (where liquid water
-       can exist), an optional scale grid and the inner solar-system orbits for
-       reference, plus your planet on its orbit,
-     • Star Properties driven by the star's mass (→ luminosity, temperature,
-       radius, spectral type, main-sequence lifetime),
-     • a Timeline that ages the star: it slowly brightens on the main sequence,
-       then balloons into a red giant — watch the habitable zone race outward and
-       engulf the inner planets.
-   HZ:  inner = √(L/1.1) AU, outer = √(L/0.53) AU  (flux-based estimate).          */
+/* Circumstellar Habitable Zone Simulator ------------------------------------------------
+   Rebuild of the NAAP "Circumstellar Habitable Zone Simulator" (stellarHabitableZone.swf,
+   AS3, decompiled): the canvas is the SWF's stage below its title bar — the diagram, the
+   Star and Planet Settings and Properties panel's read-outs and HR diagram, and the
+   Timeline panel; the General Settings check boxes, the star-system box, the two
+   "initial …" sliders and run / rate are the sidebar.
+     • the star's whole life comes from the SWF's own data file, shzStars.dat (zlib +
+       AMF3: 17 evolution tracks, 0.3–… M☉, ~950 rows of time, mass, log L, log R,
+       log T each), read here exactly as the SWF reads it.
+     • habitable zone (the SWF's "pessimistic" limits): 0.95–1.37 √L AU; the planet's
+       orbit widens as the star loses mass (a·M₀/M); the planet is destroyed once inside
+       the star's tidal (Roche) radius and tidally locked after the SWF's spin-down
+       time; the planet icon shows too hot / just right / too cold / locked / destroyed.
+     • SHZDiagram: the star at x = 130 with its colour, halo and blur, the zone, the
+       solar-system (or the chosen system's) orbits with their labels along the curve,
+       the scale bar; the view keeps the planet mid-window; drag the planet to move it,
+       drag the background sideways to zoom for a moment.
+     • the timeline (drag the ▼, or press beside it to step), the habitability plot
+       (the planet's place across the zone, too hot above, too cold below) and the
+       system's history bar with its tags; the mini HR diagram with the star's track.   */
 Sim.create({
   id: "habitable-zone",
-  width: 760, height: 540,
+  width: 980, height: 735,
   strings: {
     en: {
-      "hz.settings": "General Settings", "hz.grid": "show scale grid", "hz.solar": "show solar-system orbits",
-      "hz.starset": "Star & Planet", "hz.mass": "star mass", "hz.dist": "planet distance",
-      "hz.time": "Timeline", "hz.age": "age since formation", "hz.start": "play", "hz.pause": "pause", "hz.rate": "rate", "hz.reset": "reset to formation",
-      "hz.lum": "luminosity", "hz.temp": "temperature", "hz.rad": "radius", "hz.type": "spectral type",
-      "hz.life": "main-sequence life", "hz.zone": "habitable zone", "hz.status": "planet",
-      "hz.viewTitle": "circumstellar habitable zone", "hz.tlTitle": "stellar luminosity over time", "hz.hr": "H–R Diagram",
-      "hz.hzLabel": "Habitable Zone", "hz.now": "now",
-      "hz.hot": "too hot — water boils", "hz.cold": "too cold — water freezes", "hz.ok": "habitable — liquid water!",
-      "hz.gone": "engulfed by the star", "hz.ms": "main sequence", "hz.giant": "red giant", "hz.dead": "white dwarf"
+      "hz.general": "General Settings", "hz.grid": "show scale grid", "hz.orbits": "show solar system orbits",
+      "hz.starPlanet": "Star and Planet Settings and Properties", "hz.system": "star system", "hz.none": "(none selected)",
+      "hz.systemNote": "select a star system above to investigate its planets, or choose \"none\" to experiment with the full range of star masses and planet distances",
+      "hz.mass0": "initial star mass (Msun)", "hz.dist0": "initial planet distance (AU)",
+      "hz.timeline": "Timeline and Simulation Controls", "hz.run": "run", "hz.pause": "pause", "hz.rate": "rate", "hz.time": "time", "hz.reset": "reset",
+      "hz.timeSince": "time since star system formation:", "hz.propsNow": "star properties now:", "hz.mass": "mass:", "hz.lum": "luminosity:",
+      "hz.temp": "temperature:", "hz.radius": "radius:", "hz.distNow": "planet distance now:", "hz.zone": "Habitable Zone",
+      "hz.hot": "too hot", "hz.cold": "too cold", "hz.T": "Temperature", "hz.L": "Luminosity", "hz.loading": "loading…",
+      "hz.tagFusing": "star stops\nfusing H", "hz.tagWD": "star becomes\nwhite dwarf", "hz.tagNS": "star becomes\na neutron star",
+      "hz.tagBH": "star becomes\na black hole", "hz.tagSN": "star destroyed\nin supernova", "hz.tagDestroyed": "planet is\ndestroyed", "hz.tagLocked": "planet becomes\ntidally locked"
     },
     id: {
-      "hz.settings": "Pengaturan Umum", "hz.grid": "tampilkan grid skala", "hz.solar": "tampilkan orbit tata surya",
-      "hz.starset": "Bintang & Planet", "hz.mass": "massa bintang", "hz.dist": "jarak planet",
-      "hz.time": "Garis Waktu", "hz.age": "usia sejak pembentukan", "hz.start": "mainkan", "hz.pause": "jeda", "hz.rate": "laju", "hz.reset": "kembali ke pembentukan",
-      "hz.lum": "luminositas", "hz.temp": "suhu", "hz.rad": "radius", "hz.type": "tipe spektral",
-      "hz.life": "umur deret utama", "hz.zone": "zona laik huni", "hz.status": "planet",
-      "hz.viewTitle": "zona laik huni sekeliling bintang", "hz.tlTitle": "luminositas bintang terhadap waktu", "hz.hr": "Diagram H–R",
-      "hz.hzLabel": "Zona Laik Huni", "hz.now": "kini",
-      "hz.hot": "terlalu panas — air mendidih", "hz.cold": "terlalu dingin — air membeku", "hz.ok": "laik huni — air cair!",
-      "hz.gone": "ditelan bintang", "hz.ms": "deret utama", "hz.giant": "raksasa merah", "hz.dead": "katai putih"
+      "hz.general": "Pengaturan Umum", "hz.grid": "tampilkan kisi skala", "hz.orbits": "tampilkan orbit tata surya",
+      "hz.starPlanet": "Pengaturan dan Sifat Bintang serta Planet", "hz.system": "sistem bintang", "hz.none": "(tidak dipilih)",
+      "hz.systemNote": "pilih sistem bintang di atas untuk menyelidiki planet-planetnya, atau pilih \"tidak dipilih\" untuk bereksperimen dengan seluruh rentang massa bintang dan jarak planet",
+      "hz.mass0": "massa awal bintang (Mmatahari)", "hz.dist0": "jarak awal planet (SA)",
+      "hz.timeline": "Garis Waktu dan Kontrol Simulasi", "hz.run": "jalankan", "hz.pause": "jeda", "hz.rate": "laju", "hz.time": "waktu", "hz.reset": "atur ulang",
+      "hz.timeSince": "waktu sejak sistem bintang terbentuk:", "hz.propsNow": "sifat bintang sekarang:", "hz.mass": "massa:", "hz.lum": "luminositas:",
+      "hz.temp": "suhu:", "hz.radius": "radius:", "hz.distNow": "jarak planet sekarang:", "hz.zone": "Zona Laik Huni",
+      "hz.hot": "terlalu panas", "hz.cold": "terlalu dingin", "hz.T": "Suhu", "hz.L": "Luminositas", "hz.loading": "memuat…",
+      "hz.tagFusing": "bintang berhenti\nmembakar H", "hz.tagWD": "bintang menjadi\nkatai putih", "hz.tagNS": "bintang menjadi\nbintang neutron",
+      "hz.tagBH": "bintang menjadi\nlubang hitam", "hz.tagSN": "bintang hancur\ndalam supernova", "hz.tagDestroyed": "planet\nhancur", "hz.tagLocked": "planet terkunci\npasang surut"
     }
   },
   about: {
@@ -46,228 +56,679 @@ Sim.create({
         "<p>Sekarang jalankan <strong>garis waktu</strong>. Bintang perlahan menerang seiring usia, lalu mengembang menjadi <strong>raksasa merah</strong>: zona laik huni menyapu keluar melewati planet raksasa sementara planet dalam hangus atau ditelan. Kelaikhunian adalah sasaran yang bergerak.</p>"
   },
   build: function (S) {
-    var RSUN_AU = 0.0046524;
-    var P = { M: 1.0, dist: 1.0, t: 0 };                 // t = age in Gyr
-    var rate = 0.5;                                       // Gyr per second
-    var SOLAR = [{ n: "Mercury", a: 0.39 }, { n: "Venus", a: 0.72 }, { n: "Earth", a: 1.0 }, { n: "Mars", a: 1.52 }];
-
-    /* ---- stellar evolution model (approximate but pedagogically sound) ---- */
-    function tms(M) { return 10 * Math.pow(M, -2.5); }    // main-sequence lifetime, Gyr
-    function giantDur(M) { return 0.12 * tms(M); }        // post-MS giant phase, Gyr
-    function totalLife(M) { return tms(M) + giantDur(M); }
-    function stateAt(M, t) {
-      var tm = tms(M), gd = giantDur(M), Lms0 = Math.pow(M, 3.5);
-      if (t <= tm) {
-        var f = t / tm;
-        var L = Lms0 * (0.735 + 0.58 * f);                // brightens ~ faint-young-Sun → +35%
-        var R = Math.pow(M, 0.8) * (0.88 + 0.34 * f);     // ZAMS → slightly swollen across the MS
-        return { phase: "ms", L: L, R: R, T: 5772 * Math.pow(L / (R * R), 0.25) };
-      } else if (t <= tm + gd) {
-        var g = (t - tm) / gd;                            // 0..1 through giant phase
-        var Tg = 3300;
-        var R = Math.pow(M, 0.8) * 1.3 + 230 * Math.pow(M, 0.5) * (g * g);   // balloons
-        var L = R * R * Math.pow(Tg / 5772, 4);
-        return { phase: "giant", L: L, R: R, T: Tg };
-      }
-      return { phase: "dead", L: 0.001 * Math.pow(M, 1), R: 0.013, T: 9000 };  // white dwarf
+    var FONT = "Verdana, Geneva, sans-serif", ASC = 1.0059, OY = -30, TAU = 2 * Math.PI;
+    function t(k) { return I18N.t(k); }
+    function font(ctx, size, style) { ctx.font = (style ? style + " " : "") + size + "px " + FONT; }
+    function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+    function hex(c, a) { return "rgba(" + (c >> 16 & 255) + "," + (c >> 8 & 255) + "," + (c & 255) + "," + (a === undefined ? 1 : a) + ")"; }
+    function flashString(v) { return String(parseFloat(v.toPrecision(15))); }
+    function numberString(x, digits) {            // getNumberString
+      var L = Math.floor(Math.log(x) / Math.LN10) - (digits - 1);
+      if (L >= 0) { var p = Math.pow(10, L); return flashString(p * Math.round(x / p)); }
+      return x.toFixed(-L);
     }
-    function hzInner(L) { return Math.sqrt(L / 1.1); }
-    function hzOuter(L) { return Math.sqrt(L / 0.53); }
-    function specType(T) { return T >= 30000 ? "O" : T >= 10000 ? "B" : T >= 7500 ? "A" : T >= 6000 ? "F" : T >= 5200 ? "G" : T >= 3700 ? "K" : "M"; }
-
-    function cur() { return stateAt(P.M, P.t); }
-
-    /* ---- controls ---- */
-    S.group("hz.settings");
-    var optGrid = S.toggle({ labelKey: "hz.grid", value: false });
-    var optSolar = S.toggle({ labelKey: "hz.solar", value: true });
-
-    S.group("hz.starset");
-    var mC = S.slider({ labelKey: "hz.mass", min: 0.2, max: 3.0, step: 0.01, value: P.M, unit: " M☉",
-      on: function (v) { P.M = v; if (P.t > totalLife(v)) { P.t = totalLife(v); tC.set(P.t); } upd(); } });
-    var dC = S.slider({ labelKey: "hz.dist", min: 0.05, max: 12, step: 0.01, value: P.dist, format: function (v) { return v.toFixed(2) + " AU"; }, on: function (v) { P.dist = v; upd(); } });
-
-    S.group("hz.time");
-    var loop = S.loop(function (dt) { P.t = Math.min(totalLife(P.M), P.t + rate * dt); tC.set(P.t); if (P.t >= totalLife(P.M)) { loop.pause(); syncPlay(); } });
-    var playBtn = S.button({ labelKey: "hz.start", primary: true, on: function () { if (P.t >= totalLife(P.M)) { P.t = 0; tC.set(0); } loop.toggle(); syncPlay(); } });
-    function syncPlay() { var key = loop.playing ? "hz.pause" : "hz.start"; playBtn.setAttribute("data-i18n", key); playBtn.textContent = I18N.t(key); }
-    S.refreshers.push(syncPlay);
-    S.button({ labelKey: "hz.reset", on: function () { loop.pause(); syncPlay(); P.t = 0; tC.set(0); upd(); } });
-    S.slider({ labelKey: "hz.rate", min: 0.02, max: 3, step: 0.02, value: rate, format: function (v) { return v.toFixed(2) + " Gyr/s"; }, on: function (v) { rate = v; } });
-    var tC = S.slider({ labelKey: "hz.age", min: 0, max: 50, step: 0.01, value: P.t, format: function (v) { return v < 1 ? Math.round(v * 1000) + " Myr" : v.toFixed(2) + " Gyr"; }, on: function (v) { P.t = Math.min(totalLife(P.M), v); upd(); } });
-
-    var oType = S.readout({ labelKey: "hz.type" });
-    var oLum = S.readout({ labelKey: "hz.lum" });
-    var oTemp = S.readout({ labelKey: "hz.temp" });
-    var oRad = S.readout({ labelKey: "hz.rad" });
-    var oLife = S.readout({ labelKey: "hz.life" });
-    var oZone = S.readout({ labelKey: "hz.zone" });
-    var oStatus = S.readout({ labelKey: "hz.status" });
-
-    function planetStatus(st) {
-      if (P.dist <= st.R * RSUN_AU) return { key: "hz.gone", col: "#ff6b6b" };
-      if (P.dist < hzInner(st.L)) return { key: "hz.hot", col: "#ffa94d" };
-      if (P.dist > hzOuter(st.L)) return { key: "hz.cold", col: "#74c0fc" };
-      return { key: "hz.ok", col: "#69db7c" };
+    function sigRound(v, sigs) {
+      var dec = 1 + Math.floor(Math.log(v) / Math.LN10), pow = Math.pow(10, dec), res = Math.pow(10, sigs);
+      var tick = Math.round(v * res / pow);
+      if (tick === res) { tick = res / 10; dec += 1; pow = Math.pow(10, dec); }
+      var val = tick / res * pow, prec = sigs - dec;
+      return { v: val, s: prec > 0 ? val.toFixed(prec) : flashString(val) };
     }
-    function upd() {
-      var st = cur();
-      var ph = st.phase === "ms" ? I18N.t("hz.ms") : st.phase === "giant" ? I18N.t("hz.giant") : I18N.t("hz.dead");
-      oType(specType(st.T) + " · " + ph);
-      oLum(st.L >= 100 ? Math.round(st.L) + " L☉" : st.L.toFixed(3) + " L☉");
-      oTemp(Math.round(st.T) + " K");
-      oRad(st.R >= 10 ? Math.round(st.R) + " R☉" : st.R.toFixed(2) + " R☉");
-      oLife(tms(P.M).toFixed(2) + " Gyr");
-      oZone(hzInner(st.L).toFixed(2) + "–" + hzOuter(st.L).toFixed(2) + " AU");
-      oStatus(I18N.t(planetStatus(st).key));
-      S.requestDraw();
+
+    var ART = {
+      cursor: {nz:false, layers:[[[["rgba(224,48,48,0.502)","M1 -4.5L1 4.5L-1 4.5L-1 -4.5L1 -4.5Z"]],[]],[[["#666666","M-10 -22.4L10 -22.4L0 -8.4L-10 -22.4Z"]],[]]]},
+      planetBase: {nz:false, layers:[[[["#cccccc","M7.9 -9.7L8.8 -8.9Q12.5 -5.15 12.5 0L12.5 1Q12.15 5.55 8.8 8.8L7.45 10Q4.8 12.05 1.5 12.45L0 12.5L-1.85 12.35Q-5 11.95 -7.55 10L-7.65 9.95L-8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5L1.5 -12.4Q5.1 -12.05 7.9 -9.7Z"]],[]]]},
+      planetMask: {nz:false, layers:[[[["#cccccc","M8.8 -8.9Q12.5 -5.15 12.5 0Q12.5 5.2 8.8 8.8L7.45 10Q4.25 12.5 0 12.5L-1.85 12.35Q-5 11.95 -7.55 10L-7.65 9.95L-8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5Q5.15 -12.5 8.8 -8.9Z"]],[]]]},
+      planetRim: {nz:false, layers:[[[],[[1.0,"#999999","M8.8 -8.9Q12.5 -5.15 12.5 0Q12.5 5.2 8.8 8.8Q5.15 12.5 0 12.5L-1.85 12.35Q-5.05 11.95 -7.65 9.95L-8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5Q5.15 -12.5 8.8 -8.9"]]]]},
+      destroyed: {nz:false, layers:[[[["#666666","M7.2 -6.85Q7.2 -6.3 5.5 -4.95Q7.45 -3.4 7.45 -2.9L7.4 -2.2L6.75 -2.15L4.45 -4.1L2.9 -3L1.95 -3.05L1.75 -3.5L3.2 -5.1L1.3 -6.9L1.45 -7.45Q2 -7.55 4.1 -6Q5.7 -7.25 7.05 -7.25L7.2 -6.85ZM-1.8 -7.25Q-1.8 -6.65 -3.8 -4.55Q-3.1 -3.85 -3.1 -3.05L-3.3 -1.8L-3.65 -1.6L-4.95 -3.5Q-6.4 -2.15 -6.6 -2.15Q-7.6 -2.15 -7.3 -3.2Q-7.3 -4.05 -6.25 -5.15Q-7.3 -6.45 -7.3 -5.95L-5.35 -6L-5.2 -6.1Q-3.05 -7.9 -1.85 -7.9L-1.8 -7.25Z"]],[[1.0,"#666666","M-5.5 3.95L-4.85 3.05L-4.15 2.95L1.5 3L4.2 3.05L4.7 3.25Q5.15 3.35 5.5 4"]]]]},
+      locked: {nz:false, layers:[[[["#deb06d","M0 0.9L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15Q-0.95 2.45 -0.5 2.35L-0.05 2.3L-0.2 2.35L-0.85 2.8Q-1.95 3.55 -2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.7 5.25L-0.7 5.2L-0.65 5.2L-0.15 4.5L0 4.35L0 4.85L0 5.5L0 6.4L0 6.65L0 7.2L0 7.3Q-0.95 7.35 -1.2 8.2L-0.75 8.2L-0.2 8.2L0 8.2L0 12.5L-2.45 12.3Q-6.1 11.6 -8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5L0 -0.05L-0.15 0Q-0.4 0.2 -0.35 0.55L0 0.55L0 0.9ZM-5.35 5.4L-5.15 5.4L-6.2 5.35L-5.35 5.4ZM-6.4 5.35L-6.2 5.35L-6.55 5.3L-6.4 5.35ZM-8.8 5.55Q-8.6 5.7 -8.55 5.35L-8.75 5.4L-8.8 5.55Z"],["#ff9900","M0 8.2L-0.2 8.2L-0.75 8.2L-1.2 8.2Q-0.95 7.35 0 7.3L0.05 7.3L0 7.35L0 7.5L0 8.2ZM0 1.45L0 2.2L0 2.3L0 3.05L0 4.35L-0.15 4.5L-0.65 5.2L-0.7 5.2L-0.7 5.25L-1.05 5.5L-1.4 5.6Q-1.8 5.6 -1.95 5.9L-2.1 6.05L-2.55 6.05L-3.25 5.85L-3.9 5.6L-4.5 5.4L-3.6 5.4Q-3.4 5.4 -3.4 5.5L-2.9 5.5Q-2.2 5.2 -1.4 5.05L-1.65 5L-2.2 4.7L-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15L-2.55 2.7L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-1.05 1.3L0 0.9L0 1.45ZM0 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0L0 -0.05L0 0.55ZM-5.15 5.4L-5.35 5.4L-6.2 5.35L-6.4 5.35L-6.55 5.3L-6.2 5.35L-5.15 5.4ZM-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35Z"],["#ffffff","M5.2 -6.05L5.3 -6.3L5.2 -6.4L5.05 -6.55L4.5 -6.6L3.45 -6.6L2.35 -6.65L2.3 -6.4Q2.45 -6.1 3 -6.2L2.5 -5.95L2 -5.5L1.8 -5L1.75 -4.85L1.75 -4.6Q1.85 -4.3 2.1 -4.3L3 -4.15L3.7 -4.15Q2.9 -3.9 2.35 -3.1L3.4 -3.2Q2.85 -3.05 2.5 -2.7L2 -2.15L1.95 -1.85Q1.8 -1.4 2.3 -1.55L1.1 -0.75L0.55 -0.4L0.2 -0.15L0.2 -12.5Q5.2 -12.45 8.8 -8.9Q12.5 -5.15 12.5 0Q12.5 5.2 8.8 8.8Q6.55 11.1 3.7 12L2.35 12.3L0.2 12.5L0.2 8.2L0.7 8.2L1.05 8.1L1.4 7.9L2 7.55L3.8 6.6L1.6 6.6L1.25 6.6L0.75 7L0.2 7.3L0.2 4.15L0.5 3.95L0.9 3.7Q1.1 3.4 1.4 3.35L2.35 2.35L2.5 2.1L2.55 1.85L2.8 1.55L3.1 1.3L4.05 1.4L4.1 1.55L4.35 1.6L6.55 1.65L6.8 1.75L8.05 1.8L7.65 1.25L6.6 0.15L5.75 -0.5L5.2 -0.85L5 -1.1L4.7 -1.05Q3.95 -0.85 3.6 -0.15L3.55 0L3.45 0.2L3.1 0.2L2.1 0.2L1.95 0.15L1.6 0.2Q1.25 0.15 1.4 -0.35Q1.65 -1.1 2.35 -1.3L3.2 -1.65L3.8 -1.85L6.25 -2.45Q6.65 -2.5 6.65 -2.9Q6.65 -3.25 6.25 -3.2L5.75 -3.1L4.7 -3.2L4.35 -3.25L6.4 -4.35L6.8 -4.65L7.15 -5L4.05 -4.7L3.7 -4.65L3.75 -5L4.15 -5.35L5.15 -5.95L5.2 -6.05ZM4.95 -1.4L5 -1.1L5.05 -1.25Q5.35 -1.55 5.05 -1.55L4.95 -1.4ZM8.7 1.8L8.05 1.8L8.25 2L8.9 1.95L8.7 1.8ZM2.3 -6.65L2.35 -6.65L2.8 -6.95L3 -7Q3.55 -7.1 3 -7.1L3.45 -7.3Q4.1 -7.5 4.35 -7.8L4.05 -8L3.1 -8.25L2.1 -8.55Q1.25 -8.75 0.7 -9.15L1.05 -9.3L1.7 -9.45L1.05 -9.35L0.35 -9.25L0.35 -8.8L0.4 -8.6L1.95 -8.45Q2.55 -8.55 2.65 -8.1L2.55 -7.85Q2 -7.45 1.95 -6.75L2.3 -6.65ZM1.75 -9.5L4.05 -10.2L4.35 -10.4Q3.2 -10.35 2.1 -9.7L1.75 -9.5ZM0.2 0.55L0.35 0.55Q0.15 0.55 0.35 0.75L0.2 0.75L0.2 0.55Z"]],[[1.0,"#ffcc99","M0 8.2L-0.2 8.2L-0.75 8.2L-1.2 8.2Q-0.95 7.35 0 7.3M0 7.2L-2.2 7.55L-3.45 7.55L-3.55 7.55L-3.75 7.15Q-3.7 7.1 -3.8 7L-3.9 7L-4.05 6.95L-4.15 6.95L-4.5 6.75L-4.65 6.65L-5.35 6.25L-7 5.75M0 0.9L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15L-0.15 1.55L0 1.45M0 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0L0 -0.05M0 7.35L0.05 7.3L0 7.3M0 7.35L-0.5 7.65L-0.6 7.85L0 7.5M-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15M-0.7 5.25L-1.05 5.5L-1.4 5.6Q-1.8 5.6 -1.95 5.9L-2.1 6.05L-2.55 6.05L-3.25 5.85L-3.9 5.6L-4.5 5.4L-5.15 5.4L-5.35 5.4L-6.2 5.35L-6.4 5.35L-6.55 5.3L-6.2 5.35L-5.15 5.4M-2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4M0 5.5L-0.15 5.5Q-0.7 5.55 -0.7 5.25L-0.7 5.2L-0.65 5.2L-0.15 4.5L0 4.35M0 4.85L-0.65 5.2L-0.7 5.25M-8.55 5.35L-8.45 5.3L-8.35 5.3L-8.25 5.15L-8 4.95L-7.3 4.85L-6.4 4.65L-6.25 4.6L-6.05 4.5L-5.9 4.5L-2.8 4.6L-2.5 4.65L0 3.05M-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35M0 6.65L-0.15 6.45L-0.05 6.45L0 6.4M0 2.2L-0.05 2.3L0 2.3"]]],[[["#d8d8d8","M4.5 -5.5L4.8 -4.8L4.85 -4.45L5.05 -3.7L5.15 -3.1L5.2 -2.15L5.15 -1.55L5 -1.2L5 -1.1L4.15 0.2L3.2 1.25L3.1 1.3L2.65 1.75L2.55 1.85L2.5 1.85L1.25 3.2L0.7 3.9L0.2 4.7L0.05 5.4L0.05 5.5L0.2 5.7L0.35 5.85L0.4 5.95L0.55 6.45L0.55 6.65L0.35 7.2L0.2 7.35L0.05 7.5L0 7.5L0 -0.6L0.2 -0.9Q1.2 -2.2 1.4 -3L1.55 -5.6Q1.65 -6.4 2.15 -6.65L2.5 -6.8L3.7 -6.6L4.5 -5.5Z"]],[[1.0,"#d8d8d8","M3.7 -6.6L4.5 -6.6L5.05 -6.55L5.2 -6.4L5.3 -6.3L5.2 -6.05L5.15 -5.95L4.5 -5.5M4.8 -4.8L5.9 -4.95L7.15 -5L6.8 -4.65L6.4 -4.35L5.9 -4.15L5.05 -3.7M5.15 -3.1L5.75 -3.1L5.9 -3.1L6.25 -3.2Q6.65 -3.25 6.65 -2.9Q6.65 -2.5 6.25 -2.45L5.9 -2.3L5.2 -2.15M5.15 -1.55L5.05 -1.25L5 -1.2M5 -1.1L5.2 -0.85L5.75 -0.5L5.9 -0.35L6.6 0.15L7.55 0.2L8 0.3L8.55 0.4L9.05 0.55M4.35 -10.4Q3.2 -10.35 2.1 -9.7L1.75 -9.5L4.05 -10.2L4.35 -10.4M2.15 -6.65Q2.1 -6.65 1.95 -6.75Q2 -7.45 2.55 -7.85L2.65 -8.1Q2.55 -8.55 1.95 -8.45L0.4 -8.6L0.35 -8.8L0.35 -9.25L1.05 -9.35L1.7 -9.45L1.75 -9.5M2.5 -6.8L2.8 -6.95L3 -7Q3.55 -7.1 3 -7.1L3.45 -7.3Q4.1 -7.5 4.35 -7.8L4.05 -8L3.1 -8.25L2.1 -8.55Q1.25 -8.75 0.7 -9.15L1.05 -9.3L1.7 -9.45M8.05 1.8L8.25 2L8.9 1.95L8.7 1.8L8.05 1.8L6.8 1.75L6.55 1.65L5.9 1.65L4.35 1.6L4.1 1.55L4.05 1.4L3.1 1.3M2.55 1.85L2.8 1.8L3.35 1.75L4.7 1.8L4.85 1.85L5.9 2.5L6.25 2.7Q6.95 3.25 7.85 3.1L8.2 3.05L8.35 3Q8.55 2.55 9.05 2.3L9.8 1.65L10.05 1.4L10.3 1.05L9.5 0.75M8.05 1.8L7.65 1.25L6.6 0.15L5.9 0.15L5.55 0.15L4.15 0.2M3.2 1.25L3.1 1.3M1.25 3.2L1.4 3.35L2.35 2.35L2.5 2.1L2.55 1.85L2.5 1.85M0.7 3.9L0.9 3.7Q1.1 3.4 1.4 3.35L1.05 3.8Q0.7 4.1 0.5 4.5L0.35 4.65L0.2 4.7M0.2 5.7Q0.55 5.4 0.9 5.35L1.55 5.2L1.75 5.05L2.1 4.85M0.4 5.95L1.55 5.2M0.55 6.65L1.25 6.6L1.6 6.6L3.8 6.6L2 7.55L1.4 7.9L1.05 8.1L0.7 8.2L0.2 8.2M0.35 7.2L0.75 7L1.25 6.6"]]],[[["#d9ceb7","M0.55 -8.55L0.55 -0.4L0 -0.05L-0.15 0Q-0.4 0.2 -0.35 0.55L0 0.55L0.35 0.55Q0.15 0.55 0.35 0.75L0 0.9L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15Q-0.95 2.45 -0.5 2.35L-0.05 2.3L-0.2 2.35L-0.85 2.8Q-1.95 3.55 -2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.7 5.2L-0.15 4.5L0 4.35L0.5 3.95L0.55 3.95L0.55 4.35L0.55 5.4L0.55 5.9L0.55 6.65L0.55 7.15L0.2 7.3L0.05 7.3L0 7.3L-0.3 7.35Q-0.95 7.5 -1.2 8.2L-0.75 8.2L-0.2 8.2L0 8.2L0.55 8.2L0.55 12.5L0 12.5L-2.45 12.3Q-6.1 11.6 -8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5L0.55 -12.5L0.55 -9.25L0.35 -9.25L0.35 -8.8L0.4 -8.6L0.55 -8.55ZM-6.4 5.35L-6.2 5.35L-6.55 5.3L-6.4 5.35ZM-5.15 5.4L-6.2 5.35L-5.35 5.4L-5.15 5.4ZM-8.8 5.55Q-8.6 5.7 -8.55 5.35L-8.75 5.4L-8.8 5.55Z"],["#999999","M0.55 8.2L0 8.2L-0.2 8.2L-0.75 8.2L-1.2 8.2Q-0.95 7.5 -0.3 7.35L0 7.3L0.05 7.3L0.2 7.3L0.55 7.15L0.55 8.2ZM0.55 -8.55L0.4 -8.6L0.35 -8.8L0.35 -9.25L0.55 -9.25L0.55 -8.55ZM0.55 -0.4L0.55 0.6L0.55 0.9L0.55 1.25L0.55 1.75L0.55 2.3L0.55 2.9L0.55 3.95L0.5 3.95L0 4.35L-0.15 4.5L-0.7 5.2L-1.05 5.5L-1.4 5.6Q-1.8 5.6 -1.95 5.9L-2.1 6.05L-2.55 6.05L-3.25 5.85L-3.9 5.6L-4.5 5.4L-3.6 5.4Q-3.4 5.4 -3.4 5.5L-2.9 5.5Q-2.2 5.2 -1.4 5.05L-1.65 5L-2.2 4.7L-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15L-2.55 2.7L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-1.05 1.3L0 0.9L0.35 0.75Q0.15 0.55 0.35 0.55L0 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0L0 -0.05L0.55 -0.4ZM-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35ZM-6.2 5.35L-6.4 5.35L-6.55 5.3L-6.2 5.35ZM-6.2 5.35L-5.15 5.4L-5.35 5.4L-6.2 5.35Z"]],[[1.0,"#aa9f88","M0.55 8.2L0 8.2L-0.2 8.2L-0.75 8.2L-1.2 8.2Q-0.95 7.5 -0.3 7.35L-2.2 7.55L-3.45 7.55L-3.55 7.55L-3.75 7.15Q-3.7 7.1 -3.8 7L-3.9 7L-4.05 6.95L-4.15 6.95L-4.5 6.75L-4.65 6.65L-5.35 6.25L-7 5.75M0.55 -8.55L0.4 -8.6L0.35 -8.8L0.35 -9.25L0.55 -9.25M0.55 -0.4L0 -0.05L-0.15 0Q-0.4 0.2 -0.35 0.55L0 0.55L0.35 0.55Q0.15 0.55 0.35 0.75L0.55 0.6M0.35 0.75L0 0.9L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15L-0.15 1.55L0 1.45L0.55 1.25M0.55 0.9L0.35 0.75M0.55 1.75L0.3 2L0 2.2L-0.05 2.3L0 2.3L0.2 2.3L0.55 2.3M0.55 2.9L0 3.05L-2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.7 5.2L-0.15 4.5L0 4.35L0.5 3.95L0.55 3.95M0.55 4.35L0.5 4.5L0.35 4.65L0 4.85L-0.7 5.2Q-0.7 5.55 -0.15 5.5L0 5.5L0.55 5.4M-0.3 7.35L0 7.3L0.05 7.3L0.2 7.3L0.55 7.15M0.05 7.3L0 7.35L-0.5 7.65L-0.6 7.85L0 7.5L0.2 7.3M0.55 5.9L0 6.4L-0.05 6.45L-0.15 6.45L0 6.65L0.35 6.65L0.55 6.65M-1.05 2.15Q-0.95 2.45 -0.5 2.35L-0.05 2.3L-0.2 2.35L-0.85 2.8Q-1.95 3.55 -2.5 4.65L-2.8 4.6L-5.9 4.5L-6.05 4.5L-6.25 4.6L-6.4 4.65L-7.3 4.85L-8 4.95L-8.25 5.15L-8.35 5.3L-8.45 5.3L-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35M-6.4 5.35L-6.2 5.35L-6.55 5.3L-6.4 5.35M-5.15 5.4L-6.2 5.35L-5.35 5.4L-5.15 5.4L-4.5 5.4"]]]]},
+      lockedNight: {nz:false, layers:[[[],[]],[[["#000000","M-0.3 -12.3L0.4 -12.6Q0.8 -12.6 1.1 -12.3L1.4 -11.6L1.1 -10.9Q0.8 -10.6 0.4 -10.6Q0 -10.6 -0.3 -10.9L-0.6 -11.6L-0.3 -12.3ZM-0.3 -8.3L0.4 -8.6Q0.8 -8.6 1.1 -8.3L1.4 -7.6L1.1 -6.9Q0.8 -6.6 0.4 -6.6Q0 -6.6 -0.3 -6.9L-0.6 -7.6L-0.3 -8.3ZM-0.3 -4.3L0.4 -4.6Q0.8 -4.6 1.1 -4.3L1.4 -3.6L1.1 -2.9Q0.8 -2.6 0.4 -2.6Q0 -2.6 -0.3 -2.9L-0.6 -3.6L-0.3 -4.3ZM1.1 -0.3L1.4 0.4L1.1 1.1Q0.8 1.4 0.4 1.4L-0.3 1.1L-0.6 0.4L-0.3 -0.3L0.4 -0.6Q0.8 -0.6 1.1 -0.3ZM1.1 3.7L1.4 4.4L1.1 5.1Q0.8 5.4 0.4 5.4L-0.3 5.1L-0.6 4.4L-0.3 3.7Q0 3.4 0.4 3.4Q0.8 3.4 1.1 3.7ZM1.1 11.7L1.4 12.4L1.1 13.1Q0.8 13.4 0.4 13.4L-0.3 13.1L-0.6 12.4L-0.3 11.7Q0 11.4 0.4 11.4Q0.8 11.4 1.1 11.7ZM1.1 7.7L1.4 8.4L1.1 9.1Q0.8 9.4 0.4 9.4L-0.3 9.1L-0.6 8.4L-0.3 7.7Q0 7.4 0.4 7.4Q0.8 7.4 1.1 7.7Z"]],[]]]},
+      hot: {nz:false, layers:[[[["#d9ceb7","M-2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.15 4.5L0 4.35L0.5 3.95L0.55 3.95L0.9 3.7Q1.1 3.4 1.4 3.35L2.1 2.65L2.35 2.35L2.5 2.1L2.55 1.85L2.8 1.55L3.1 1.3L4.05 1.4L4.1 1.55L4.35 1.6L6.55 1.65L6.8 1.75L8.05 1.8L7.65 1.25L6.6 0.15L5.75 -0.5L5.2 -0.85L5 -1.1L4.7 -1.05Q3.95 -0.85 3.6 -0.15L3.55 0L3.45 0.2L3.1 0.2L2.1 0.2L1.95 0.15L1.6 0.2Q1.25 0.15 1.4 -0.35Q1.6 -0.95 2.1 -1.2L2.35 -1.3L3.2 -1.65L3.8 -1.85L6.25 -2.45Q6.65 -2.5 6.65 -2.9Q6.65 -3.25 6.25 -3.2L5.75 -3.1L4.7 -3.2L4.35 -3.25L6.4 -4.35L6.8 -4.65L7.15 -5L4.05 -4.7L3.7 -4.65L3.75 -5L4.15 -5.35L5.15 -5.95L5.2 -6.05L5.3 -6.3L5.2 -6.4L5.05 -6.55L4.5 -6.6L3.45 -6.6L2.35 -6.65L2.3 -6.4Q2.45 -6.1 3 -6.2L2.5 -5.95L2.1 -5.55L2 -5.5L1.8 -5L1.75 -4.85L1.75 -4.6Q1.85 -4.3 2.1 -4.3L3 -4.15L3.7 -4.15Q2.9 -3.9 2.35 -3.1L3.4 -3.2Q2.85 -3.05 2.5 -2.7L2.1 -2.2L2 -2.15L1.95 -1.85Q1.85 -1.55 2.1 -1.45L2.3 -1.55L2.1 -1.4L1.1 -0.75L0.55 -0.4L0 -0.05L-0.15 0Q-0.4 0.2 -0.35 0.55L0 0.55L0.35 0.55Q0.15 0.55 0.35 0.75L0 0.9L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15Q-0.95 2.45 -0.5 2.35L-0.05 2.3L-0.2 2.35L-0.85 2.8Q-1.95 3.55 -2.5 4.65ZM-5.15 5.4L-6.2 5.35L-5.35 5.4L-5.15 5.4ZM-8.9 -8.9Q-5.2 -12.5 0 -12.5L0.55 -12.5L2.1 -12.3Q5.9 -11.75 8.8 -8.9Q12.5 -5.15 12.5 0Q12.5 5.2 8.8 8.8Q5.95 11.65 2.35 12.3L2.1 12.35L0.55 12.5L0 12.5L-2.45 12.3Q-6.1 11.6 -8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9ZM2.3 -6.65L2.35 -6.65L2.8 -6.95L3 -7Q3.55 -7.1 3 -7.1L3.45 -7.3Q4.1 -7.5 4.35 -7.8L4.05 -8L3.1 -8.25L2.1 -8.55Q1.25 -8.75 0.7 -9.15L1.05 -9.3L1.75 -9.5L1.05 -9.35L0.55 -9.25L0.35 -9.25L0.35 -8.8L0.4 -8.6L0.55 -8.55L1.95 -8.45L2.1 -8.45Q2.55 -8.45 2.65 -8.1L2.55 -7.85L2.1 -7.2L1.95 -6.75L2.1 -6.65L2.3 -6.65ZM2.1 -9.7L1.75 -9.5L2.1 -9.65L4.05 -10.2L4.35 -10.4Q3.2 -10.35 2.1 -9.7ZM4.95 -1.4L5 -1.1L5.05 -1.25Q5.35 -1.55 5.05 -1.55L4.95 -1.4ZM-6.4 5.35L-6.2 5.35L-6.55 5.3L-6.4 5.35ZM-2.55 4.7L-2.5 4.65L-2.55 4.7ZM-8.8 5.55Q-8.6 5.7 -8.55 5.35L-8.75 5.4L-8.8 5.55ZM2.1 4.85L1.55 5.2L1.75 5.05L2.1 4.85ZM1.6 6.6L1.25 6.6L0.75 7L0.55 7.15L0.2 7.3L0.05 7.3L0 7.3L-0.3 7.35Q-0.95 7.5 -1.2 8.2L-0.75 8.2L-0.2 8.2L0 8.2L0.55 8.2L0.7 8.2L1.05 8.1L1.4 7.9L2 7.55L2.1 7.55L3.8 6.6L2.1 6.6L1.6 6.6ZM8.7 1.8L8.05 1.8L8.25 2L8.9 1.95L8.7 1.8Z"],["#999999","M-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15L-2.55 2.7L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-1.05 1.3L0 0.9L0.35 0.75Q0.15 0.55 0.35 0.55L0 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0L0 -0.05L0.55 -0.4L1.1 -0.75L2.1 -1.4L2.3 -1.55L2.1 -1.45Q1.85 -1.55 1.95 -1.85L2 -2.15L2.1 -2.2L2.5 -2.7Q2.85 -3.05 3.4 -3.2L2.35 -3.1Q2.9 -3.9 3.7 -4.15L3 -4.15L2.1 -4.3Q1.85 -4.3 1.75 -4.6L1.75 -4.85L1.8 -5L2 -5.5L2.1 -5.55L2.5 -5.95L3 -6.2Q2.45 -6.1 2.3 -6.4L2.35 -6.65L2.3 -6.65L2.1 -6.65L1.95 -6.75L2.1 -7.2L2.55 -7.85L2.65 -8.1Q2.55 -8.45 2.1 -8.45L1.95 -8.45L0.55 -8.55L0.4 -8.6L0.35 -8.8L0.35 -9.25L0.55 -9.25L1.05 -9.35L1.75 -9.5L2.1 -9.7Q3.2 -10.35 4.35 -10.4L4.05 -10.2L2.1 -9.65L1.75 -9.5L1.05 -9.3L0.7 -9.15Q1.25 -8.75 2.1 -8.55L3.1 -8.25L4.05 -8L4.35 -7.8Q4.1 -7.5 3.45 -7.3L3 -7.1Q3.55 -7.1 3 -7L2.8 -6.95L2.35 -6.65L3.45 -6.6L4.5 -6.6L5.05 -6.55L5.2 -6.4L5.3 -6.3L5.2 -6.05L5.15 -5.95L4.15 -5.35L3.75 -5L3.7 -4.65L4.05 -4.7L7.15 -5L6.8 -4.65L6.4 -4.35L4.35 -3.25L4.7 -3.2L5.75 -3.1L6.25 -3.2Q6.65 -3.25 6.65 -2.9Q6.65 -2.5 6.25 -2.45L3.8 -1.85L3.2 -1.65L2.35 -1.3L2.1 -1.2Q1.6 -0.95 1.4 -0.35Q1.25 0.15 1.6 0.2L1.95 0.15L2.1 0.2L3.1 0.2L3.45 0.2L3.55 0L3.6 -0.15Q3.95 -0.85 4.7 -1.05L5 -1.1L4.95 -1.4L5.05 -1.55Q5.35 -1.55 5.05 -1.25L5 -1.1L5.2 -0.85L5.75 -0.5L6.6 0.15L7.65 1.25L8.05 1.8L8.7 1.8L8.9 1.95L8.25 2L8.05 1.8L6.8 1.75L6.55 1.65L4.35 1.6L4.1 1.55L4.05 1.4L3.1 1.3L2.8 1.55L2.55 1.85L2.5 2.1L2.35 2.35L2.1 2.65L1.4 3.35Q1.1 3.4 0.9 3.7L0.55 3.95L0.5 3.95L0 4.35L-0.15 4.5L-1.05 5.5L-1.4 5.6Q-1.8 5.6 -1.95 5.9L-2.1 6.05L-2.55 6.05L-3.25 5.85L-3.9 5.6L-4.5 5.4L-3.6 5.4Q-3.4 5.4 -3.4 5.5L-2.9 5.5Q-2.2 5.2 -1.4 5.05L-1.65 5L-2.2 4.7L-2.5 4.65ZM-5.15 5.4L-5.35 5.4L-6.2 5.35L-6.4 5.35L-6.55 5.3L-6.2 5.35L-5.15 5.4ZM-2.5 4.65L-2.55 4.7L-2.5 4.65ZM-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35ZM1.55 5.2L2.1 4.85L1.75 5.05L1.55 5.2ZM1.25 6.6L1.6 6.6L2.1 6.6L3.8 6.6L2.1 7.55L2 7.55L1.4 7.9L1.05 8.1L0.7 8.2L0.55 8.2L0 8.2L-0.2 8.2L-0.75 8.2L-1.2 8.2Q-0.95 7.5 -0.3 7.35L0 7.3L0.05 7.3L0.2 7.3L0.55 7.15L0.75 7L1.25 6.6Z"]],[[1.0,"#aa9f88","M-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15L-2.55 2.7L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-1.05 1.3L0 0.9L0.35 0.75Q0.15 0.55 0.35 0.55L0 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0L0 -0.05L0.55 -0.4L1.1 -0.75L2.1 -1.4L2.3 -1.55L2.1 -1.45Q1.85 -1.55 1.95 -1.85L2 -2.15L2.1 -2.2L2.5 -2.7Q2.85 -3.05 3.4 -3.2L2.35 -3.1Q2.9 -3.9 3.7 -4.15L3 -4.15L2.1 -4.3Q1.85 -4.3 1.75 -4.6L1.75 -4.85L1.8 -5L2 -5.5L2.1 -5.55L2.5 -5.95L3 -6.2Q2.45 -6.1 2.3 -6.4L2.35 -6.65L2.3 -6.65L2.1 -6.65L1.95 -6.75L2.1 -7.2L2.55 -7.85L2.65 -8.1Q2.55 -8.45 2.1 -8.45L1.95 -8.45L0.55 -8.55L0.4 -8.6L0.35 -8.8L0.35 -9.25L0.55 -9.25L1.05 -9.35L1.75 -9.5L2.1 -9.7Q3.2 -10.35 4.35 -10.4L4.05 -10.2L2.1 -9.65L1.75 -9.5L1.05 -9.3L0.7 -9.15Q1.25 -8.75 2.1 -8.55L3.1 -8.25L4.05 -8L4.35 -7.8Q4.1 -7.5 3.45 -7.3L3 -7.1Q3.55 -7.1 3 -7L2.8 -6.95L2.35 -6.65L3.45 -6.6L4.5 -6.6L5.05 -6.55L5.2 -6.4L5.3 -6.3L5.2 -6.05L5.15 -5.95L4.15 -5.35L3.75 -5L3.7 -4.65L4.05 -4.7L7.15 -5L6.8 -4.65L6.4 -4.35L4.35 -3.25L4.7 -3.2L5.75 -3.1L6.25 -3.2Q6.65 -3.25 6.65 -2.9Q6.65 -2.5 6.25 -2.45L3.8 -1.85L3.2 -1.65L2.35 -1.3L2.1 -1.2Q1.6 -0.95 1.4 -0.35Q1.25 0.15 1.6 0.2L1.95 0.15L2.1 0.2L3.1 0.2L3.45 0.2L3.55 0L3.6 -0.15Q3.95 -0.85 4.7 -1.05L5 -1.1L4.95 -1.4L5.05 -1.55Q5.35 -1.55 5.05 -1.25L5 -1.1L5.2 -0.85L5.75 -0.5L6.6 0.15L7.55 0.2L8 0.3L8.55 0.4L9.05 0.55M3.45 -6.6L3 -6.2M3.4 -3.2L3.7 -3.25L3.45 -3.2L3.4 -3.2M-0.05 2.3L0 2.2L0.3 2L0.55 1.75L0.7 1.6L0.9 1.25L0.55 1.25L0 1.45L-0.15 1.55L-1.05 2.15M-4.5 5.4L-5.15 5.4L-5.35 5.4L-6.2 5.35L-6.4 5.35L-6.55 5.3L-6.2 5.35M-2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.15 4.5L0 4.35L0.5 3.95L0.55 3.95L0.9 3.7Q1.1 3.4 1.4 3.35L0.55 2.9L0 3.05L-2.5 4.65L-2.55 4.7L-2.5 4.65L-2.8 4.6L-5.9 4.5L-6.05 4.5L-6.25 4.6L-6.4 4.65L-7.3 4.85L-8 4.95L-8.25 5.15L-8.35 5.3L-8.4 5.3L-8.45 5.3L-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35M-0.3 7.35L-2.2 7.55L-3.45 7.55L-3.55 7.55L-3.75 7.15Q-3.7 7.1 -3.8 7L-3.9 7L-4.05 6.95L-4.15 6.95L-4.5 6.75L-4.65 6.65L-5.35 6.25L-7 5.75M-5.15 5.4L-6.2 5.35M1.4 3.35L1.05 3.8L0.55 4.35L0.5 4.5L0.35 4.65L0 4.85L-0.7 5.2Q-0.7 5.55 -0.15 5.5L0 5.5L0.55 5.4L0.9 5.35L1.55 5.2L2.1 4.85L1.75 5.05L1.55 5.2L0.55 5.9L0 6.4L-0.05 6.45L-0.15 6.45L0 6.65L0.35 6.65L0.55 6.65L1.25 6.6L1.6 6.6L2.1 6.6L3.8 6.6L2.1 7.55L2 7.55L1.4 7.9L1.05 8.1L0.7 8.2L0.55 8.2L0 8.2L-0.2 8.2L-0.75 8.2L-1.2 8.2Q-0.95 7.5 -0.3 7.35L0 7.3L0.05 7.3L0.2 7.3L0.55 7.15L0.75 7L1.25 6.6M0.05 7.3L0 7.35L-0.5 7.65L-0.6 7.85L0 7.5L0.2 7.3M2.55 1.85L2.8 1.8L3.35 1.75L4.7 1.8L4.85 1.85L6.25 2.7Q6.95 3.25 7.85 3.1L8.2 3.05L8.35 3Q8.55 2.55 9.05 2.3L9.8 1.65L10.05 1.4L10.3 1.05L9.5 0.75M6.6 0.15L7.65 1.25L8.05 1.8L8.7 1.8L8.9 1.95L8.25 2L8.05 1.8L6.8 1.75L6.55 1.65L4.35 1.6L4.1 1.55L4.05 1.4L3.1 1.3L2.8 1.55L2.55 1.85L2.5 2.1L2.35 2.35L2.1 2.65L1.4 3.35M6.6 0.15L5.55 0.15L3.45 0.2L3.45 0.35Q3.55 0.95 3.1 1.3L2.1 1.3L1.4 1.4L1.75 1.05L2 0.9L0.7 0.9L0.55 0.9L0.35 0.75L0.55 0.6L0.7 0.55Q1.1 0.3 1.6 0.2M2 0.9L2.1 0.9L2.45 0.85L2.8 0.7L2.1 0.85L2 0.9M2.55 1.85L2.45 1.85L2.1 1.95L1.75 2L0.9 2.2L0.55 2.3L0.2 2.3L0 2.3L-0.05 2.3M2.1 0.2L1.6 0.2"]]]]},
+      right: {nz:false, layers:[[[["#adc6fc","M3.75 -5L3.7 -4.65L4.05 -4.7L7.15 -5L6.8 -4.65L6.4 -4.35L4.35 -3.25L4.7 -3.2L5.75 -3.1L6.25 -3.2Q6.65 -3.25 6.65 -2.9Q6.65 -2.5 6.25 -2.45L3.8 -1.85L3.2 -1.65L2.35 -1.3Q1.65 -1.1 1.4 -0.35Q1.25 0.15 1.6 0.2L1.95 0.15L2.1 0.2L3.1 0.2L3.45 0.2L3.55 0L3.6 -0.15Q3.95 -0.85 4.7 -1.05L5 -1.1L5.2 -0.85L5.75 -0.5L6.6 0.15L7.55 0.2L7.5 0.35L7.85 0.35L8.2 0.4L9.05 0.55Q9.3 0.6 9.5 0.75L10.3 1.05L10.05 1.4L9.8 1.65L9.05 2.3Q8.55 2.55 8.35 3L8.2 3.05L7.85 3.1Q6.95 3.25 6.25 2.7L4.85 1.85L4.7 1.8L3.35 1.75L2.8 1.8L2.55 1.85L2.5 2.1L2.35 2.35L1.4 3.35L1.05 3.8Q0.7 4.1 0.5 4.5L0.35 4.65L-0.7 5.2Q-0.7 5.55 -0.15 5.5L0.9 5.35L1.55 5.2Q0.6 5.7 -0.05 6.45L-0.15 6.45Q-0.05 6.75 0.35 6.65L1.25 6.6L1.6 6.6L3.8 6.6L2 7.55L1.4 7.9L1.05 8.1L0.7 8.2L-0.2 8.2L-0.35 8Q-0.7 7.9 -0.75 8.2L-1.2 8.2Q-0.95 7.35 0 7.3L0.2 7.3L0.2 7.15L-2.2 7.55L-3.45 7.55L-3.55 7.55L-3.55 7.5L-3.75 7.15Q-3.7 7.1 -3.8 7L-3.9 7L-3.9 6.95L-4.05 6.95L-4.15 6.95L-4.5 6.75L-4.65 6.65L-5.35 6.25L-7 5.75L-6.45 5.6L-6.25 5.4L-6.2 5.35L-6.1 5.2Q-5.95 4.85 -6.05 4.5L-5.9 4.5L-2.8 4.6L-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15L-2.55 2.7L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-1.05 1.3L0.35 0.75Q0.15 0.55 0.35 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0Q0.2 -0.15 0.55 -0.4L1.1 -0.75L2.3 -1.55Q1.8 -1.4 1.95 -1.85L2 -2.15L2.5 -2.7Q2.85 -3.05 3.4 -3.2L2.35 -3.1Q2.9 -3.9 3.7 -4.15L3 -4.15L2.1 -4.3Q1.85 -4.3 1.75 -4.6L1.75 -4.85L1.8 -5L3.75 -5Z"],["#a7d0fa","M8.8 -8.9Q12.5 -5.15 12.5 0Q12.5 5.2 8.8 8.8Q5.95 11.65 2.35 12.3Q-0.05 12.15 -2.45 12.3Q-6.1 11.6 -8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5Q5.15 -12.5 8.8 -8.9ZM1.75 -9.5L4.05 -10.2L4.35 -10.4Q3.2 -10.35 2.1 -9.7L1.75 -9.5ZM-0.35 -11.45L3.1 -11.55L3.45 -11.6L2.45 -11.6L1.95 -11.65L0.4 -11.6L-0.15 -11.6L-0.35 -11.45ZM1.25 -5.05L1.8 -5L1.75 -4.85L1.75 -4.6Q1.85 -4.3 2.1 -4.3L3 -4.15L3.7 -4.15Q2.9 -3.9 2.35 -3.1L3.4 -3.2Q2.85 -3.05 2.5 -2.7L2 -2.15L1.95 -1.85Q1.8 -1.4 2.3 -1.55L1.1 -0.75L0.55 -0.4Q0.2 -0.15 -0.15 0Q-0.4 0.2 -0.35 0.55L0.35 0.55Q0.15 0.55 0.35 0.75L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15Q-0.95 2.45 -0.5 2.35L-0.05 2.3L-0.2 2.35L-0.85 2.8Q-1.95 3.55 -2.5 4.65L-2.8 4.6L-5.9 4.5L-6.05 4.5L-6.2 4.15L-6.4 3.8L-6.4 3.7L-6.6 3.45Q-7.1 2.3 -8 1.95Q-8.25 1.85 -8.45 2.1L-8.6 2.35L-9.25 3L-9.45 3.45L-9.5 4.05Q-9.6 4.6 -9.3 5L-9.05 5.2L-8.75 5.4L-8.8 5.55L-8.45 5.6L-8.35 5.6L-7.85 6.95L-7.55 7.45L-6.95 8Q-5.9 8.7 -4.5 8.55L-4.3 8.55L-4.3 8.7Q-4.3 9.1 -3.95 9.3L-3.45 9.5L-2.3 9.5L-2.2 9.5L-1.2 9.35L-0.75 9.1L-0.3 8.7L-0.2 8.35L-0.2 8.2L0.7 8.2L1.05 8.1L1.4 7.9L2 7.55L3.8 6.6L1.6 6.6L1.25 6.6L0.35 6.65Q-0.05 6.75 -0.15 6.45L-0.05 6.45Q0.6 5.7 1.55 5.2L0.9 5.35L-0.15 5.5Q-0.7 5.55 -0.7 5.2L0.35 4.65L0.5 4.5Q0.7 4.1 1.05 3.8L1.4 3.35L2.35 2.35L2.5 2.1L2.55 1.85L2.8 1.8L3.35 1.75L4.7 1.8L4.85 1.85L6.25 2.7Q6.95 3.25 7.85 3.1L8.2 3.05L8.35 3Q8.55 2.55 9.05 2.3L9.8 1.65L10.05 1.4L10.3 1.05L9.5 0.75Q9.3 0.6 9.05 0.55L8.55 0.4L8 0.3L7.55 0.2L6.6 0.15L5.75 -0.5L5.2 -0.85L5 -1.1L4.7 -1.05Q3.95 -0.85 3.6 -0.15L3.55 0L3.45 0.2L3.1 0.2L2.1 0.2L1.95 0.15L1.6 0.2Q1.25 0.15 1.4 -0.35Q1.65 -1.1 2.35 -1.3L3.2 -1.65L3.8 -1.85L6.25 -2.45Q6.65 -2.5 6.65 -2.9Q6.65 -3.25 6.25 -3.2L5.75 -3.1L4.7 -3.2L4.35 -3.25L6.4 -4.35L6.8 -4.65L7.15 -5L4.05 -4.7L3.7 -4.65L3.75 -5L4.15 -5.35L5.15 -5.95L5.2 -6.05L5.4 -6.05L5.95 -6.05Q5.6 -6.2 5.2 -6.4L5.05 -6.55L4.5 -6.6L2.35 -6.65L2.3 -6.4L1.75 -6.4L0 -6.45L-1.4 -6.25L-1.55 -6.25L1.75 -6.05L2.1 -6.05Q1.85 -5.85 1.4 -5.75L0.9 -5.35L0.95 -5.2Q1.1 -5.05 1.25 -5.05ZM2.3 -6.65L2.35 -6.65L2.8 -6.95L3 -7Q3.55 -7.1 3 -7.1L3.45 -7.3Q4.1 -7.5 4.35 -7.8L4.05 -8L3.1 -8.25L2.1 -8.55Q1.25 -8.75 0.7 -9.15L1.05 -9.3L1.7 -9.45L1.05 -9.35L0.35 -9.25L0.35 -8.8L0.4 -8.6L1.95 -8.45Q2.55 -8.55 2.65 -8.1L2.55 -7.85Q2 -7.45 1.95 -6.75L2.3 -6.65ZM4.95 -1.4L5 -1.1L5.05 -1.25Q5.35 -1.55 5.05 -1.55L4.95 -1.4ZM-5.55 -6.95L-4.65 -7Q-4.25 -6.95 -4.3 -7.3L-6.05 -7.1L-6.6 -6.95L-5.7 -6.95L-5.55 -6.95ZM-6.65 -6.95L-7.3 -6.95L-7.45 -6.95L-6.65 -6.95Z"]],[]],[[],[[1.0,"#999999","M1.75 -9.5L2.1 -9.7Q3.2 -10.35 4.35 -10.4L4.05 -10.2L1.75 -9.5L1.7 -9.45L1.05 -9.3L0.7 -9.15Q1.25 -8.75 2.1 -8.55L3.1 -8.25L4.05 -8L4.35 -7.8Q4.1 -7.5 3.45 -7.3L3 -7.1Q3.55 -7.1 3 -7L2.8 -6.95L2.35 -6.65L3.45 -6.6L4.5 -6.6L5.05 -6.55L5.2 -6.4L5.3 -6.3L5.2 -6.05L5.15 -5.95L4.15 -5.35L3.75 -5L3.7 -4.65L4.05 -4.7L7.15 -5L6.8 -4.65L6.4 -4.35L4.35 -3.25L4.7 -3.2L5.75 -3.1L6.25 -3.2Q6.65 -3.25 6.65 -2.9Q6.65 -2.5 6.25 -2.45L3.8 -1.85L3.2 -1.65L2.35 -1.3Q1.65 -1.1 1.4 -0.35Q1.25 0.15 1.6 0.2L1.95 0.15L2.1 0.2L3.1 0.2L3.45 0.2L3.55 0L3.6 -0.15Q3.95 -0.85 4.7 -1.05L5 -1.1L4.95 -1.4L5.05 -1.55Q5.35 -1.55 5.05 -1.25L5 -1.1L5.2 -0.85L5.75 -0.5L6.6 0.15L7.55 0.2L8 0.3L8.55 0.4L9.05 0.55M-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35L-8.45 5.3L-8.35 5.3L-8.25 5.15L-8 4.95L-7.3 4.85L-6.4 4.65L-6.25 4.6L-6.05 4.5L-5.9 4.5L-2.8 4.6L-2.5 4.65Q-1.95 3.55 -0.85 2.8L-0.2 2.35L-0.05 2.3L-0.5 2.35Q-0.95 2.45 -1.05 2.15L-2.55 2.7L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-1.05 1.3L0.35 0.75Q0.15 0.55 0.35 0.55L-0.35 0.55Q-0.4 0.2 -0.15 0Q0.2 -0.15 0.55 -0.4L1.1 -0.75L2.3 -1.55Q1.8 -1.4 1.95 -1.85L2 -2.15L2.5 -2.7Q2.85 -3.05 3.4 -3.2L2.35 -3.1Q2.9 -3.9 3.7 -4.15L3 -4.15L2.1 -4.3Q1.85 -4.3 1.75 -4.6L1.75 -4.85L1.8 -5L2 -5.5L2.5 -5.95L3 -6.2Q2.45 -6.1 2.3 -6.4L2.35 -6.65L2.3 -6.65L1.95 -6.75Q2 -7.45 2.55 -7.85L2.65 -8.1Q2.55 -8.55 1.95 -8.45L0.4 -8.6L0.35 -8.8L0.35 -9.25L1.05 -9.35L1.7 -9.45M3 -6.2L3.45 -6.6M3.4 -3.2L3.45 -3.2L3.7 -3.25L3.4 -3.2M6.6 0.15L7.65 1.25L8.05 1.8L8.7 1.8L8.9 1.95L8.25 2L8.05 1.8L6.8 1.75L6.55 1.65L4.35 1.6L4.1 1.55L4.05 1.4L3.1 1.3L2.8 1.55L2.55 1.85L2.8 1.8L3.35 1.75L4.7 1.8L4.85 1.85L6.25 2.7Q6.95 3.25 7.85 3.1L8.2 3.05L8.35 3Q8.55 2.55 9.05 2.3L9.8 1.65L10.05 1.4L10.3 1.05L9.5 0.75M3.45 0.2L5.55 0.15L6.6 0.15M2.1 0.2L1.6 0.2Q1.1 0.3 0.7 0.55L0.35 0.75L0.7 0.9L2 0.9L2.8 0.7L2.45 0.85L2 0.9L1.75 1.05L1.4 1.4L3.1 1.3Q3.55 0.95 3.45 0.35L3.45 0.2M-1.05 2.15L-0.15 1.55Q0.3 1.2 0.9 1.25L0.7 1.6L0.3 2L-0.05 2.3L0.2 2.3L0.9 2.2L1.75 2L2.45 1.85L2.55 1.85L2.5 2.1L2.35 2.35L1.4 3.35L1.05 3.8Q0.7 4.1 0.5 4.5L0.35 4.65L-0.7 5.2Q-0.7 5.55 -0.15 5.5L0.9 5.35L1.55 5.2L1.75 5.05L2.1 4.85M0 3.05L-2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.7 5.2L-0.15 4.5L0.5 3.95L0.9 3.7Q1.1 3.4 1.4 3.35L0.55 2.9L0 3.05M-7 5.75L-5.35 6.25L-4.65 6.65L-4.5 6.75L-4.15 6.95L-4.05 6.95L-3.9 7L-3.8 7Q-3.7 7.1 -3.75 7.15L-3.55 7.55L-3.45 7.55L-2.2 7.55L0.2 7.15L0.2 7.3L0.75 7L1.25 6.6L0.35 6.65Q-0.05 6.75 -0.15 6.45L-0.05 6.45Q0.6 5.7 1.55 5.2M0.2 7.3L0 7.5L-0.6 7.85L-0.5 7.65L0.05 7.3L0 7.3Q-0.95 7.35 -1.2 8.2L-0.75 8.2L-0.2 8.2L0.7 8.2L1.05 8.1L1.4 7.9L2 7.55L3.8 6.6L1.6 6.6L1.25 6.6M0.2 7.3L0.05 7.3M-6.4 5.35L-6.2 5.35L-6.55 5.3L-6.4 5.35M-5.15 5.4L-6.2 5.35L-5.35 5.4L-5.15 5.4L-4.5 5.4"]]]]},
+      rightClouds: {nz:false, layers:[[[["#a7d0fa","M-0.35 -11.45L-0.15 -11.6L0.75 -11.6L1.95 -11.65L2.45 -11.6L3.45 -11.6L3.1 -11.55L-0.35 -11.45ZM-1.4 -6.25L0 -6.45L1.75 -6.4L2.3 -6.4Q2.45 -6.1 3 -6.2L2.5 -5.95L2 -5.5L1.8 -5L1.25 -5.05Q1.1 -5.05 0.95 -5.2L0.9 -5.35L1.4 -5.75Q1.85 -5.85 2.1 -6.05L1.75 -6.05L-1.55 -6.25L-1.4 -6.25ZM-5.7 -6.95L-6.6 -6.95L-6.05 -7.1L-4.3 -7.3Q-4.25 -6.95 -4.65 -7L-5.55 -6.95L-5.7 -6.95ZM-6.65 -6.95L-7.45 -6.95L-7.3 -6.95L-6.65 -6.95ZM-0.2 8.2L-0.2 8.35L-0.3 8.7L-0.75 9.1L-1.2 9.35L-2.2 9.5L-2.3 9.5L-3.45 9.5L-3.95 9.3Q-4.3 9.1 -4.3 8.7L-4.3 8.55L-4.5 8.55Q-5.9 8.7 -6.95 8L-7.55 7.45L-7.85 6.95L-8.35 5.6L-8.2 5.6L-7 5.75L-5.35 6.25L-4.65 6.65L-4.5 6.75L-4.15 6.95L-4.05 6.95L-3.9 7L-3.8 7Q-3.7 7.1 -3.75 7.15L-3.55 7.55L-3.45 7.55L-2.2 7.55L0.2 7.15L0.2 7.3L0 7.3Q-0.95 7.35 -1.2 8.2L-0.75 8.2L-0.2 8.2ZM2.35 12.3L0 12.5L-1.8 12.45L-2.45 12.3L-2.35 12.3Q-0.05 12.15 2.35 12.3ZM-6.6 3.45L-6.4 3.7L-6.4 3.8L-6.2 4.15L-6.05 4.5L-6.25 4.6L-6.4 4.65L-7.3 4.85L-8 4.95L-8.25 5.15L-8.35 5.3L-8.4 5.3L-8.45 5.3L-8.75 5.4L-9.05 5.2L-9.3 5Q-9.6 4.6 -9.5 4.05L-9.45 3.45L-9.25 3L-8.6 2.35L-8.45 2.1Q-8.25 1.85 -8 1.95Q-7.1 2.3 -6.6 3.45ZM5.3 -6.3L5.2 -6.4Q5.6 -6.2 5.95 -6.05L5.4 -6.05L5.2 -6.05L5.3 -6.3Z"],["#adc6fc","M5.2 -6.4L5.3 -6.3L5.2 -6.05L5.15 -5.95L4.15 -5.35L3.75 -5L1.8 -5L2 -5.5L2.5 -5.95L3 -6.2Q2.45 -6.1 2.3 -6.4L2.35 -6.65L2.3 -6.65L1.95 -6.75Q2 -7.45 2.55 -7.85L2.65 -8.1Q2.55 -8.55 1.95 -8.45L0.4 -8.6L0.35 -8.8L0.35 -9.25L1.05 -9.35L1.7 -9.45L1.05 -9.3L0.7 -9.15Q1.25 -8.75 2.1 -8.55L3.1 -8.25L4.05 -8L4.35 -7.8Q4.1 -7.5 3.45 -7.3L3 -7.1Q3.55 -7.1 3 -7L2.8 -6.95L2.35 -6.65L4.5 -6.6L5.05 -6.55L5.2 -6.4ZM4.05 -10.2L1.75 -9.5L2.1 -9.7Q3.2 -10.35 4.35 -10.4L4.05 -10.2ZM5.05 -1.55Q5.35 -1.55 5.05 -1.25L5 -1.1L4.95 -1.4L5.05 -1.55ZM9.05 0.55L8.2 0.4L7.85 0.35L7.5 0.35L7.55 0.2L8 0.3L8.55 0.4L9.05 0.55ZM-0.75 8.2Q-0.7 7.9 -0.35 8L-0.2 8.2L-0.75 8.2ZM-8.35 5.3L-8.25 5.15L-8 4.95L-7.3 4.85L-6.4 4.65L-6.25 4.6L-6.05 4.5Q-5.95 4.85 -6.1 5.2L-6.2 5.35L-6.25 5.4L-6.45 5.6L-7 5.75L-8.2 5.6L-8.35 5.6L-8.45 5.6L-8.8 5.55L-8.75 5.4L-8.45 5.3L-8.4 5.3L-8.35 5.3ZM-3.55 7.55L-3.75 7.15L-3.55 7.5L-3.55 7.55ZM-4.05 6.95L-3.9 6.95L-3.9 7L-4.05 6.95Z"]],[[1.0,"#ffffff","M5.95 -6.05L7.15 -6.4L7.8 -6.25L7.85 -5.9L7.85 -5.55M5.2 -6.05L5.4 -6.05L5.95 -6.05Q5.6 -6.2 5.2 -6.4M2.3 -6.4L3.45 -6.4L5.1 -6.4L5.2 -6.4M-0.35 -11.45L-0.15 -11.6L0.75 -11.6L1.95 -11.65L2.45 -11.6L3.45 -11.6L3.1 -11.55L-0.35 -11.45L-1.75 -11.45Q-1.55 -11.3 -1.4 -11.3L3.45 -10.75L2.8 -10.75L1.95 -10.85L0.7 -10.95L-2.45 -11.1M0.75 -11.6L2.45 -11.6M-1.4 -6.25L0 -6.45L1.75 -6.4L2.3 -6.4M1.8 -5L3.75 -5M5.2 -6.05L4.5 -5.95Q4.05 -5.9 4.05 -6.25L4.15 -6.3L5.1 -6.4M1.8 -5L1.25 -5.05Q1.1 -5.05 0.95 -5.2L0.9 -5.35L1.4 -5.75Q1.85 -5.85 2.1 -6.05L1.75 -6.05L-1.55 -6.25L-1.4 -6.25Q-2.45 -6.75 -3.25 -6.75L-4.6 -6.75L-5.9 -6.75L-6.4 -6.75Q-6.05 -6.8 -5.7 -6.95L-6.6 -6.95L-6.65 -6.95L-7.45 -6.95L-7.3 -6.95L-6.65 -6.95M7.55 0.2Q7.7 -0.6 8.35 -0.85L8 -1.1L6.95 -0.95L6.45 -0.85L6.25 -0.85Q6.3 -1.3 6.95 -1.3L8 -1.4Q9.05 -1.6 9.95 -2.1L9.85 -1.95L10.4 -1.8L11.8 -2.1M9.05 0.55L8.2 0.4L7.85 0.35L7.5 0.35L7.55 0.2M9.05 0.55Q9.3 0.6 9.5 0.75M-0.75 9.1L-0.15 9.65L0.55 9.85L1.6 9.95L2.1 9.95M-3.55 7.55L-3.6 8.05Q-3.25 8.1 -3.1 8.7Q-2.9 9.5 -3.6 9.35L-3.95 9.3L-3.45 9.5L-2.3 9.5L-2.45 9.35L-2.35 9.05L-2.15 8.8Q-1.65 8.55 -1.6 8.9L-1.6 9.1L-2.3 9.5L-2.2 9.5L-1.2 9.35L-0.75 9.1L-0.85 8.35L-0.75 8.2Q-0.7 7.9 -0.35 8L-0.2 8.2L-0.2 8.35L-0.3 8.7L-0.75 9.1M-2.45 12.3L-2.35 12.3Q-0.05 12.15 2.35 12.3M-6.6 -6.95L-6.05 -7.1L-4.3 -7.3Q-4.25 -6.95 -4.65 -7L-5.55 -6.95L-5.7 -6.95M-6.6 3.45Q-7.1 2.3 -8 1.95Q-8.25 1.85 -8.45 2.1L-8.6 2.35L-8.35 2.35L-8 2.45Q-7.45 2.55 -7.15 3.05L-6.6 3.45L-6.4 3.7L-5.7 3.8M-6.4 4.65L-6.4 4.35L-7.1 4.3L-7.35 4.1Q-7.55 3.75 -7.3 3.7L-6.65 3.7L-6.8 3.55L-7.15 3.1L-7.15 3.05Q-7.65 2.8 -8.1 2.7Q-8.55 2.65 -8.75 2.9L-8.75 3.45L-8.4 5.2L-8.35 5.3M-6.05 4.5L-6.2 4.15L-6.4 3.8Q-6.25 4.15 -6.4 4.35Q-6.4 3.95 -6.65 3.7L-6.45 3.7L-6.6 3.45M-8.4 5.3L-8.4 5.2L-8.75 4.95Q-9.1 4.45 -8.95 3.8L-8.9 3.35L-8.75 2.9L-8.6 2.35L-9.25 3L-9.45 3.45L-9.5 4.05Q-9.6 4.6 -9.3 5L-9.05 5.2L-8.75 5.4M-8.35 5.3L-7.45 5.55L-6.55 5.3L-6.4 4.65M-8.75 5.4L-8.35 5.6L-8.4 5.3M-7 5.75L-8.2 5.6L-8.35 5.6L-7.85 6.95L-7.55 7.45L-6.95 8Q-5.9 8.7 -4.5 8.55L-4.3 8.55L-4.35 7.5L-4.25 7L-4.15 6.95M-7 5.75L-6.45 5.6L-6.25 5.4L-6.2 5.35L-6.1 5.2Q-5.95 4.85 -6.05 4.5M-6.4 3.7L-6.45 3.7L-6.4 3.8L-6.4 3.7M-3.75 7.15L-3.8 7.15L-3.8 7.3Q-3.7 7.85 -4.15 7.85L-4.25 7.85L-4.3 7.5L-4.25 7L-4.1 7L-4.15 6.95M-4.05 6.95L-3.9 6.95L-3.9 7M-3.75 7.15L-3.55 7.5L-3.55 7.55M-3.9 7L-3.8 7.15L-3.95 7.1L-4.1 7L-4.05 6.95M-4.3 8.55L-4.3 8.7Q-4.3 9.1 -3.95 9.3L-4.25 8.55L-4.3 8.55M-4.25 8.55L-4.25 8.35Q-4.15 8 -3.8 8L-3.6 8.05L-4.25 8.55"]]]]},
+      cold: {nz:false, layers:[[[["#ffffff","M0.2 -12.5Q5.2 -12.45 8.8 -8.9Q12.5 -5.15 12.5 0Q12.5 5.2 8.8 8.8Q6.55 11.1 3.7 12L2.35 12.3L0.2 12.5L0 12.5L-1.05 12.5L-2.45 12.3Q-6.1 11.6 -8.9 8.8Q-12.5 5.2 -12.5 0Q-12.5 -5.15 -8.9 -8.9Q-5.2 -12.5 0 -12.5L0.2 -12.5ZM5.2 -6.05L5.3 -6.3L5.2 -6.4L5.05 -6.55L4.5 -6.6L3.45 -6.6L2.35 -6.65L2.3 -6.4Q2.45 -6.1 3 -6.2L2.5 -5.95L2 -5.5L1.8 -5L1.75 -4.85L1.75 -4.6Q1.85 -4.3 2.1 -4.3L3 -4.15L3.7 -4.15Q2.9 -3.9 2.35 -3.1L3.4 -3.2Q2.85 -3.05 2.5 -2.7L2 -2.15L1.95 -1.85Q1.8 -1.4 2.3 -1.55L1.1 -0.75L0.55 -0.4L0.2 -0.15L-0.15 0Q-0.4 0.2 -0.35 0.55L0.2 0.55L0.35 0.55Q0.15 0.55 0.35 0.75L0.2 0.75L-1.05 1.3L-2.5 2L-3.55 2.7L-3.8 3L-3.45 2.9L-2.55 2.7L-1.05 2.15Q-0.95 2.45 -0.5 2.35L-0.05 2.3L-0.2 2.35L-0.85 2.8Q-1.95 3.55 -2.5 4.65L-2.2 4.7L-1.65 5L-1.4 5.05Q-2.2 5.2 -2.9 5.5L-3.4 5.5Q-3.4 5.4 -3.6 5.4L-4.5 5.4L-3.9 5.6L-3.25 5.85L-2.55 6.05L-2.1 6.05L-1.95 5.9Q-1.8 5.6 -1.4 5.6L-1.05 5.5L-0.15 4.5L0.2 4.15L0.5 3.95L0.9 3.7Q1.1 3.4 1.4 3.35L2.35 2.35L2.5 2.1L2.55 1.85L2.8 1.55L3.1 1.3L4.05 1.4L4.1 1.55L4.35 1.6L6.55 1.65L6.8 1.75L8.05 1.8L7.65 1.25L6.6 0.15L5.75 -0.5L5.2 -0.85L5 -1.1L4.7 -1.05Q3.95 -0.85 3.6 -0.15L3.55 0L3.45 0.2L3.1 0.2L2.1 0.2L1.95 0.15L1.6 0.2Q1.25 0.15 1.4 -0.35Q1.65 -1.1 2.35 -1.3L3.2 -1.65L3.8 -1.85L6.25 -2.45Q6.65 -2.5 6.65 -2.9Q6.65 -3.25 6.25 -3.2L5.75 -3.1L4.7 -3.2L4.35 -3.25L6.4 -4.35L6.8 -4.65L7.15 -5L4.05 -4.7L3.7 -4.65L3.75 -5L4.15 -5.35L5.15 -5.95L5.2 -6.05ZM4.95 -1.4L5 -1.1L5.05 -1.25Q5.35 -1.55 5.05 -1.55L4.95 -1.4ZM8.7 1.8L8.05 1.8L8.25 2L8.9 1.95L8.7 1.8ZM2.3 -6.65L2.35 -6.65L2.8 -6.95L3 -7Q3.55 -7.1 3 -7.1L3.45 -7.3Q4.1 -7.5 4.35 -7.8L4.05 -8L3.1 -8.25L2.1 -8.55Q1.25 -8.75 0.7 -9.15L1.05 -9.3L1.7 -9.45L1.05 -9.35L0.35 -9.25L0.35 -8.8L0.4 -8.6L1.95 -8.45Q2.55 -8.55 2.65 -8.1L2.55 -7.85Q2 -7.45 1.95 -6.75L2.3 -6.65ZM1.75 -9.5L4.05 -10.2L4.35 -10.4Q3.2 -10.35 2.1 -9.7L1.75 -9.5ZM0.75 7L0.2 7.3L0 7.3Q-0.95 7.35 -1.2 8.2L-0.75 8.2L-0.2 8.2L0.2 8.2L0.7 8.2L1.05 8.1L1.4 7.9L2 7.55L3.8 6.6L1.6 6.6L1.25 6.6L0.75 7ZM-8.75 5.4L-8.8 5.55Q-8.6 5.7 -8.55 5.35L-8.75 5.4ZM-5.35 5.4L-5.15 5.4L-6.2 5.35L-5.35 5.4ZM-6.4 5.35L-6.2 5.35L-6.55 5.3L-6.4 5.35Z"]],[]],[[["#d8d8d8","M4.5 -5.5L4.8 -4.8L4.85 -4.45L5.05 -3.7L5.15 -3.1L5.2 -2.15L5.15 -1.55L5 -1.2L5 -1.1L4.15 0.2L3.2 1.25L3.1 1.3L2.65 1.75L2.55 1.85L2.5 1.85L1.25 3.2L0.7 3.9L0.2 4.7L0.05 5.4L0.05 5.5L0.2 5.7L0.35 5.85L0.4 5.95L0.55 6.45L0.55 6.65L0.35 7.2L0.2 7.35L0.05 7.5L0 7.5L-0.5 7.7L-0.7 7.8L-0.95 7.85L-1.8 7.85L-3.4 7.55L-3.7 7.45L-4.1 6.95L-4.15 6.8L-4.15 5.75L-4.15 5.55L-4.15 5.4L-3.9 4.6L-2.8 2.8L-2 1.8L-1.75 1.45L-0.7 0.2L0 -0.6L0.2 -0.9Q1.2 -2.2 1.4 -3L1.55 -5.6Q1.65 -6.4 2.15 -6.65L2.5 -6.8L3.7 -6.6L4.5 -5.5Z"]],[[1.0,"#d8d8d8","M3.7 -6.6L4.5 -6.6L5.05 -6.55L5.2 -6.4L5.3 -6.3L5.2 -6.05L5.15 -5.95L4.5 -5.5M4.8 -4.8L5.9 -4.95L7.15 -5L6.8 -4.65L6.4 -4.35L5.9 -4.15L5.05 -3.7M5.15 -3.1L5.75 -3.1L5.9 -3.1L6.25 -3.2Q6.65 -3.25 6.65 -2.9Q6.65 -2.5 6.25 -2.45L5.9 -2.3L5.2 -2.15M5.15 -1.55L5.05 -1.25L5 -1.2M5 -1.1L5.2 -0.85L5.75 -0.5L5.9 -0.35L6.6 0.15L7.55 0.2L8 0.3L8.55 0.4L9.05 0.55M4.35 -10.4Q3.2 -10.35 2.1 -9.7L1.75 -9.5L4.05 -10.2L4.35 -10.4M2.15 -6.65Q2.1 -6.65 1.95 -6.75Q2 -7.45 2.55 -7.85L2.65 -8.1Q2.55 -8.55 1.95 -8.45L0.4 -8.6L0.35 -8.8L0.35 -9.25L1.05 -9.35L1.7 -9.45L1.75 -9.5M2.5 -6.8L2.8 -6.95L3 -7Q3.55 -7.1 3 -7.1L3.45 -7.3Q4.1 -7.5 4.35 -7.8L4.05 -8L3.1 -8.25L2.1 -8.55Q1.25 -8.75 0.7 -9.15L1.05 -9.3L1.7 -9.45M8.05 1.8L8.25 2L8.9 1.95L8.7 1.8L8.05 1.8L6.8 1.75L6.55 1.65L5.9 1.65L4.35 1.6L4.1 1.55L4.05 1.4L3.1 1.3M2.55 1.85L2.8 1.8L3.35 1.75L4.7 1.8L4.85 1.85L5.9 2.5L6.25 2.7Q6.95 3.25 7.85 3.1L8.2 3.05L8.35 3Q8.55 2.55 9.05 2.3L9.8 1.65L10.05 1.4L10.3 1.05L9.5 0.75M8.05 1.8L7.65 1.25L6.6 0.15L5.9 0.15L5.55 0.15L4.15 0.2M3.2 1.25L3.1 1.3M1.25 3.2L1.4 3.35L2.35 2.35L2.5 2.1L2.55 1.85L2.5 1.85M0.7 3.9L0.9 3.7Q1.1 3.4 1.4 3.35L1.05 3.8Q0.7 4.1 0.5 4.5L0.35 4.65L0.2 4.7M0.2 5.7Q0.55 5.4 0.9 5.35L1.55 5.2L1.75 5.05L2.1 4.85M0.4 5.95L1.55 5.2M0.55 6.65L1.25 6.6L1.6 6.6L3.8 6.6L2 7.55L1.4 7.9L1.05 8.1L0.7 8.2L0.2 8.2M0 7.5L-0.6 7.85L-0.5 7.7M-0.95 7.85L-1.2 8.2L-0.75 8.2L-0.7 8.2L-0.2 8.2M0.35 7.2L0.75 7L1.25 6.6M-2.8 2.8L-3.45 2.9L-3.8 3L-3.55 2.7L-2.5 2L-2 1.8M-4.15 5.55Q-4.35 5.4 -4.5 5.4L-5.15 5.4L-5.35 5.4L-6.2 5.35L-6.4 5.35L-6.55 5.3L-6.2 5.35L-5.15 5.4M-4.15 5.4L-4.5 5.4M-3.9 4.6L-5.9 4.5L-6.05 4.5L-6.25 4.6L-6.4 4.65L-7.3 4.85L-8 4.95L-8.25 5.15L-8.35 5.3L-8.45 5.3L-8.55 5.35Q-8.6 5.7 -8.8 5.55L-8.75 5.4L-8.55 5.35M-3.4 7.55L-3.55 7.55L-3.7 7.45M-4.1 6.95L-4.15 6.95L-4.5 6.75L-4.65 6.65L-5.35 6.25L-7 5.75"]]]]},
+      zoneArrow: {nz:false, layers:[[[["#6080d0","M0 -1.6L5.95 -1.6L4.7 -4.8L13.35 0L4.7 4.8L5.95 1.6L0 1.6L0 -1.6Z"]],[]]]},
+      hrTempArrow: {nz:false, layers:[[[["#666666","M20.1 143.95L20.1 146.75L25.15 146.75L25.15 152.2L20.1 152.2L20.1 154.95L14.35 149.45L20.1 143.95Z"]],[]]]},
+      hrBox: {nz:false, layers:[[[["#ffffff","M130 139.95L0 139.95L0 0L130 0L130 139.95Z"],["#666666","M-15.65 31.6L-10.15 25.8L-4.65 31.6L-7.4 31.6L-7.4 36.6L-12.85 36.6L-12.85 31.6L-15.65 31.6Z"]],[]]]}
+    };
+
+    /* ---------------- shzStars.dat: zlib + AMF3, as ByteArray.uncompress() / readObject() read it ---------------- */
+    function readAMF3(bytes) {
+      var p = 0, strs = [], objs = [], traits = [], dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      function u8() { return bytes[p++]; }
+      function u29() { var v = 0, c; for (var i = 0; i < 3; i++) { c = u8(); v = (v << 7) | (c & 0x7f); if (!(c & 0x80)) return v; } return (v << 8) | u8(); }
+      function str() {
+        var r = u29(); if (!(r & 1)) return strs[r >> 1];
+        var n = r >> 1; if (!n) return "";
+        var s = new TextDecoder().decode(bytes.subarray(p, p + n)); p += n; strs.push(s); return s;
+      }
+      function val() {
+        var tp = u8(), r, n, o, i, k;
+        switch (tp) {
+          case 0: case 1: return null;
+          case 2: return false;
+          case 3: return true;
+          case 4: r = u29(); return r & 0x10000000 ? r - 0x20000000 : r;
+          case 5: r = dv.getFloat64(p); p += 8; return r;
+          case 6: return str();
+          case 9:
+            r = u29(); if (!(r & 1)) return objs[r >> 1];
+            n = r >> 1; o = []; objs.push(o);
+            while ((k = str()) !== "") o[k] = val();
+            for (i = 0; i < n; i++) o.push(val());
+            return o;
+          case 10:
+            r = u29(); if (!(r & 1)) return objs[r >> 1];
+            var tr;
+            if (!(r & 2)) tr = traits[r >> 2];
+            else { tr = { dyn: !!(r & 8), names: [] }; str(); for (i = 0; i < r >> 4; i++) tr.names.push(str()); traits.push(tr); }
+            o = {}; objs.push(o);
+            tr.names.forEach(function (nm) { o[nm] = val(); });
+            if (tr.dyn) while ((k = str()) !== "") o[k] = val();
+            return o;
+          case 12:
+            r = u29(); if (!(r & 1)) return objs[r >> 1];
+            n = r >> 1; o = bytes.subarray(p, p + n); p += n; objs.push(o); return o;
+          default: throw new Error("AMF3 type " + tp);
+        }
+      }
+      return val();
     }
-    S.refreshers.push(upd);
+    var stars = null;
+    window.__simBusy = (window.__simBusy || 0) + 1;   // (lets the thumbnail capturer wait for the data)
+    fetch("../shzStars.dat").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+      var ds = new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("deflate")));
+      return ds.arrayBuffer();
+    }).then(function (buf) {
+      var list = readAMF3(new Uint8Array(buf));
+      stars = list.map(function (st) {                 // doneLoadingData
+        var raw = st.rawDataTable, dv = new DataView(raw.buffer, raw.byteOffset, raw.byteLength), rows = [];
+        for (var i = 0; i < raw.byteLength / 20; i++) {
+          rows.push({ time: dv.getFloat32(20 * i), mass: dv.getFloat32(20 * i + 4), logLum: dv.getFloat32(20 * i + 8),
+            logRadius: dv.getFloat32(20 * i + 12), logTemp: dv.getFloat32(20 * i + 16), shzInner: 1, shzOuter: 1, shzTemp: 1, distance: 1 });
+        }
+        return { mass: st.mass, timespan: st.timespan, epochsList: st.epochsList, dataTable: rows };
+      });
+      massCtl.input.max = stars.length - 1;
+      reset();
+      window.__simBusy--;
+    }).catch(function (err) { loadError = String(err); window.__simBusy--; S.requestDraw(); });
+    var loadError = null;
 
-    /* ===================================================================== */
-    var VIEW = { x: 12, y: 28, w: 556, h: 332 };
-    var HR = { x: 580, y: 28, w: 168, h: 332 };
-    var TL = { x: 12, y: 372, w: 736, h: 156 };
-    S.onDraw(function () { var ctx = S.ctx; S.clear(); drawView(ctx); drawHR(ctx); drawTimeline(ctx); });
-
-    function niceStep(span) { var raw = span / 5, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
-
-    function drawView(ctx) {
-      panel(ctx, VIEW, I18N.t("hz.viewTitle"));
-      ctx.save(); roundRect(ctx, VIEW.x + 1, VIEW.y + 1, VIEW.w - 2, VIEW.h - 2, 11); ctx.clip();
-      ctx.fillStyle = "#04060d"; ctx.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
-      var cx = VIEW.x + VIEW.w / 2, cy = VIEW.y + VIEW.h / 2 + 6;
-      var st = cur(), inn = hzInner(st.L), out = hzOuter(st.L);
-      var fit = Math.max(out * 1.18, P.dist * 1.12, st.R * RSUN_AU * 1.3, 0.3);
-      var sc = Math.min(VIEW.w * 0.46, VIEW.h * 0.44) / fit;     // px per AU
-
-      // scale grid
-      if (optGrid.value()) {
-        var stp = niceStep(fit), dl = 0.707;            // label along the lower-left diagonal so rings never crowd
-        ctx.strokeStyle = "rgba(120,140,190,0.16)"; ctx.fillStyle = "rgba(150,170,210,0.5)"; ctx.font = "9px system-ui"; ctx.textAlign = "right"; ctx.lineWidth = 1;
-        for (var rr = stp; rr <= fit; rr += stp) { ctx.beginPath(); ctx.arc(cx, cy, rr * sc, 0, 2 * Math.PI); ctx.stroke(); ctx.fillText(rr.toFixed(rr < 1 ? 2 : (rr < 10 ? 1 : 0)) + " AU", cx - rr * sc * dl - 2, cy + rr * sc * dl + 3); }
+    /* ---------------- the model (MainTimeline) ---------------- */
+    var INNER = 0.95, OUTER = 1.37, MIN_PLANET_DIST = 1.5, D0_MIN = 0.01, D0_MAX = 500;
+    var SOLAR = [["Mercury", 0.387], ["Venus", 0.723], ["Earth", 1], ["Mars", 1.524], ["Jupiter", 5.203], ["Saturn", 9.54], ["Uranus", 19.18], ["Neptune", 30.06], ["Pluto", 39.44]]
+      .map(function (p) { return { label: p[0], a: p[1], e: 0 }; });
+    var SYSTEMS = [
+      { name: "(none selected)", mass: 0, planets: [] },
+      { name: "Gliese 581", mass: 0.31, planets: [["e", 0, 0.03], ["b", 0, 0.041], ["c", 0.16, 0.073], ["d", 0.2, 0.22]] },
+      { name: "55 Cancri A", mass: 0.95, planets: [["e", 0.2637, 0.038], ["b", 0.0159, 0.115], ["c", 0.053, 0.241], ["f", 0.0002, 0.785], ["d", 0.0633, 5.901]] },
+      { name: "51 Pegasi", mass: 1.06, planets: [["b", 0, 0.052]] },
+      { name: "HD 40307", mass: 0.75, planets: [["c", 0, 0.081], ["d", 0, 0.134], ["b", 0, 0.47]] },
+      { name: "HD 189733", mass: 0.8, planets: [["b", 0, 0.03099]] },
+      { name: "HD 93083", mass: 0.7, planets: [["b", 0.14, 0.477]] }
+    ];
+    var star = null, system = null, dist0 = 1, time = 0, running = false, runLast = 0, rate = 12;
+    var statesList = [], tDestroyed = Infinity, tLocked = Infinity, showGrid = false, showSolar = true;
+    var dragDist = null, planetDragX = -1, distIndex = 0, distSet = null;
+    function getData(tm) {                         // getData: rows interpolated in time
+      var tbl = star.dataTable, i = 1;
+      tm = clamp(tm, 0, star.timespan);
+      while (i < tbl.length && !(tm < tbl[i].time)) i++;
+      if (i >= tbl.length) i = tbl.length - 1;
+      var a = tbl[i - 1], b = tbl[i], u = (tm - a.time) / (b.time - a.time), o = { time: tm };
+      ["mass", "logRadius", "logTemp", "logLum", "shzInner", "shzOuter", "shzTemp", "distance"].forEach(function (k) { o[k] = a[k] + u * (b[k] - a[k]); });
+      return o;
+    }
+    function shzTempAt(d, tm) {                    // getSHZTemp (while dragging)
+      var tbl = star.dataTable, i = 1;
+      while (i < tbl.length && !(tm < tbl[i].time)) i++;
+      if (i >= tbl.length) i = tbl.length - 1;
+      var a = tbl[i - 1], b = tbl[i], u = (tm - a.time) / (b.time - a.time);
+      var ta = 1 - (d - a.shzInner) / (a.shzOuter - a.shzInner), tb = 1 - (d - b.shzInner) / (b.shzOuter - b.shzInner);
+      return ta + u * (tb - ta);
+    }
+    function crossing(a, b, k, target) {           // findTimeOfHabitabilityCrossing: 16 bisections
+      var u = 0.5, du = 0.25;
+      if (a.shzTemp > b.shzTemp) du *= -1;
+      for (var i = 0; i < 16; i++) {
+        var d = k / (a.mass + u * (b.mass - a.mass)), inn = a.shzInner + u * (b.shzInner - a.shzInner), out = a.shzOuter + u * (b.shzOuter - a.shzOuter);
+        if (1 - (d - inn) / (out - inn) < target) u += du; else u -= du;
+        du *= 0.5;
       }
-      // habitable-zone annulus (blue ring, like the SWF)
-      ctx.beginPath(); ctx.arc(cx, cy, out * sc, 0, 2 * Math.PI); ctx.arc(cx, cy, inn * sc, 0, 2 * Math.PI, true);
-      ctx.fillStyle = "rgba(96,165,250,0.20)"; ctx.fill("evenodd");
-      ctx.strokeStyle = "rgba(125,185,255,0.6)"; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(cx, cy, inn * sc, 0, 2 * Math.PI); ctx.stroke();
-      ctx.beginPath(); ctx.arc(cx, cy, out * sc, 0, 2 * Math.PI); ctx.stroke();
-      ctx.fillStyle = "rgba(160,205,255,0.95)"; ctx.font = "700 10px system-ui"; ctx.textAlign = "center";
-      if ((out - inn) * sc > 26) ctx.fillText(I18N.t("hz.hzLabel"), cx, cy - (inn + out) / 2 * sc);
-
-      // solar-system reference orbits
-      if (optSolar.value()) {
-        ctx.setLineDash([3, 4]); ctx.strokeStyle = "rgba(140,160,210,0.35)"; ctx.font = "9px system-ui"; ctx.lineWidth = 1; ctx.textAlign = "center";
-        SOLAR.forEach(function (pl, idx) { if (pl.a * sc < VIEW.w * 0.5 && pl.a * sc > 4) { ctx.beginPath(); ctx.arc(cx, cy, pl.a * sc, 0, 2 * Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(cx + pl.a * sc, cy, 2.2, 0, 2 * Math.PI); ctx.fillStyle = "rgba(160,180,220,0.85)"; ctx.fill(); ctx.fillStyle = "rgba(160,180,220,0.7)"; ctx.fillText(pl.n, cx + pl.a * sc, cy + (idx % 2 ? 14 : -6)); } });
-        ctx.setLineDash([]);
+      return a.time + u * (b.time - a.time);
+    }
+    function table1() {                            // completeDataTable1: the zone from √L
+      star.dataTable.forEach(function (r) { var s = Math.sqrt(Math.pow(10, r.logLum)); r.shzInner = s * INNER; r.shzOuter = s * OUTER; });
+      table2();
+    }
+    function destroyedAt(r, d) {                   // inside the star's tidal radius?
+      var R = 696000000 * Math.pow(10, r.logRadius), rho = 1.99e30 * r.mass / (4 * Math.PI * R * R * R / 3);
+      var f = Math.max(2.44 * Math.pow(rho / 5500, 1 / 3), MIN_PLANET_DIST);
+      return d <= 6.685e-12 * R * f;
+    }
+    function table2() {                            // completeDataTable2: distances, states, destruction, locking
+      var tbl = star.dataTable, M0 = star.mass, k = dist0 * M0, destroyed = NaN, i;
+      function stateOf(v) { return v < 0 ? -1 : v > 1 ? 1 : 0; }
+      var r0 = tbl[0], d = k / r0.mass;
+      r0.distance = d; r0.shzTemp = 1 - (d - r0.shzInner) / (r0.shzOuter - r0.shzInner);
+      var last = stateOf(r0.shzTemp);
+      statesList = [{ start: 0, end: star.timespan, state: last }];
+      if (destroyedAt(r0, d)) destroyed = r0.time;
+      for (i = 1; i < tbl.length; i++) {
+        var r = tbl[i]; d = k / r.mass; r.distance = d; r.shzTemp = 1 - (d - r.shzInner) / (r.shzOuter - r.shzInner);
+        var st = stateOf(r.shzTemp);
+        if (isNaN(destroyed) && destroyedAt(r, d)) destroyed = r.time;
+        if (st !== last) {
+          var a = tbl[i - 1], push = function (tm, s) { statesList[statesList.length - 1].end = tm; statesList.push({ start: tm, end: star.timespan, state: s }); };
+          if (last === 0 && st === 1) push(crossing(a, r, k, 1), st);
+          else if (last === 0 && st === -1) push(crossing(a, r, k, 0), st);
+          else if (last === 1 && st === 0) push(crossing(a, r, k, 1), st);
+          else if (last === -1 && st === 0) push(crossing(a, r, k, 0), st);
+          else if (last === 1 && st === -1) { push(crossing(a, r, k, 1), 0); push(crossing(a, r, k, 0), st); }
+          else if (last === -1 && st === 1) { push(crossing(a, r, k, 0), 0); push(crossing(a, r, k, 1), st); }
+          last = st;
+        }
       }
-      // star (true scaled size if a giant, else a visible minimum)
-      var rgb = tempToRGB(st.T), Rpx = Math.max(7, st.R * RSUN_AU * sc);
-      var g = ctx.createRadialGradient(cx, cy, 1, cx, cy, Rpx);
-      g.addColorStop(0, "rgb(" + rgb.map(function (v) { return Math.min(255, v + 60); }).map(Math.round).join(",") + ")");
-      g.addColorStop(0.75, "rgb(" + rgb.map(Math.round).join(",") + ")");
-      g.addColorStop(1, "rgba(" + rgb.map(function (v) { return Math.round(v * 0.4); }).join(",") + ",0.6)");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, Rpx, 0, 2 * Math.PI); ctx.fill();
+      tDestroyed = isNaN(destroyed) ? Infinity : destroyed;
+      var lock = 100 * (TAU / 86400) * 6e24 * Math.pow(149600000000 * dist0, 6) / (6.67e-11 * 2e30 * 2e30 * M0 * M0 * Math.pow(6370000, 3)) / (60 * 60 * 24 * 365 * 1000000);
+      tLocked = isNaN(lock) ? Infinity : lock;
+      if (tLocked * TL.w / star.timespan < 4) tLocked = 0;
+    }
 
-      // planet on its orbit
-      var status = planetStatus(st);
-      ctx.strokeStyle = "rgba(220,225,240,0.45)"; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
-      ctx.beginPath(); ctx.arc(cx, cy, P.dist * sc, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
-      var ang = -0.6, px = cx + P.dist * sc * Math.cos(ang), py = cy + P.dist * sc * Math.sin(ang);
-      if (status.key !== "hz.gone") {
-        ctx.fillStyle = status.col; ctx.beginPath(); ctx.arc(px, py, 5.5, 0, 2 * Math.PI); ctx.fill();
-        ctx.strokeStyle = "#0b1020"; ctx.lineWidth = 1.5; ctx.stroke();
+    /* ---------------- SHZDiagram ---------------- */
+    var DG = { x: 7, y: 37, w: 966, h: 250, starX: 130 };
+    DG.safe = 1.1 * Math.sqrt(DG.h * DG.h / 4 + DG.w * DG.w);
+    DG.dragMinX = DG.starX + 135; DG.dragMaxX = DG.w - 30;
+    DG.zoomMinX = DG.dragMinX + 0.15 * (DG.dragMaxX - DG.dragMinX); DG.zoomMaxX = DG.dragMinX + 0.65 * (DG.dragMaxX - DG.dragMinX);
+    var scale = 353, ease = null, zoomer = null;
+    function colorFromTemp(T) {
+      T = clamp(T, 1000, 40000);
+      var l = Math.log(T) / Math.LN10, l2 = l * l, l3 = l * l2;
+      var r = clamp(22686.34111 - l * 15082.52755 + l2 * 3375.333832 - l3 * 252.4073853, 0, 255);
+      var g = T > 6500 ? 13836.23586 - l * 9069.078214 + l2 * 2015.254756 - l3 * 149.7766966 : -811.6499145 + l * 36.97365953 + l2 * 160.7861677 - l3 * 25.57573664;
+      var b = clamp(-11545.34298 + l * 8529.658165 - l2 * 2150.198586 + l3 * 190.0306573, 0, 255);
+      return ((r >>> 0) << 16) | ((g >>> 0 & 255) << 8) | (b >>> 0);
+    }
+    function niceSpacing(px) {                    // the 15-px minimum spacing rule (scale bar, grid)
+      var m = px / scale, lg = Math.log(m) / Math.LN10, k = Math.ceil(lg), sp, below, mult;
+      if (k - lg > Math.log(2) / Math.LN10) { below = Math.pow(10, k - 1); sp = 5 * below; mult = 2; } else { sp = Math.pow(10, k); below = 0.5 * sp; mult = 5; }
+      return { m: m, sp: sp, below: below, mult: mult };
+    }
+    function drawStar(ctx, radius, temp) {        // SHZDiagramStar.update
+      var col = colorFromTemp(temp), r = Math.max(radius * 0.00465 * scale, 1.2), rc = Math.min(r, DG.safe);
+      var lt = (Math.log(temp) - Math.log(1000)) / (Math.log(40000) - Math.log(1000));
+      var hr = (1.2 + 1.4 * lt) * r, ha = Math.min(0.3 + 0.2 * lt, 0.7);
+      if (rc !== DG.safe) {                        // the halo: a lightened colour fading out
+        var cr = (col >> 16 & 255), cg = (col >> 8 & 255), cb = col & 255;
+        cr = Math.min(255, cr + 0.6 * (255 - cr)); cg = Math.min(255, cg + 0.6 * (255 - cg)); cb = Math.min(255, cb + 0.6 * (255 - cb));
+        var h = Math.min(hr, DG.safe), g = ctx.createRadialGradient(0, 0, 0, 0, 0, hr), stop = Math.max(0, Math.floor(255 / ((1.2 + 1.4 * lt))) - 1) / 255;
+        g.addColorStop(0, "rgba(" + (cr | 0) + "," + (cg | 0) + "," + (cb | 0) + "," + ha + ")");
+        g.addColorStop(Math.min(1, stop), "rgba(" + (cr | 0) + "," + (cg | 0) + "," + (cb | 0) + "," + ha + ")");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, h, 0, TAU); ctx.fill();
+      }
+      var blur = Math.min(2 + 3 * (rc - 2) / (DG.safe - 2), 5);
+      ctx.save(); ctx.filter = "blur(" + Math.max(0, blur / 2) + "px)";
+      ctx.fillStyle = hex(col); ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+      var g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      g2.addColorStop(0, "rgba(255,255,255,0.95)"); g2.addColorStop(170 / 255, "rgba(255,255,255,0.8)"); g2.addColorStop(1, "rgba(255,255,255,0.6)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(0, 0, rc, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    function orbitLabel(ctx, o, k, baseY, color) {  // SHZDiagramRefOrbits: the label where the orbit meets the base line, or along the curve
+      var bx = 200, cxk = bx / 4, KX1 = 2 * cxk, KX2 = bx - 2 * cxk, KY1 = 2 * baseY, KY2 = baseY - 2 * baseY, baseR = Math.sqrt(bx * bx + baseY * baseY);
+      var R = scale * o.a, q = baseY / (R * k), x, y, sc = 1;
+      var curve = q > 1 || q < -1;
+      if (!curve) { x = R * (-o.e + Math.cos(Math.asin(q))); curve = x < bx; y = baseY; }
+      if (curve) {
+        var u = 0.5, du = 0.5;
+        for (var i = 0; i < 12; i++) {
+          du *= 0.5;
+          var lx = u * (KX1 + u * KX2), ly = u * (KY1 + u * KY2), qq = ly / (R * k);
+          if (qq > 1) { u -= du; continue; }
+          if (qq < -1) qq = -1;
+          if (R * (-o.e + Math.cos(Math.asin(qq))) > lx) u += du; else u -= du;
+        }
+        x = u * (KX1 + u * KX2); y = u * (KY1 + u * KY2); sc = Math.pow(Math.sqrt(x * x + y * y) / baseR, 0.4);
+      }
+      ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      font(ctx, 11, "bold"); ctx.fillStyle = color;
+      var w = FlashText.width(ctx, o.label);
+      FlashText.fill(ctx, o.label, 2, 2 + ASC * 11, "left");
+      ctx.restore();
+    }
+    function drawRefOrbits(ctx, list, color, alpha, hiColor, hiIdx, baseY) {
+      var n = 12, st = TAU / n, c = 1 / Math.cos(st / 2);
+      list.forEach(function (o, idx) {
+        var A = o.a * scale; if (!(A < DG.safe)) return;
+        var b = A * Math.sqrt(1 - o.e * o.e), off = o.e * A, hi = idx === hiIdx;
+        ctx.strokeStyle = hex(hi ? hiColor : color, 0.8); ctx.lineWidth = hi ? 1.5 : 1; ctx.beginPath();
+        ctx.moveTo(-off + A * Math.cos(n * st), b * Math.sin(n * st));
+        for (var i = 0, ca = st / 2, aa = st; i < n; i++, ca += st, aa += st) ctx.quadraticCurveTo(-off + A * c * Math.cos(ca), b * c * Math.sin(ca), -off + A * Math.cos(aa), b * Math.sin(aa));
+        ctx.stroke();
+        orbitLabel(ctx, o, Math.sqrt(1 - o.e * o.e), baseY, hex(hi ? hiColor : color));
+      });
+    }
+    function drawZone(ctx, inner, outer) {        // SHZDiagramZone
+      if (inner * scale > DG.safe) return;
+      ctx.fillStyle = "rgba(96,128,208,0.5)"; ctx.beginPath();
+      ctx.arc(0, 0, outer * scale, 0, TAU); ctx.arc(0, 0, inner * scale, 0, TAU, true); ctx.fill("evenodd");
+      ctx.strokeStyle = "rgba(96,128,208,0.75)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(0, 0, outer * scale, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, inner * scale, 0, TAU); ctx.stroke();
+    }
+    function drawZoneLabel(ctx, inner, outer) {
+      var bx = 200, by = -(DG.h / 2 - 35), br = Math.sqrt(bx * bx + by * by), cx = bx / 4, KX1 = 2 * cx, KX2 = bx - 2 * cx, KY1 = 2 * by, KY2 = by - 2 * by;
+      font(ctx, 10, "bold"); var lw = FlashText.width(ctx, t("hz.zone")) + 4, lh = 12.16 + 4;
+      var mid = (inner + (outer - inner) / 2) * scale, lx, ly;
+      if (mid < br) {
+        var u = 0.5, du = 0.25, x = 0, y = 0;
+        for (var i = 0; i < 12; i++) { x = u * (KX1 + u * KX2); y = u * (KY1 + u * KY2); if (Math.sqrt(x * x + y * y) > mid) u -= du; else u += du; du *= 0.5; }
+        lx = x - lw / 2; ly = y - (y - by) / 2.3;
+      } else { lx = Math.sqrt(mid * mid - by * by) - lw / 2; ly = by; lx = Math.min(lx, DG.w - DG.starX - lw - 27); }
+      ctx.fillStyle = "#6080d0"; FlashText.fill(ctx, t("hz.zone"), lx + 2, ly + 2 + ASC * 10, "left");
+      var ax, ay, rot = null;
+      if (inner * scale > DG.w - DG.starX - 7) { ax = lx + lw + 5; ay = ly + lh / 2; rot = 0; }
+      else if (outer * scale < 22) { ax = lx + lw / 2; ay = ly + lh - 2; rot = Math.PI + Math.atan2(ay, ax); }
+      if (rot !== null) { ctx.save(); ctx.translate(ax, ay); ctx.rotate(rot); SwfShape.draw(ctx, ART.zoneArrow); ctx.restore(); }
+    }
+    function drawPlanet(ctx, x, d, now) {
+      var st = (time >= tDestroyed) ? "destroyed" : (time >= tLocked) ? "tidallyLocked" : now < 0 ? "tooCold" : now > 1 ? "tooHot" : "justRight";
+      ctx.save(); ctx.translate(x, DG.h / 2);
+      if (x < DG.dragMinX) { var k = Math.pow((x - DG.starX) / (DG.dragMinX - DG.starX), 0.4); ctx.scale(k, k); }
+      SwfShape.draw(ctx, ART.planetBase);
+      if (st === "destroyed") SwfShape.draw(ctx, ART.destroyed);
+      else if (st === "tidallyLocked") { SwfShape.draw(ctx, ART.locked); ctx.save(); ctx.clip(SwfShape.path(ART.planetMask)); SwfShape.draw(ctx, ART.lockedNight); ctx.restore(); }
+      else if (st === "tooHot") SwfShape.draw(ctx, ART.hot);
+      else if (st === "justRight") { SwfShape.draw(ctx, ART.right); ctx.save(); ctx.clip(SwfShape.path(ART.planetMask)); SwfShape.draw(ctx, ART.rightClouds); ctx.restore(); }
+      else SwfShape.draw(ctx, ART.cold);
+      SwfShape.draw(ctx, ART.planetRim);
+      ctx.restore();
+    }
+    function drawDiagram(ctx, now) {
+      ctx.save(); ctx.translate(DG.x, DG.y);
+      ctx.beginPath(); ctx.rect(0, 0, DG.w, DG.h); ctx.save(); ctx.clip();
+      ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, DG.w, DG.h);
+      if (star && now) {
+        var L2 = star.mass / now.mass, sp, i;
+        ctx.save(); ctx.translate(DG.starX, DG.h / 2);
+        if (showGrid) {                            // SHZDiagramGrid
+          sp = niceSpacing(15);
+          var minA = 0.05 + (0.2 - 0.05) * (sp.sp - sp.m) / (sp.sp - sp.below), L1 = -DG.starX, R = DG.w - DG.starX, T = -DG.h / 2, B = DG.h / 2;
+          ctx.lineWidth = 1;
+          for (i = Math.ceil(L1 / scale / sp.sp); i < Math.ceil(R / scale / sp.sp); i++) { ctx.strokeStyle = hex(0xe0e0e0, i % sp.mult === 0 ? 0.2 : minA); ctx.beginPath(); ctx.moveTo(i * sp.sp * scale, T); ctx.lineTo(i * sp.sp * scale, B); ctx.stroke(); }
+          for (i = Math.ceil(T / scale / sp.sp); i < Math.ceil(B / scale / sp.sp); i++) { ctx.strokeStyle = hex(0xe0e0e0, i % sp.mult === 0 ? 0.2 : minA); ctx.beginPath(); ctx.moveTo(L1, i * sp.sp * scale); ctx.lineTo(R, i * sp.sp * scale); ctx.stroke(); }
+        }
+        var gone = time >= star.epochsList[star.epochsList.length - 1].time && star.epochsList[star.epochsList.length - 1].type >= 14;
+        if (!gone) drawZone(ctx, now.shzInner, now.shzOuter);
+        if (showSolar) drawRefOrbits(ctx, SOLAR, 0x909090, 0.8, 0xff6060, -1, DG.h / 2 - 25);   // (label base line measured against Ruffle)
+        if (system) drawRefOrbits(ctx, system.planets.map(function (p) { return { label: p[0], e: p[1], a: L2 * p[2] }; }), 0xb08000, 0.8, 0xffcc00, distIndex, DG.h / 2 - 42);
+        if (!gone) drawStar(ctx, Math.pow(10, now.logRadius), Math.pow(10, now.logTemp));
+        if (!gone) drawZoneLabel(ctx, now.shzInner, now.shzOuter);
+        ctx.restore();
+        // the planet, then the scale bar
+        var d = drag && drag.kind === "planet" ? dragDist : L2 * dist0;
+        var px = drag && drag.kind === "planet" && planetDragX > 0 ? planetDragX : DG.starX + d * scale;
+        drawPlanet(ctx, px, d, drag && drag.kind === "planet" ? shzTempAt(dragDist, time) : now.shzTemp);
+        sp = niceSpacing(15);
+        var half = sp.mult * sp.sp * scale / 2, label = flashString(sp.mult * sp.sp) + " AU";
+        ctx.save(); ctx.translate(DG.w - 85, 23);
+        ctx.save(); ctx.filter = "blur(2px)"; ctx.fillStyle = "#000000"; ctx.fillRect(-half, 0, 2 * half, 5);
+        font(ctx, 12, "bold"); FlashText.fill(ctx, label, 0, -16.5 + 2 + ASC * 12, "center"); ctx.restore();
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(-half, 0, 2 * half, 5);
+        font(ctx, 12, "bold"); FlashText.fill(ctx, label, 0, -16.5 + 2 + ASC * 12, "center");
+        ctx.restore();
+      } else {
+        font(ctx, 12); ctx.fillStyle = "#ffffff"; FlashText.fill(ctx, loadError || t("hz.loading"), DG.w / 2, DG.h / 2, "center");
       }
       ctx.restore();
-
-      // status caption
-      ctx.fillStyle = status.col; ctx.font = "700 12px system-ui"; ctx.textAlign = "left";
-      ctx.fillText("● " + I18N.t(status.key), VIEW.x + 14, VIEW.y + VIEW.h - 14);
-      ctx.fillStyle = "#9fabce"; ctx.font = "11px system-ui"; ctx.textAlign = "right";
-      ctx.fillText("planet @ " + P.dist.toFixed(2) + " AU   ·   HZ " + inn.toFixed(2) + "–" + out.toFixed(2) + " AU", VIEW.x + VIEW.w - 14, VIEW.y + VIEW.h - 14);
+      ctx.strokeStyle = "#909090"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.restore();
     }
 
-    function drawHR(ctx) {
-      panel(ctx, HR, I18N.t("hz.hr"));
-      var px0 = HR.x + 26, px1 = HR.x + HR.w - 12, py0 = HR.y + HR.h - 26, py1 = HR.y + 34;
-      var lThi = Math.log10(40000), lTlo = Math.log10(2500), lLlo = -4, lLhi = 5;
-      function xT(T) { return px0 + (lThi - Math.log10(T)) / (lThi - lTlo) * (px1 - px0); }   // hot → left
-      function yL(L) { return py0 - (Math.log10(Math.max(L, 1e-4)) - lLlo) / (lLhi - lLlo) * (py0 - py1); }
-      // axes + labels
-      ctx.strokeStyle = "#2c3a66"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px0, py1); ctx.lineTo(px0, py0); ctx.lineTo(px1, py0); ctx.stroke();
-      ctx.fillStyle = "#7d8bb0"; ctx.font = "8px system-ui"; ctx.textAlign = "center";
-      ctx.fillText(I18N.t("hz.temp") + " (hot → cool)", (px0 + px1) / 2, py0 + 13);
-      ctx.save(); ctx.translate(HR.x + 9, (py0 + py1) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(I18N.t("hz.lum"), 0, 0); ctx.restore();
-      // main-sequence line (consistent with the sim's L=M^3.5, T=5810·M^0.51)
-      ctx.strokeStyle = "rgba(150,170,210,0.45)"; ctx.lineWidth = 1.5; ctx.beginPath();
-      var first = true;
-      for (var m = 0.2; m <= 20.0001; m *= 1.16) { var X = xT(5810 * Math.pow(m, 0.51)), Y = yL(Math.pow(m, 3.5)); first ? (ctx.moveTo(X, Y), first = false) : ctx.lineTo(X, Y); }
-      ctx.stroke();
-      ctx.fillStyle = "rgba(150,170,210,0.6)"; ctx.font = "italic 8px system-ui"; ctx.textAlign = "left"; ctx.fillText("main sequence", xT(7000), yL(8));
-      // evolutionary track from formation up to "now"
-      ctx.strokeStyle = "rgba(255,209,102,0.75)"; ctx.lineWidth = 1.5; ctx.beginPath();
-      for (var i = 0; i <= 60; i++) { var s = stateAt(P.M, P.t * i / 60); i === 0 ? ctx.moveTo(xT(s.T), yL(s.L)) : ctx.lineTo(xT(s.T), yL(s.L)); }
-      ctx.stroke();
-      // current position
-      var st = cur(), rgb = tempToRGB(st.T);
-      ctx.fillStyle = "rgb(" + rgb.map(Math.round).join(",") + ")"; ctx.strokeStyle = "#ff6b6b"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(xT(st.T), yL(st.L), 4.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    /* ---------------- the panels ---------------- */
+    var TL = { x: 55, y: 580, w: 870, h: 5 }, HP = { x: 55, y: 622, w: 870, h: 50 }, SH = { x: 55, y: 715, w: 870, h: 5 }, HR = { x: 815, y: 326, w: 130, h: 140 };
+    var HRBG = new Image(); HRBG.onload = function () { S.requestDraw(); }; HRBG.src = "../assets/img/sims/habitable-zone-hr.webp";
+    function logLumMS(lt) {                        // getLogLumFromLogTempAndClass, class V
+      var c;
+      if (lt < 3.5081) c = [-4686.707, 4157.5332, -1232.05177, 121.875554];
+      else if (lt < 3.5799) c = [22801.9307, -19349.4898, 5468.65774, -514.806626];
+      else if (lt < 3.728) c = [-9950.2659, 8097.5483, -2198.40972, 199.100683];
+      else if (lt < 3.8287) c = [10594.1896, -8435.0942, 2236.33537, -197.427256];
+      else if (lt < 3.9156) c = [-7990.8168, 6127.2576, -1567.12652, 133.707956];
+      else if (lt < 4.2129) c = [277.0365, -207.2491, 50.62412, -4.009536];
+      else if (lt < 4.6015) c = [-280.446, 189.7309, -43.6049, 3.446011];
+      else c = [-9724.5727, 6346.9359, -1381.69136, 100.377185];
+      return c[0] + lt * (c[1] + lt * (c[2] + lt * c[3]));
     }
-
+    function drawHR(ctx, now) {                    // SHZHRDiagram
+      var minT = Math.log(2500) / Math.LN10, maxT = Math.log(50000) / Math.LN10, minL = -4, maxL = 7;
+      ctx.save(); ctx.translate(HR.x, HR.y);
+      SwfShape.draw(ctx, ART.hrTempArrow);
+      SwfShape.draw(ctx, ART.hrBox);
+      font(ctx, 11, "bold"); ctx.fillStyle = "#666666";
+      FlashText.fillStatic(ctx, t("hz.T"), 1.7 + 32 + (79.85 - FlashText.widthStatic(ctx, t("hz.T"))) / 2, 142.65 + 11);
+      ctx.save(); ctx.translate(-18 + 11, 149.95 - 37.85); ctx.rotate(-Math.PI / 2); FlashText.fillStatic(ctx, t("hz.L"), (68.1 - FlashText.widthStatic(ctx, t("hz.L"))) / 2, 0); ctx.restore();
+      if (HRBG.complete && HRBG.naturalWidth) { ctx.globalAlpha = 189 / 256; ctx.drawImage(HRBG, 0, 0, 130, 140); ctx.globalAlpha = 1; }
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, HR.w, HR.h); ctx.clip();
+      var xs = HR.w / (maxT - minT), ys = -HR.h / (maxL - minL);
+      function X(lt) { return HR.w - xs * (lt - minT); } function Y(ll) { return HR.h + ys * (ll - minL); }
+      ctx.strokeStyle = "#b8b8b8"; ctx.lineWidth = 1; ctx.beginPath();
+      for (var i = 0; i <= HR.w; i++) { var lt = minT + (maxT - minT) * (1 - i / HR.w), px = X(lt), py = Y(logLumMS(lt)); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+      ctx.stroke();
+      if (star && now) {
+        var tbl = star.dataTable;
+        ctx.strokeStyle = "#ff9090"; ctx.beginPath(); ctx.moveTo(X(tbl[0].logTemp), Y(tbl[0].logLum));
+        for (i = 1; i < tbl.length; i++) {
+          if (!(tbl[i].time < now.time)) { ctx.lineTo(X(now.logTemp), Y(now.logLum)); break; }
+          ctx.lineTo(X(tbl[i].logTemp), Y(tbl[i].logLum));
+        }
+        ctx.stroke();
+        ctx.fillStyle = "#e03030"; ctx.beginPath(); ctx.arc(X(now.logTemp), Y(now.logLum), 3, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+      ctx.strokeStyle = "#808080"; ctx.lineWidth = 1; ctx.strokeRect(0, 0, HR.w, HR.h);
+      ctx.restore();
+    }
+    function timeString(tm) {                      // SHZTimeline.getTimeString
+      if (!(tm > 0)) return "0 My";
+      var L = Math.floor(Math.log(tm) / Math.LN10);
+      function f(x, a) { if (a >= 0) { var p = Math.pow(10, a); return flashString(p * Math.round(x / p)); } return x.toFixed(-a); }
+      if (L >= 6) return f(tm / 1e6, L - 6 - 2) + " Ty";
+      if (L >= 3) return f(tm / 1000, L - 3 - 2) + " Gy";
+      return f(tm, L - 2) + " My";
+    }
     function drawTimeline(ctx) {
-      panel(ctx, TL, I18N.t("hz.tlTitle"));
-      var x0 = TL.x + 16, x1 = TL.x + TL.w - 16, y0 = TL.y + TL.h - 26, y1 = TL.y + 30;
-      var T = totalLife(P.M), tm = tms(P.M);
-      function xf(t) { return x0 + t / T * (x1 - x0); }
-      // log-L axis
-      var lmax = stateAt(P.M, tm + giantDur(P.M)).L, lo = -2, hi = Math.max(1, Math.ceil(Math.log10(lmax)));
-      function yf(L) { var e = Math.log10(Math.max(L, 1e-3)); return y0 - (e - lo) / (hi - lo) * (y0 - y1); }
-      // grid
-      ctx.strokeStyle = "#16213f"; ctx.fillStyle = "#9fabce"; ctx.font = "9px system-ui"; ctx.textAlign = "right"; ctx.lineWidth = 1;
-      for (var e = lo; e <= hi; e++) { var yy = yf(Math.pow(10, e)); ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke(); ctx.fillText((e === 0 ? "1" : "10" + sup(e)) + " L☉", x0 + 34, yy + 3); }
-      // main-sequence end marker
-      ctx.strokeStyle = "rgba(255,180,80,0.6)"; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(xf(tm), y1); ctx.lineTo(xf(tm), y0); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(255,180,80,0.85)"; ctx.font = "9px system-ui"; ctx.textAlign = "center"; ctx.fillText(I18N.t("hz.giant") + " →", (xf(tm) + x1) / 2, y1 - 4);
-      ctx.textAlign = "left"; ctx.fillStyle = "rgba(120,200,255,0.8)"; ctx.fillText("← " + I18N.t("hz.ms"), x0 + 2, y1 - 4);
-      // luminosity track
-      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 2; ctx.beginPath();
-      for (var i = 0; i <= 240; i++) { var t = T * i / 240, L = stateAt(P.M, t).L, X = xf(t), Y = yf(L); i === 0 ? ctx.moveTo(X, Y) : ctx.lineTo(X, Y); }
-      ctx.stroke();
-      // current-time cursor
-      var st = cur();
-      ctx.strokeStyle = "#ff6b6b"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(xf(P.t), y1); ctx.lineTo(xf(P.t), y0); ctx.stroke();
-      ctx.fillStyle = "#ff6b6b"; ctx.beginPath(); ctx.arc(xf(P.t), yf(st.L), 3.5, 0, 2 * Math.PI); ctx.fill();
-      // axis labels
-      ctx.fillStyle = "#9fabce"; ctx.font = "9px system-ui"; ctx.textAlign = "left"; ctx.fillText("0", x0, y0 + 12);
-      ctx.textAlign = "right"; ctx.fillText(T.toFixed(1) + " Gyr", x1, y0 + 12);
-      var nearEnd = P.t > 0.7 * T;                        // flip the label to the left so it clears the total
-      ctx.textAlign = nearEnd ? "right" : "left"; ctx.fillStyle = "#ff6b6b";
-      ctx.fillText(I18N.t("hz.now") + ": " + (P.t < 1 ? Math.round(P.t * 1000) + " Myr" : P.t.toFixed(2) + " Gyr"), xf(P.t) + (nearEnd ? -5 : 5), y1 + 9);
+      ctx.save(); ctx.translate(TL.x, TL.y);
+      ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#eaeaea"; ctx.lineWidth = 1;
+      ctx.fillRect(0, -2, TL.w, TL.h + 4); ctx.strokeRect(0, -2, TL.w, TL.h + 4);
+      if (star) {                                  // updateTickmarks
+        var pxPer = TL.w / star.timespan, minor = Math.pow(10, Math.ceil(Math.log(15 / pxPer) / Math.LN10));
+        if (minor / 2 * pxPer > 15) minor /= 2;
+        var mp = Math.ceil(Math.log(80 / pxPer) / Math.LN10), major = Math.pow(10, mp);
+        if (major / 2 * pxPer > 80) { major /= 2; mp -= 1; }
+        function f(x, a) { if (a >= 0) { var p = Math.pow(10, a); return flashString(p * Math.round(x / p)); } return x.toFixed(-a); }
+        var labels = [{ x: 0, label: "0" }];
+        ctx.strokeStyle = "#505050"; ctx.beginPath();
+        for (var v = 0; v < star.timespan; v += minor) {
+          var x = pxPer * v, isMajor = Math.abs(v / major - Math.round(v / major)) < 1e-9;
+          if (isMajor) {
+            if (v !== 0) labels.push({ x: x, label: v >= 1e6 ? f(v / 1e6, mp - 6) + " Ty" : v >= 1000 ? f(v / 1000, mp - 3) + " Gy" : f(v, mp) + " My" });
+            ctx.moveTo(x, 0); ctx.lineTo(x, TL.h);
+          } else { ctx.moveTo(x, 1.5); ctx.lineTo(x, TL.h - 1.5); }
+        }
+        ctx.stroke();
+        font(ctx, 12); ctx.fillStyle = "#505050";
+        labels.forEach(function (l) { var w = FlashText.width(ctx, l.label) + 4; FlashText.fill(ctx, l.label, l.x - w / 2 + 2, TL.h + 3 + 2 + ASC * 12, "left"); });
+        ctx.save(); ctx.translate(time * TL.w / star.timespan, TL.h / 2);
+        if (cursorHover || (drag && drag.kind === "cursor")) ctx.globalAlpha = 1;
+        SwfShape.draw(ctx, ART.cursor);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+    function drawHabitabilityPlot(ctx) {          // SHZHabitabilityPlot
+      ctx.save(); ctx.translate(HP.x, HP.y);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, HP.w, HP.h);
+      var g = ctx.createLinearGradient(0, 0, 0, 5); g.addColorStop(0, hex(0xfad3ac, 1)); g.addColorStop(1, hex(0xfad3ac, 0.2));
+      ctx.fillStyle = g; ctx.fillRect(0, 0, HP.w, 5);
+      g = ctx.createLinearGradient(0, HP.h, 0, HP.h - 5); g.addColorStop(0, hex(0x9cadeb, 1)); g.addColorStop(1, hex(0x9cadeb, 0.2));
+      ctx.fillStyle = g; ctx.fillRect(0, HP.h - 5, HP.w, 5);
+      if (star) {
+        var tbl = star.dataTable, xs = HP.w / star.timespan, ys = -(HP.h - 10), y0 = HP.h - 5;
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, HP.w, HP.h); ctx.clip();
+        ctx.strokeStyle = "#505050"; ctx.lineWidth = 1; ctx.beginPath();
+        function pt(r) { var y = ys * r.shzTemp + y0, s = y < 0 ? 1 : y > HP.h ? -1 : 0; return { x: xs * r.time, y: clamp(y, -10, HP.h + 10), s: s }; }
+        var p0 = pt(tbl[0]);
+        if (p0.s === 0) ctx.moveTo(p0.x, p0.y);
+        for (var i = 1; i < tbl.length; i++) {
+          var p1 = pt(tbl[i]);
+          if (p0.s === 0) ctx.lineTo(p1.x, p1.y);
+          else if (p0.s !== p1.s) { ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); }
+          p0 = p1;
+        }
+        ctx.stroke(); ctx.restore();
+        var dx = xs * tDestroyed;
+        if (dx < HP.w) { ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fillRect(dx, 0, HP.w - dx, HP.h); }
+      }
+      ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 1; ctx.strokeRect(0, 0, HP.w, HP.h);
+      font(ctx, 10, "italic");
+      ctx.fillStyle = hex(0xf19538); var w1 = FlashText.width(ctx, t("hz.hot")) + 4; FlashText.fill(ctx, t("hz.hot"), HP.w - w1 + 2, -4 + 5 + 2 + ASC * 10, "left");
+      ctx.fillStyle = hex(0x658ade); var w2 = FlashText.width(ctx, t("hz.cold")) + 4; FlashText.fill(ctx, t("hz.cold"), HP.w - w2 + 2, HP.h - 16.16 + 3 - 5 + 2 + ASC * 10, "left");
+      if (star) { ctx.strokeStyle = "rgba(224,48,48,0.5)"; ctx.lineWidth = 2; ctx.beginPath(); var cx = time * HP.w / star.timespan; ctx.moveTo(cx, 0); ctx.lineTo(cx, HP.h); ctx.stroke(); }
+      ctx.restore();
+    }
+    function drawHistory(ctx) {                   // SHZSystemHistory
+      if (!star) return;
+      ctx.save(); ctx.translate(SH.x, SH.y);
+      var xs = SH.w / star.timespan, cols = [0x9cadeb, 0x6080d0, 0xfad3ac], alphas = [0.3, 0.9, 0.3];
+      for (var i = 0; i < statesList.length; i++) {
+        var s = statesList[i], x0 = xs * s.start;
+        if (s.end > tDestroyed) {
+          ctx.fillStyle = hex(cols[s.state + 1], alphas[s.state + 1]); ctx.fillRect(x0, 0, xs * tDestroyed - x0, SH.h);
+          ctx.fillStyle = hex(0xa0a0a0); ctx.fillRect(xs * tDestroyed, 0, SH.w - xs * tDestroyed, SH.h);
+          break;
+        }
+        ctx.fillStyle = hex(cols[s.state + 1], alphas[s.state + 1]); ctx.fillRect(x0, 0, xs * s.end - x0, SH.h);
+      }
+      var ep = star.epochsList, endType = ep[ep.length - 1].type;
+      var deathKey = endType >= 10 && endType <= 12 ? "hz.tagWD" : endType === 13 ? "hz.tagNS" : endType === 14 ? "hz.tagBH" : endType === 15 ? "hz.tagSN" : null;
+      var tags = [{ key: "hz.tagFusing", x: ep[1].time * xs, above: true }];
+      if (deathKey) tags.push({ key: deathKey, x: ep[ep.length - 1].time * xs, above: true });
+      if (tDestroyed < star.timespan) tags.push({ key: "hz.tagDestroyed", x: tDestroyed * xs, above: false });
+      if (tLocked < star.timespan && tLocked < tDestroyed) tags.push({ key: "hz.tagLocked", x: tLocked * xs, above: false });
+      font(ctx, 10);
+      tags.forEach(function (tg) { var ls = t(tg.key).split("\n"); tg.w = Math.max.apply(null, ls.map(function (l) { return FlashText.width(ctx, l); })) + 4; tg.lines = ls; tg.off = 0; });
+      function spread(a, b) {                     // offsetText: pull close tags apart
+        if (!a || !b) return;
+        var gap = Math.min(7, Math.abs(b.x - a.x)), d = Math.abs(b.x - a.x) - (a.w / 2 + b.w / 2);
+        if (d < gap) { var lft = a.x < b.x ? a : b, rgt = lft === a ? b : a; rgt.off = rgt.w / (a.w + b.w) * (gap - d); lft.off = -lft.w / (a.w + b.w) * (gap - d); }
+      }
+      spread(tags.filter(function (q) { return q.above; })[0], tags.filter(function (q) { return q.above; })[1]);
+      spread(tags.filter(function (q) { return !q.above; })[0], tags.filter(function (q) { return !q.above; })[1]);
+      tags.forEach(function (tg) {
+        ctx.save(); ctx.translate(tg.x, tg.above ? -2 : SH.h + 2);
+        ctx.fillStyle = "#303030"; ctx.beginPath(); ctx.moveTo(0, 0);
+        if (tg.above) { ctx.lineTo(3, -3); ctx.lineTo(-3, -3); } else { ctx.lineTo(-3, 3); ctx.lineTo(3, 3); }
+        ctx.closePath(); ctx.fill();
+        var lh = 12.16, th = tg.lines.length * lh + 4, ty = tg.above ? -th - 3 - 1 : 3 + 1 - 2;
+        tg.lines.forEach(function (l, i) { FlashText.fill(ctx, l, tg.off, ty + 2 + ASC * 10 + i * lh, "center"); });
+        ctx.restore();
+      });
+      ctx.strokeStyle = "rgba(224,48,48,0.5)"; ctx.lineWidth = 2; ctx.beginPath(); var cx = time * xs; ctx.moveTo(cx, -1); ctx.lineTo(cx, SH.h + 1); ctx.stroke();
+      ctx.restore();
+    }
+    function panel(ctx, x0, y0, x1, y1) { ctx.fillStyle = "#fafafa"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); ctx.strokeStyle = "#999999"; ctx.lineWidth = 1; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); }
+
+    S.onDraw(function () {
+      var ctx = S.ctx, now = star ? getData(time) : null;
+      FlashText.begin(ctx);
+      ctx.save(); ctx.clearRect(0, 0, S.W, S.H); ctx.translate(0, OY);
+      ctx.fillStyle = "#cccccc"; ctx.fillRect(0, 30, S.W, S.H);
+      drawDiagram(ctx, now);
+      panel(ctx, 222, 294, 973, 494); panel(ctx, 7, 501, 973, 758);
+      font(ctx, 14); ctx.fillStyle = "#000000";
+      var w1 = FlashText.fillStatic(ctx, t("hz.starPlanet"), 235, 301.95 + 14), w2 = FlashText.fillStatic(ctx, t("hz.timeline"), 19, 508.95 + 14);
+      ctx.strokeStyle = "#dddddd"; ctx.beginPath(); ctx.moveTo(Math.max(579, 235 + w1 + 12), 311); ctx.lineTo(962, 311); ctx.moveTo(Math.max(261, 19 + w2 + 12), 518); ctx.lineTo(961.95, 518); ctx.stroke();
+      font(ctx, 12); ctx.fillStyle = "#000000";
+      FlashText.fillStatic(ctx, t("hz.propsNow"), 418.95 + 16 + 122.95 - FlashText.widthStatic(ctx, t("hz.propsNow")), 382.95 + 12);
+      [["hz.mass", 621.95 + 36.8, 355.95], ["hz.lum", 591.15 + 67.6, 375.3], ["hz.temp", 578.2 + 80.55, 394.65], ["hz.radius", 616.35 + 42.4, 414]].forEach(function (q) {
+        FlashText.fillStatic(ctx, t(q[0]), q[1] - FlashText.widthStatic(ctx, t(q[0])), q[2] + 12);
+      });
+      FlashText.fillStatic(ctx, t("hz.distNow"), 532.95 + 126.05 - FlashText.widthStatic(ctx, t("hz.distNow")), 469.55 + 12);
+      FlashText.fillStatic(ctx, t("hz.timeSince"), 281.05 + 204.5 - FlashText.widthStatic(ctx, t("hz.timeSince")), 535.45 + 12);
+      if (now) {
+        var vals = [numberString(now.mass, 3) + " Msun", now.logLum < -5 ? "0 Lsun" : numberString(Math.pow(10, now.logLum), 3) + " Lsun",
+          numberString(Math.pow(10, now.logTemp), 3) + " K", numberString(Math.pow(10, now.logRadius), 3) + " Rsun"];
+        [355.95, 375.3, 394.65, 414].forEach(function (y, i) { FlashText.fill(ctx, vals[i], 665.45, y + ASC * 12, "left"); });
+        FlashText.fill(ctx, numberString(now.distance, 3) + " AU", 665.45, 469.55 + ASC * 12, "left");
+        FlashText.fill(ctx, timeString(time), 492.95, 535.45 + ASC * 12, "left");
+      }
+      drawHR(ctx, now);
+      drawTimeline(ctx);
+      drawHabitabilityPlot(ctx);
+      drawHistory(ctx);
+      ctx.restore();
+    });
+
+    /* ---------------- pointer: planet, zoomer, timeline ---------------- */
+    var drag = null, cursorHover = false, stepTimer = null;
+    function stagePt(ev) { var r = S.canvas.getBoundingClientRect(); return { x: (ev.clientX - r.left) * S.W / r.width, y: (ev.clientY - r.top) * S.H / r.height - OY }; }
+    function planetX() { var now = getData(time); return DG.starX + star.mass / now.mass * dist0 * scale; }
+    function hit(p) {
+      if (!star) return null;
+      var lx = p.x - DG.x, ly = p.y - DG.y;
+      if (lx >= 0 && lx <= DG.w && ly >= 0 && ly <= DG.h) {
+        if (Math.abs(lx - planetX()) <= 13 && Math.abs(ly - DG.h / 2) <= 13) return "planet";
+        return "zoomer";
+      }
+      var cx = TL.x + time * TL.w / star.timespan;
+      if (Math.abs(p.x - cx) <= 10 && p.y >= TL.y - 22 && p.y <= TL.y + 8) return "cursor";
+      if (p.x >= TL.x && p.x <= TL.x + TL.w && p.y >= TL.y - 2 && p.y <= TL.y + TL.h + 2) return "timeline";
+      return null;
+    }
+    function processMouse(x) {                     // SHZDiagram.processMouse
+      planetDragX = clamp(x + drag.off, DG.dragMinX, DG.dragMaxX);
+      var now = getData(time), L2 = star.mass / now.mass, d = (planetDragX - DG.starX) / scale;
+      if (d > 500 * L2) { d = 500 * L2; planetDragX = -1; } else if (d < 0.01 * L2) { d = 0.01 * L2; planetDragX = -1; }
+      return d;
+    }
+    function planetDragged(d) {                   // onPlanetDragged
+      if (running) toggleRun();
+      var now = getData(time), L2 = star.mass / now.mass;
+      setDist0(d / L2, true); dragDist = d; table2();
+    }
+    S.canvas.addEventListener("pointerdown", function (ev) {
+      var p = stagePt(ev), h = hit(p);
+      if (!h) return;
+      ev.preventDefault(); try { S.canvas.setPointerCapture(ev.pointerId); } catch (err) {}
+      if (h === "planet") { drag = { kind: "planet", off: planetX() - (p.x - DG.x) }; planetDragged(processMouse(p.x - DG.x)); }
+      else if (h === "zoomer") { ease = null; drag = { kind: "zoomer", x0: p.x, x: p.x, last: performance.now() }; kick(); }
+      else if (h === "cursor") drag = { kind: "cursor", off: p.x - (TL.x + time * TL.w / star.timespan) };
+      else {                                        // press beside the cursor: step towards the mouse, then keep stepping
+        var dir = p.x - TL.x > time * TL.w / star.timespan ? 1 : -1;
+        drag = { kind: "step", dir: dir }; step(dir);
+        var t0 = performance.now() + 500, last = performance.now();
+        stepTimer = setInterval(function () {
+          var n = performance.now(); if (n < t0) { last = n; return; }
+          setTime(clamp(time + drag.dir * 0.0625 * (n - last) * star.timespan / TL.w, 0, star.timespan)); last = n;
+        }, 40);
+      }
+      S.requestDraw();
+    });
+    function step(dir) { setTime(clamp(time + dir * star.timespan / TL.w, 0, star.timespan)); }
+    S.canvas.addEventListener("pointermove", function (ev) {
+      var p = stagePt(ev);
+      if (drag) {
+        if (drag.kind === "planet") { planetDragged(processMouse(p.x - DG.x)); }
+        else if (drag.kind === "zoomer") {         // onZoomerTimerEvent
+          drag.x = p.x;
+        } else if (drag.kind === "cursor") setTime(clamp((p.x - drag.off - TL.x) * star.timespan / TL.w, 0, star.timespan));
+        S.requestDraw(); return;
+      }
+      var h = hit(p);
+      if ((h === "cursor") !== cursorHover) { cursorHover = h === "cursor"; S.requestDraw(); }
+      S.canvas.style.cursor = h === "planet" || h === "cursor" ? "ew-resize" : h === "zoomer" ? "col-resize" : h === "timeline" ? "pointer" : "default";
+    });
+    function release() {
+      if (!drag) return;
+      if (drag.kind === "planet") { dragDist = null; planetDragX = -1; centre(false); }
+      if (drag.kind === "zoomer") centre(true);
+      if (stepTimer) { clearInterval(stepTimer); stepTimer = null; }
+      drag = null; S.requestDraw();
+    }
+    S.canvas.addEventListener("pointerup", release);
+    S.canvas.addEventListener("pointercancel", release);
+    function centre(eased) {                       // the planet back to mid-window (setPlanetDistance / easeToScale)
+      if (!star) return;
+      var now = getData(time), d = star.mass / now.mass * dist0, target = (DG.w / 2 - DG.starX) / d;
+      if (!eased) { ease = null; scale = target; return; }
+      ease = { t0: performance.now(), from: Math.log(scale), to: Math.log(target) }; kick();
     }
 
-    upd();
-
-    /* ---- helpers ---- */
-    function sup(e) { var m = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" }; return String(e).split("").map(function (c) { return m[c] || c; }).join(""); }
-    function panel(ctx, r, title) {
-      roundRect(ctx, r.x, r.y, r.w, r.h, 12); ctx.fillStyle = "#0e1530"; ctx.fill();
-      ctx.strokeStyle = "#2c3a66"; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = "#6ea8fe"; ctx.font = "700 12px system-ui"; ctx.textAlign = "left"; ctx.fillText(title.toUpperCase(), r.x + 14, r.y + 18);
+    /* ---------------- run / ease loop ---------------- */
+    var loop = S.loop(function () {
+      var n = performance.now();
+      if (ease) { var u = Math.min(1, (n - ease.t0) / 500), h = u * u * (3 - 2 * u); scale = Math.exp(ease.from + (ease.to - ease.from) * h); if (u >= 1) ease = null; }
+      if (drag && drag.kind === "zoomer") {        // onZoomerTimerEvent: hold right of the press to zoom out, left to zoom in (95 px dead space)
+        var dx = drag.x - drag.x0, f = dx > 0 ? clamp((dx - 95) / DG.w, 0, 1) : clamp((dx + 95) / DG.w, -1, 0);
+        scale = clamp(scale * Math.pow(1.3, -f * (n - drag.last) / 20), 0.25, 25000); drag.last = n;
+      }
+      if (running) {
+        var tm = time + star.timespan / 50000000 * rate * 1000 * (n - runLast); runLast = n;
+        if (tm > star.timespan) { tm = star.timespan; toggleRun(); }
+        time = tm; syncTime(); centre(false);
+      }
+      if (!running && !ease && !(drag && drag.kind === "zoomer")) loop.pause();
+    });
+    function kick() { if (!loop.playing) loop.play(); }
+    function toggleRun() {
+      running = !running; if (running) { runLast = performance.now(); kick(); }
+      runBtn.setAttribute("data-i18n", running ? "hz.pause" : "hz.run"); runBtn.textContent = t(running ? "hz.pause" : "hz.run");
     }
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    function setTime(tm) { time = tm; syncTime(); centre(false); S.requestDraw(); }
+
+    /* ---------------- the sidebar ---------------- */
+    var syncing = false, aside = S.canvas.closest(".sim-layout").querySelector(".sim-controls");
+    S.group("hz.general");
+    var gridCtl = S.toggle({ labelKey: "hz.grid", value: false, on: function (v) { showGrid = v; } });
+    var solarCtl = S.toggle({ labelKey: "hz.orbits", value: true, on: function (v) { showSolar = v; } });
+    S.group("hz.starPlanet");
+    var sysCtl = S.select({ labelKey: "hz.system", value: "0", options: SYSTEMS.map(function (s, i) { return i ? { v: String(i), label: s.name } : { v: "0", labelKey: "hz.none" }; }),
+      on: function (v) { selectSystem(+v); } });
+    var note = document.createElement("div"); note.className = "ctl"; note.style.cssText = "font-size:12px;font-style:italic;opacity:.75;line-height:1.35";
+    note.setAttribute("data-i18n", "hz.systemNote"); aside.appendChild(note);
+    var massCtl = S.slider({ labelKey: "hz.mass0", min: 0, max: 16, step: 1, value: 7,
+      format: function (v) { return stars ? sigRound(stars[Math.round(v)].mass, 2).s : "1.0"; },
+      on: function (v) { if (!syncing) setStar(stars[Math.round(v)]); } });
+    var distCtl = S.slider({ labelKey: "hz.dist0", min: Math.log(D0_MIN) / Math.LN10, max: Math.log(D0_MAX) / Math.LN10, step: 0.0005, value: 0,
+      format: function (v) { return distSet ? sigRound(distSet[Math.round(v)], 3).s : sigRound(Math.pow(10, v), 3).s; },
+      on: function (v) { if (syncing) return; if (running) toggleRun(); if (distSet) { distIndex = Math.round(v); dist0 = distSet[distIndex]; } else dist0 = sigRound(Math.pow(10, v), 3).v; if (star) { table2(); centre(false); } } });
+    S.group("hz.timeline");
+    var runBtn = S.button({ labelKey: "hz.run", primary: true, on: function () { if (star) toggleRun(); } });
+    var rateCtl = S.slider({ labelKey: "hz.rate", min: -1, max: Math.log(20) / Math.LN10, step: 0.001, value: Math.log(12) / Math.LN10,
+      format: function (v) { return sigRound(Math.pow(10, v), 2).s; }, on: function (v) { rate = Math.pow(10, v); } });
+    var timeCtl = S.slider({ labelKey: "hz.time", min: 0, max: 1000, step: 1, value: 0, format: function () { return timeString(time); },
+      on: function (v) { if (!syncing && star) { if (running) toggleRun(); time = v / 1000 * star.timespan; centre(false); } } });
+    S.button({ labelKey: "hz.reset", on: function () { reset(); } });
+
+    function syncTime() { if (!star) return; syncing = true; timeCtl.set(Math.round(time / star.timespan * 1000)); syncing = false; }
+    function setDist0(v, fromDrag) {
+      dist0 = v; syncing = true;
+      if (distSet) distCtl.set(distIndex); else distCtl.set(Math.log(v) / Math.LN10);
+      syncing = false;
+    }
+    function setStar(st) {                         // onInitStarMassChanged
+      if (running) toggleRun();
+      star = st; time = 0; table1(); syncTime(); centre(false); S.requestDraw();
+    }
+    function selectSystem(i) {                     // syncToSelectedSystem
+      system = i > 0 ? SYSTEMS[i] : null;
+      if (system) {
+        distSet = system.planets.map(function (p) { return p[2] * (1 - p[1]); });
+        distCtl.input.min = 0; distCtl.input.max = distSet.length - 1; distCtl.input.step = 1;
+        distIndex = 0; dist0 = distSet[0];
+        var mi = 0; stars.forEach(function (s, k) { if (Math.abs(s.mass - system.mass) < Math.abs(stars[mi].mass - system.mass)) mi = k; });
+        syncing = true; massCtl.set(mi); distCtl.set(0); syncing = false;
+        massCtl.input.disabled = true;
+        star = stars[mi]; time = 0; table1();
+      } else {
+        distSet = null; distCtl.input.min = Math.log(D0_MIN) / Math.LN10; distCtl.input.max = Math.log(D0_MAX) / Math.LN10; distCtl.input.step = 0.0005;
+        massCtl.input.disabled = false; setDist0(dist0);
+        if (star) table2();
+      }
+      centre(false); S.requestDraw();
+    }
+    function reset() {
+      if (!stars) return;
+      if (running) toggleRun();
+      sysCtl.set("0");
+      var mi = 0; stars.forEach(function (s, k) { if (Math.abs(s.mass - 1) < 1e-10) mi = k; });
+      syncing = true; massCtl.set(mi); syncing = false;
+      dist0 = 1; setDist0(1);
+      gridCtl.set(false); solarCtl.set(true);
+      syncing = true; rateCtl.set(Math.log(12) / Math.LN10); syncing = false; rate = 12;
+      setStar(stars[mi]);
     }
   }
 });
-
-/* blackbody colour (Tanner Helland approximation), T in K */
-function tempToRGB(T) {
-  var t = T / 100, r, g, b;
-  if (t <= 66) r = 255; else r = clamp(329.7 * Math.pow(t - 60, -0.1332));
-  if (t <= 66) g = clamp(99.47 * Math.log(t) - 161.12); else g = clamp(288.12 * Math.pow(t - 60, -0.0755));
-  if (t >= 66) b = 255; else if (t <= 19) b = 0; else b = clamp(138.52 * Math.log(t - 10) - 305.04);
-  return [r, g, b];
-  function clamp(x) { return Math.max(0, Math.min(255, x)); }
-}
