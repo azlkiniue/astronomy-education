@@ -6,7 +6,7 @@ Research note for issue #2. Written 2026-11-17. Throwaway branch; not meant to b
 
 A sim teaches when the student, not the sim, is asking the questions. The research supports ten principles for getting there. The strongest evidence is for three of them: build the guidance into the sim, make the student commit to a prediction before the result appears, and answer a wrong idea with an explanation instead of a red cross. The weakest evidence is for the phone: no study was found that tests sim learning on a phone-sized touch screen, so that principle rests on accessibility standards and on reading the code.
 
-`gravalgebra` already follows seven of the ten. It misses on the phone, hides its two challenge modes behind a dropdown, and never asks for a prediction in its default mode.
+`gravalgebra` already follows six of the ten (1, 2, 3, 4, 6, 7), partly follows three (5, 8, 9), and misses one (10, the phone). Its main gaps: targets too small on a phone, two challenge modes hidden behind a dropdown, and no prediction in its default mode.
 
 ## How to read this note
 
